@@ -1,0 +1,36 @@
+{
+  "name": "@modelbay/doubao-speech",
+  "version": "0.1.0",
+  "description": "Doubao Speech adapter",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./asr": {
+      "types": "./dist/node/asr.d.mts",
+      "default": "./dist/node/asr.mjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "build": "vp pack"
+  },
+  "peerDependencies": {
+    "zod": "^4.6"
+  },
+  "dependencies": {
+    "@modelbay/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "zod": "catalog:"
+  }
+}

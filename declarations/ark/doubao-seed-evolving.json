@@ -1,0 +1,32 @@
+{
+  "canonicalId": "volc/doubao-seed-evolving",
+  "id": "doubao-seed-evolving",
+  "title": "Doubao Seed Evolving（快速迭代）",
+  "capabilities": ["text.chat"],
+  "features": ["tools", "vision", "structured"],
+  "channels": [
+    {
+      "channel": "ark",
+      "id": "doubao-seed-evolving"
+    },
+    {
+      "channel": "ark-plan",
+      "id": "doubao-seed-evolving"
+    }
+  ],
+  "aliases": {
+    "official": [],
+    "short": []
+  },
+  "lifecycle": {
+    "status": "active",
+    "source": {
+      "url": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
+      "checkedAt": "2026-11-04"
+    }
+  },
+  "source": {
+    "url": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
+    "checkedAt": "2026-11-04"
+  }
+}

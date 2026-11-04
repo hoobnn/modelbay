@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://ark.cn-beijing.volces.com/api/v3/images/generations",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "doubao-seedream-5-0-pro-260628",
+      "prompt": "一只猫",
+      "size": "2048x2048",
+      "response_format": "b64_json",
+      "watermark": false
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        { "b64_json": "iVBORw0KGgo=", "output_format": "png" },
+        { "url": "https://ark-recorded.volces.com/image/2.png", "output_format": "jpeg" }
+      ]
+    }
+  }
+}

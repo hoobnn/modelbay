@@ -1,0 +1,23 @@
+{
+  "note": "text.chat through /v1/chat/completions, base_resp.status_code 0.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/chat/completions",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "model": "MiniMax-M3",
+      "messages": [{ "role": "user", "content": "你好" }],
+      "stream": false,
+      "reasoning_split": true
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "base_resp": { "status_code": 0, "status_msg": "success" },
+      "choices": [{ "message": { "content": "你好！" }, "finish_reason": "stop" }],
+      "usage": { "prompt_tokens": 5, "completion_tokens": 3 },
+      "id": "req-chat-1"
+    }
+  }
+}

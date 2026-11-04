@@ -1,0 +1,33 @@
+{
+  "note": "voice-enrollment create_voice (clone), ported from Python products.py clone_voice.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "voice-enrollment",
+      "input": {
+        "action": "create_voice",
+        "target_model": "qwen-audio-3.0-tts-flash",
+        "prefix": "custom",
+        "audio": "https://example.com/sample.wav",
+        "language_hints": ["zh"]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": {
+        "voice_id": "qwen-audio-3.0-tts-flash-custom-abc",
+        "target_model": "qwen-audio-3.0-tts-flash",
+        "status": "OK"
+      },
+      "request_id": "req-voice-1",
+      "usage": { "characters": 1 }
+    }
+  }
+}

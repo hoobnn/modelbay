@@ -1,0 +1,19 @@
+{
+  "note": "GET /v2/query/video_generation/{id} failed with an upstream error type.",
+  "request": {
+    "url": "https://api.minimax.cn/v2/query/video_generation/task-1",
+    "method": "GET",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "base_resp": { "status_code": 0 },
+      "task": {
+        "id": "task-1",
+        "status": "failed",
+        "error": { "type": 1000, "message": "生成失败" }
+      }
+    }
+  }
+}

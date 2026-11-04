@@ -6,15 +6,15 @@
 
 工具链和 plein 保持一致，这样 plein 那边的代码搬过来时不用改风格，也不用改测试。
 
-| 项 | 选择 |
-| --- | --- |
-| Node | `>=24`，`.node-version` 写 `26` |
-| 包管理 | pnpm workspace，根 `package.json` 写 `"packageManager": "pnpm@12.11.2"` |
-| lint / 格式化 / 测试 / 打包 | Vite+（`vite-plus`，用 `vp check`、`vp test`、`vp pack`），版本和 plein 的 catalog 一致 |
-| TypeScript | `^7`，`strict`、`noUncheckedIndexedAccess`、`verbatimModuleSyntax`，直接照搬 plein 的 `tsconfig.base.json` |
-| 文档检查 | `markdownlint-cli` |
-| 提交检查 | husky + commitlint，配置照搬 plein 的 `commitlint.config.cjs`；pre-commit 跑 `vp staged` |
-| 版本管理 | changesets |
+| 项                          | 选择                                                                                                       |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Node                        | `>=24`，`.node-version` 写 `26`                                                                            |
+| 包管理                      | pnpm workspace，根 `package.json` 写 `"packageManager": "pnpm@12.11.2"`                                    |
+| lint / 格式化 / 测试 / 打包 | Vite+（`vite-plus`，用 `vp check`、`vp test`、`vp pack`），版本和 plein 的 catalog 一致                    |
+| TypeScript                  | `^7`，`strict`、`noUncheckedIndexedAccess`、`verbatimModuleSyntax`，直接照搬 plein 的 `tsconfig.base.json` |
+| 文档检查                    | `markdownlint-cli`                                                                                         |
+| 提交检查                    | husky + commitlint，配置照搬 plein 的 `commitlint.config.cjs`；pre-commit 跑 `vp staged`                   |
+| 版本管理                    | changesets                                                                                                 |
 
 格式化规则照搬 plein `vite.config.ts` 里的 `fmt` 段：单引号、不加分号、行宽 100。lint 规则用 plein 那套去掉 React 和 a11y 的部分，同样开启 `typeAware`。
 
@@ -83,11 +83,11 @@ M1 只建 `core`，其他包到了对应的里程碑再建。
 
 ## 测试
 
-| 层 | 内容 | 什么时候跑 |
-| --- | --- | --- |
-| 单元测试 + 录制夹具 | 请求构造、响应解析、错误映射，用 `test/fixtures/` 里的录制数据，不联网 | 每次提交，`vp test` |
-| 声明自检 | 每个声明都能生成合法的 JSON Schema；都有 `source`；默认模型都是 `active`；别名不冲突 | 每次提交，`vp test` |
-| 真实冒烟 | 每家用最便宜的一档跑一次真实调用 | 夜间。key 放在哪、预算多少还没定（见 0001），M3 之前不做 |
+| 层                  | 内容                                                                                 | 什么时候跑                                               |
+| ------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| 单元测试 + 录制夹具 | 请求构造、响应解析、错误映射，用 `test/fixtures/` 里的录制数据，不联网               | 每次提交，`vp test`                                      |
+| 声明自检            | 每个声明都能生成合法的 JSON Schema；都有 `source`；默认模型都是 `active`；别名不冲突 | 每次提交，`vp test`                                      |
+| 真实冒烟            | 每家用最便宜的一档跑一次真实调用                                                     | 夜间。key 放在哪、预算多少还没定（见 0001），M3 之前不做 |
 
 - 夹具用 JSON，每个文件记一次请求和响应。录制时 `Authorization`、签名、key 和账号 ID 一律替换成 `<redacted>`。
 - 从 plein 搬过来的测试保留原来的断言，只改 import 路径。
@@ -97,13 +97,13 @@ M1 只建 `core`，其他包到了对应的里程碑再建。
 
 根 `package.json` 里提供这些脚本：
 
-| 命令 | 做什么 |
-| --- | --- |
-| `pnpm lint` | `vp check` + markdownlint |
-| `pnpm typecheck` | `pnpm -r typecheck` |
-| `pnpm test` | `vp test` |
-| `pnpm build` | `pnpm -r build`（各包内是 `vp pack`） |
-| `pnpm verify` | `pnpm dedupe --check`、lint、typecheck、带覆盖率门槛的 test、build、publint、attw、许可检查，全部按顺序跑 |
+| 命令             | 做什么                                                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`      | `vp check` + markdownlint                                                                                 |
+| `pnpm typecheck` | `pnpm -r typecheck`                                                                                       |
+| `pnpm test`      | `vp test`                                                                                                 |
+| `pnpm build`     | `pnpm -r build`（各包内是 `vp pack`）                                                                     |
+| `pnpm verify`    | `pnpm dedupe --check`、lint、typecheck、带覆盖率门槛的 test、build、publint、attw、许可检查，全部按顺序跑 |
 
 PR 合并前，`pnpm verify` 必须通过。CI（GitHub Actions）跑的就是这一条命令。
 

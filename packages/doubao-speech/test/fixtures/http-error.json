@@ -1,0 +1,14 @@
+{
+  "note": "HTTP 401 with a Doubao header error; the key in the message is redacted.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/tts/query",
+    "method": "POST",
+    "headers": { "Content-Type": "application/json", "X-Api-Key": "<redacted>" },
+    "body": { "task_id": "bad" }
+  },
+  "response": {
+    "status": 401,
+    "headers": { "X-Api-Status-Code": "45000001" },
+    "body": { "header": { "code": 45000001, "message": "invalid api key <redacted>" } }
+  }
+}

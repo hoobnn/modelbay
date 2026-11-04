@@ -1,0 +1,16 @@
+import type { ModelDeclaration } from '@modelbay/core'
+
+export default {
+  canonicalId: 'aliyun/qwen3-tts-flash',
+  id: 'qwen3-tts-flash',
+  title: 'qwen3-tts-flash',
+  capabilities: ['audio.speech'],
+  limits: { speed: false, instruction: false, promptMaxLength: 600 },
+  channels: [{ channel: 'bailian', id: 'qwen3-tts-flash' }],
+  aliases: { official: [], short: [] },
+  lifecycle: {
+    status: 'active',
+    source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-04' },
+  },
+  source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-04' },
+} satisfies ModelDeclaration

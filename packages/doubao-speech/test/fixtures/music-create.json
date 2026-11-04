@@ -1,0 +1,21 @@
+{
+  "note": "Seed Audio music creation returns a single audio chunk (no completion marker).",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/tts/create",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>"
+    },
+    "body": {
+      "model": "seed-audio-1.0",
+      "text_prompt": "仅生成音乐，不要人声对白。轻快的钢琴",
+      "audio_config": { "format": "mp3", "sample_rate": 24000 }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "X-Api-Status-Code": "20000000" },
+    "text": "{\"code\":0,\"audio\":\"AQID\"}"
+  }
+}

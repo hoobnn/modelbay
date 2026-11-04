@@ -1,0 +1,78 @@
+# @modelbay/doubao-speech
+
+Doubao Speech adapter for [Modelbay](../../README.md). MIT licensed.
+
+```ts
+import { doubaoAdapter } from '@modelbay/doubao-speech'
+import { createAdapterContext } from '@modelbay/core'
+
+const ctx = createAdapterContext({
+  secrets: { DOUBAO_APP_ID: '...', DOUBAO_ACCESS_TOKEN: '...' },
+})
+const result = await doubaoAdapter.submit(
+  { capability: 'audio.speech', model: 'seed-tts-2.0', input: { text: '你好' } },
+  ctx,
+)
+```
+
+Only `ctx.fetch` and `ctx.secret` are used. Canonical credential names (injected by the
+`modelbay` entry / CLI) are `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN` for the legacy
+`X-Api-App-Key` / `X-Api-Access-Key` pair, or `DOUBAO_API_KEY` for the modern
+`X-Api-Key`. The upstream aliases `VOLC_SPEECH_API_KEY`, `VOLC_SPEECH_APP_ID`,
+`VOLC_SPEECH_ACCESS_TOKEN` and `VOLC_SPEECH_ACCESS_KEY` are also accepted so existing
+hosts keep working. Host-managed configuration may be supplied as `VOLC_SPEECH_VOICE`,
+`VOLC_SPEECH_FORMAT` and `VOLC_SPEECH_SAMPLE_RATE` (defaults are in `speechSettings`).
+No key is stored and no `console.*` is emitted.
+
+## Cross-adapter API (ark -> doubao-speech)
+
+This is the only allowed cross-adapter dependency. The root entry exports:
+
+- `speechSettings` — a zod object (`.shape` / `.parse`) with the TTS defaults.
+- `synthesizeSpeech(model, input, ctx, plan?)` — synchronous `Promise<SubmitResult>`;
+  `plan=true` selects `/api/v3/plan/tts/unidirectional` for Ark Agent Plan TTS.
+- `TTS_VOICES` — `VoicePreset[]` for speech synthesis 2.0.
+
+## Capabilities
+
+`submit` handles `audio.speech` (unidirectional HTTP), `audio.music` / `audio.sfx`
+(Seed Audio `/api/v3/tts/create`), and `audio.transcribe` (flash `/api/v3/auc/bigmodel/recognize/flash`
+with `X-Api-Sequence: -1`). Responses are chunked JSON streams: adjacent or
+newline-delimited objects carrying base64 audio, decoded without `Buffer`. Speech
+synthesis is synchronous, so `poll` is intentionally not implemented (no pending tasks).
+
+## Native operations
+
+Declared in `DOUBAO_NATIVE_OPERATIONS`; each op's input JSON Schema is declared by the
+adapter in `nativeOperationSchemas` (for the MCP generator). M3 baseline:
+
+- `podcast` — `POST /api/v3/podcast/sse` (validated request + SSE event parsing)
+- `simultaneous-interpretation` — **validated stub**: the official protocol is
+  WSS + protobuf (`wss://openspeech.bytedance.com/api/v4/ast/v2/translate`), which
+  `ctx.fetch` cannot carry. The op returns a complete request plan with a `todo` marker.
+
+Also implemented: `translation` (`matx_translate`), `meeting-notes` (lark submit/query),
+`hotword-table` (`/api/proxy/invoke`), `voice-clone` / `voice-design` / `voice-query`,
+`raw-request`, and `console-management` (a **validated stub** — HMAC request signing
+is a TODO).
+
+## Realtime session
+
+`session.ts` defines `RealtimeSessionConfig`, `RealtimeSocketFactory` and
+`RealtimeSessionHandle` (open/send/receive/close) — deliberately **not** modelled as
+submit/poll. `openRealtimeSession()` returns an `InMemoryRealtimeSession` placeholder
+or wraps a host-injected socket. TODO: the real WSS transport needs a socket factory
+injected by the host (`AdapterContext` only provides `fetch`).
+
+## Node-only subpath
+
+`@modelbay/doubao-speech/asr` exports the `node:zlib`-based streaming ASR frame codec
+(`encodeAsrFrame` / `decodeAsrFrame`). It is excluded from the root entry. Wiring it to
+a real WebSocket session is a TODO (see `nodeAsrTodo`).
+
+## Errors and redaction
+
+All failures are `ProviderError`; the raw upstream code/message is kept in
+`error.cause` with credentials scrubbed. POST submissions are never retryable and
+truncated chunked streams are flagged `outcome: 'unknown'`. Recorded fixtures under
+`test/fixtures/` have `X-Api-Key` replaced with `<redacted>`.

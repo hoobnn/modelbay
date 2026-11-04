@@ -1,0 +1,18 @@
+{
+  "note": "Voice clone (S_ slot) with inline base64 audio.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/tts/voice_clone",
+    "method": "POST",
+    "headers": { "Content-Type": "application/json", "X-Api-Key": "<redacted>" },
+    "body": {
+      "speaker_id": "S_test123",
+      "language": 0,
+      "audio": { "data": "AQID", "format": "wav" },
+      "extra_params": { "enable_audio_denoise": false, "disable_volume_normalization": true }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "code": 0, "data": { "status": 1 } }
+  }
+}

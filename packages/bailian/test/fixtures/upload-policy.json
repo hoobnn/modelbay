@@ -1,0 +1,26 @@
+{
+  "note": "GET upload policy for OSS asset upload, credentials redacted.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/uploads?action=getPolicy&model=wan3.0-video",
+    "method": "GET",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "upload_host": "https://oss.example.com",
+        "upload_dir": "tmp/123",
+        "oss_access_key_id": "<redacted>",
+        "signature": "<redacted>",
+        "policy": "<redacted>",
+        "x_oss_object_acl": "private",
+        "x_oss_forbid_overwrite": "true"
+      },
+      "request_id": "req-upload-1"
+    }
+  }
+}

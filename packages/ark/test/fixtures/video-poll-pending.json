@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/cgt-2026-recorded-0001",
+    "headers": { "Authorization": "Bearer <redacted>" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "cgt-2026-recorded-0001",
+      "status": "running",
+      "progress": 40
+    }
+  }
+}

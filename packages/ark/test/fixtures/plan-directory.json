@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://ark.cn-beijing.volcengineapi.com/?Action=ListArkAgentPlanModel&Version=2024-01-01",
+    "headers": {
+      "Authorization": "HMAC-SHA256 Credential=<redacted>/20261104/cn-beijing/ark/request, SignedHeaders=host;x-content-sha256;x-date, Signature=<redacted>",
+      "X-Date": "20261104T000000Z",
+      "X-Content-Sha256": "<redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": { "Edition": "personal" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "ResponseMetadata": { "RequestId": "<redacted>" },
+      "Result": {
+        "Datas": [
+          { "ModelID": "doubao-seed-2.1-pro" },
+          { "ModelID": "doubao-seedream-5.0-pro" },
+          { "ModelID": "doubao-seed-2.1-pro" }
+        ]
+      }
+    }
+  }
+}

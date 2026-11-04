@@ -1,0 +1,21 @@
+{
+  "note": "audio.music via /v1/music_generation returns hex audio.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/music_generation",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "model": "music-3.0",
+      "prompt": "轻快的钢琴",
+      "lyrics": "",
+      "is_instrumental": true,
+      "stream": false,
+      "output_format": "hex",
+      "audio_setting": { "format": "mp3", "sample_rate": 44100, "bitrate": 256000 }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "data": { "audio": "aabb" } }
+  }
+}

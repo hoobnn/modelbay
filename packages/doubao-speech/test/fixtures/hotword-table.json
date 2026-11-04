@@ -1,0 +1,17 @@
+{
+  "note": "Hotword table management through the proxy invoke endpoint.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/proxy/invoke?Action=ListBoostingTable",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>",
+      "X-Api-Resource-Id": "volc.speech.hotword"
+    },
+    "body": { "page": 1 }
+  },
+  "response": {
+    "status": 200,
+    "body": { "code": 0, "data": { "tables": [] } }
+  }
+}

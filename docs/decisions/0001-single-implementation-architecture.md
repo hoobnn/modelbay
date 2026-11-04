@@ -19,12 +19,12 @@
 1. 新建独立仓库 Modelbay，用 TypeScript 维护这四家平台（外加 OpenAI）唯一的一份实现。plein 和 MCP 都只是它的消费方。命名和许可见 [0002](0002-naming-license-and-namespaces.md)。
 2. 分四层：
 
-   | 层 | 包 | 职责 |
-   | --- | --- | --- |
-   | 核心运行时 | `@modelbay/core` | 能力类型、输入输出、错误归一化、HTTP（重试 / 超时 / 代理）、异步任务生命周期、按声明校验、素材上传策略接口 |
-   | 模型声明 | 放在各适配器包内 | 纯数据，格式见 [0003](0003-capabilities-and-model-declarations.md) |
-   | 平台适配器 | `@modelbay/ark`、`@modelbay/bailian`、`@modelbay/minimax`、`@modelbay/doubao-speech`、`@modelbay/openai` | 只写各家不同的部分：鉴权、路由、请求和响应映射、错误码映射 |
-   | 消费方 | `modelbay`（汇总入口）、`@modelbay/mcp`、`@modelbay/cli`，以及 plein 的插件包装 | 不包含平台逻辑 |
+   | 层         | 包                                                                                                       | 职责                                                                                                       |
+   | ---------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+   | 核心运行时 | `@modelbay/core`                                                                                         | 能力类型、输入输出、错误归一化、HTTP（重试 / 超时 / 代理）、异步任务生命周期、按声明校验、素材上传策略接口 |
+   | 模型声明   | 放在各适配器包内                                                                                         | 纯数据，格式见 [0003](0003-capabilities-and-model-declarations.md)                                         |
+   | 平台适配器 | `@modelbay/ark`、`@modelbay/bailian`、`@modelbay/minimax`、`@modelbay/doubao-speech`、`@modelbay/openai` | 只写各家不同的部分：鉴权、路由、请求和响应映射、错误码映射                                                 |
+   | 消费方     | `modelbay`（汇总入口）、`@modelbay/mcp`、`@modelbay/cli`，以及 plein 的插件包装                          | 不包含平台逻辑                                                                                             |
 
 3. 文本对话（`text.chat`）走 Vercel AI SDK 的 OpenAI 兼容层，不再给每家写专门的对话适配。
 4. 核心通过接口注入宿主差异，并自带默认实现：

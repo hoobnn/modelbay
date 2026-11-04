@@ -1,0 +1,37 @@
+{
+  "name": "@modelbay/ark",
+  "version": "0.1.0",
+  "description": "Volcengine Ark adapter (pay-as-you-go and plan channels)",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./tos": {
+      "types": "./dist/node/index.d.mts",
+      "default": "./dist/node/index.mjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "build": "vp pack"
+  },
+  "peerDependencies": {
+    "zod": "^4.6"
+  },
+  "dependencies": {
+    "@modelbay/core": "workspace:*",
+    "@modelbay/doubao-speech": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "zod": "catalog:"
+  }
+}

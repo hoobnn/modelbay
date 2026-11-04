@@ -1,0 +1,12 @@
+{
+  "note": "list-video-tasks: GET /v2/query/video_generation with pagination filters.",
+  "request": {
+    "url": "https://api.minimax.cn/v2/query/video_generation?page_num=1&page_size=20",
+    "method": "GET",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "task_list": [] }
+  }
+}

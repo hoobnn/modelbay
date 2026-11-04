@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://ark.cn-beijing.volces.com/api/v3/models",
+    "headers": { "Authorization": "Bearer <redacted>" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        { "id": "doubao-seed-2-1-pro-260628", "owned_by": "volcengine", "created": 1760000000 },
+        { "id": "doubao-seedream-5-0-pro-260628" },
+        { "id": "" }
+      ]
+    }
+  }
+}

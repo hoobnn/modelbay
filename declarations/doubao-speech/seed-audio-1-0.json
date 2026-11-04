@@ -1,0 +1,34 @@
+{
+  "canonicalId": "doubao/seed-audio-1.0",
+  "id": "seed-audio-1.0",
+  "title": "Seed Audio 1.0",
+  "capabilities": ["audio.music", "audio.sfx"],
+  "limits": {
+    "duration": {
+      "min": 1,
+      "max": 120
+    },
+    "promptMaxLength": 2971
+  },
+  "channels": [
+    {
+      "channel": "doubao-speech",
+      "id": "seed-audio-1.0"
+    }
+  ],
+  "aliases": {
+    "official": [],
+    "short": []
+  },
+  "lifecycle": {
+    "status": "active",
+    "source": {
+      "url": "https://www.volcengine.com/docs/6561/79820",
+      "checkedAt": "2026-11-04"
+    }
+  },
+  "source": {
+    "url": "https://www.volcengine.com/docs/6561/79820",
+    "checkedAt": "2026-11-04"
+  }
+}

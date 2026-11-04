@@ -1,0 +1,26 @@
+{
+  "note": "text.chat through the OpenAI-compatible chat/completions endpoint.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "qwen3.8-max",
+      "messages": [{ "role": "user", "content": "你好" }],
+      "stream": false
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "choices": [
+        { "message": { "role": "assistant", "content": "你好！" }, "finish_reason": "stop" }
+      ],
+      "usage": { "prompt_tokens": 5, "completion_tokens": 3 },
+      "request_id": "req-chat-1"
+    }
+  }
+}

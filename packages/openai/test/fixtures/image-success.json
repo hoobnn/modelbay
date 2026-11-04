@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/images/generations",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "gpt-image-2-5-sunburst",
+      "prompt": "一只猫",
+      "n": 1,
+      "output_format": "png",
+      "size": "auto"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [{ "b64_json": "iVBORw0KGgo=" }, { "b64_json": "AAAA" }]
+    }
+  }
+}

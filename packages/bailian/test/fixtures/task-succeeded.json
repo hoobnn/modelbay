@@ -1,0 +1,19 @@
+{
+  "note": "GET /api/v1/tasks/{id} SUCCEEDED with a video_url.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/tasks/task-123",
+    "method": "GET",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": { "task_status": "SUCCEEDED", "video_url": "http://example.com/v.mp4" },
+      "usage": { "duration": 5 },
+      "request_id": "req-task-1"
+    }
+  }
+}

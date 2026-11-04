@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "gpt-6-1-sol",
+      "messages": [{ "role": "user", "content": "Hello" }],
+      "stream": false,
+      "reasoning_effort": "high",
+      "temperature": 0.5,
+      "max_tokens": 512
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "chatcmpl-openai-recorded-0001",
+      "choices": [
+        {
+          "index": 0,
+          "message": { "role": "assistant", "content": "Hi there!" },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": { "prompt_tokens": 8, "completion_tokens": 4, "total_tokens": 12 }
+    }
+  }
+}

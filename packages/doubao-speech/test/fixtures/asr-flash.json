@@ -1,0 +1,27 @@
+{
+  "note": "Flash ASR (bigmodel) returns text plus millisecond utterances.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/auc/bigmodel/recognize/flash",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>",
+      "X-Api-Resource-Id": "volc.bigasr.auc_turbo",
+      "X-Api-Sequence": "-1"
+    },
+    "body": {
+      "audio": { "data": "AQID", "format": "wav" },
+      "request": {
+        "model_name": "bigmodel",
+        "enable_itn": true,
+        "enable_punc": true,
+        "show_utterances": true
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "X-Api-Status-Code": "20000000" },
+    "text": "{\"code\":0,\"result\":{\"text\":\"今天讨论模型迁移。\",\"utterances\":[{\"text\":\"今天\",\"start_time\":0,\"end_time\":1000}]}}"
+  }
+}

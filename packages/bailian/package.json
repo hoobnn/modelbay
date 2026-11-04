@@ -1,0 +1,36 @@
+{
+  "name": "@modelbay/bailian",
+  "version": "0.1.0",
+  "description": "Alibaba Bailian / DashScope adapter",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./image-edit": {
+      "types": "./dist/node/image-edit.d.mts",
+      "default": "./dist/node/image-edit.mjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "build": "vp pack"
+  },
+  "peerDependencies": {
+    "zod": "^4.6"
+  },
+  "dependencies": {
+    "@modelbay/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "zod": "catalog:"
+  }
+}

@@ -1,0 +1,1408 @@
+{
+  "checkedAt": "2026-11-04",
+  "inventory": {
+    "providers": 7,
+    "models": 84,
+    "mock": 8,
+    "staticModels": 76
+  },
+  "declarations": 66,
+  "platformDist": {
+    "ark": 32,
+    "bailian": 11,
+    "minimax": 12,
+    "doubao-speech": 5,
+    "openai": 6
+  },
+  "platformMap": [
+    {
+      "providerId": "minimax/api",
+      "platform": "minimax",
+      "channel": "minimax",
+      "vendor": "minimax"
+    },
+    {
+      "providerId": "doubao/speech",
+      "platform": "doubao-speech",
+      "channel": "doubao-speech",
+      "vendor": "doubao"
+    },
+    {
+      "providerId": "openai/api",
+      "platform": "openai",
+      "channel": "openai",
+      "vendor": "openai"
+    },
+    {
+      "providerId": "aliyun/bailian",
+      "platform": "bailian",
+      "channel": "bailian",
+      "vendor": "aliyun"
+    },
+    {
+      "providerId": "volc/ark-plan",
+      "platform": "ark",
+      "channel": "ark-plan",
+      "vendor": "volc"
+    },
+    {
+      "providerId": "volc/ark",
+      "platform": "ark",
+      "channel": "ark",
+      "vendor": "volc"
+    }
+  ],
+  "platformUrl": {
+    "ark": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
+    "bailian": "https://help.aliyun.com/zh/model-studio/models",
+    "minimax": "https://platform.minimax.cn/docs/api-reference",
+    "doubao-speech": "https://www.volcengine.com/docs/6561/79820",
+    "openai": "https://platform.openai.com/docs/models"
+  },
+  "officialLinks": {
+    "minimaxMusic": "https://platform.minimax.cn/docs/api-reference/music-generation",
+    "arkDeprecation": "https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh",
+    "bailianTts": "https://help.aliyun.com/zh/model-studio/tts-model"
+  },
+  "skippedMock": [
+    "agent",
+    "agent-vision",
+    "chat",
+    "image",
+    "image-process",
+    "image-edit",
+    "video",
+    "audio"
+  ],
+  "merged": [
+    {
+      "id": "doubao-seedream-5-0-pro-260628",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": []
+    },
+    {
+      "id": "doubao-seedream-5-0-flash-260915",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": []
+    },
+    {
+      "id": "doubao-seedance-2-5-260628",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": [
+        {
+          "field": "options",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "{\"def\":{\"type\":\"object\",\"shape\":{\"adaptive_duration\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"return_last_frame\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"service_tier\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"default\":\"default\",\"flex\":\"flex\"}},\"type\":\"enum\",\"enum\":{\"default\":\"default\",\"flex\":\"flex\"},\"options\":[\"default\",\"flex\"]}},\"type\":\"optional\"},\"watermark\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"omni_reference_task_type\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"}},\"type\":\"enum\",\"enum\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"},\"options\":[\"auto\",\"reference\",\"edit\",\"extend\"]}},\"type\":\"optional\"},\"draft\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"}}},\"type\":\"object\"}",
+          "otherValue": "{\"def\":{\"type\":\"object\",\"shape\":{\"adaptive_duration\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"return_last_frame\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"service_tier\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"default\":\"default\",\"flex\":\"flex\"}},\"type\":\"enum\",\"enum\":{\"default\":\"default\",\"flex\":\"flex\"},\"options\":[\"default\",\"flex\"]}},\"type\":\"optional\"},\"watermark\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"omni_reference_task_type\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"}},\"type\":\"enum\",\"enum\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"},\"options\":[\"auto\",\"reference\",\"edit\",\"extend\"]}},\"type\":\"optional\"}},\"checks\":[]},\"type\":\"object\"}"
+        }
+      ]
+    },
+    {
+      "id": "doubao-seedance-2-0-260128",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": []
+    },
+    {
+      "id": "doubao-seedance-2-0-fast-260128",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": []
+    },
+    {
+      "id": "doubao-seedance-2-0-mini-260615",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": []
+    },
+    {
+      "id": "custom-image",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": []
+    },
+    {
+      "id": "custom-video",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": []
+    },
+    {
+      "id": "doubao-seed-evolving",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": [
+        {
+          "field": "title",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "\"Doubao Seed Evolving（快速迭代）\"",
+          "otherValue": "\"doubao-seed-evolving\""
+        },
+        {
+          "field": "description",
+          "providerId": "volc/ark-plan",
+          "otherValue": "\"Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位\""
+        },
+        {
+          "field": "features",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "[\"tools\",\"vision\",\"structured\"]",
+          "otherValue": "[\"tools\",\"structured\",\"vision\"]"
+        },
+        {
+          "field": "agentOnly",
+          "providerId": "volc/ark-plan",
+          "otherValue": "true"
+        }
+      ]
+    },
+    {
+      "id": "custom-chat",
+      "sources": ["volc/ark-plan", "volc/ark"],
+      "channels": ["ark", "ark-plan"],
+      "primary": "volc/ark",
+      "fieldDiffs": [
+        {
+          "field": "title",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "\"自定义对话模型（设置中填写）\"",
+          "otherValue": "\"自定义套餐对话模型\""
+        },
+        {
+          "field": "features",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "[\"structured\"]",
+          "otherValue": "[\"tools\",\"structured\"]"
+        },
+        {
+          "field": "agentOnly",
+          "providerId": "volc/ark-plan",
+          "otherValue": "true"
+        }
+      ]
+    }
+  ],
+  "lifecycleRules": [
+    {
+      "key": "minimax/music-3.0",
+      "status": "closed-to-new-accounts",
+      "url": "https://platform.minimax.cn/docs/api-reference/music-generation",
+      "note": "inventory.md 第三节：自 2026-08-20 起付费接口不再向新用户开放，历史付费用户可继续使用；music-3.0 仍是推荐型号"
+    },
+    {
+      "key": "seedream-5.0-lite",
+      "status": "sunsetting",
+      "url": "https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh",
+      "note": "inventory.md 第三节 + 下线公告：停止新购，2026-11-24 14:00（UTC+8）关停"
+    },
+    {
+      "key": "qwen-audio-3.0-tts-flash",
+      "status": "superseded",
+      "url": "https://help.aliyun.com/zh/model-studio/tts-model",
+      "note": "inventory.md 第三节：官方推荐 qwen-audio-3.1-tts-flash，3.0-flash 记为 superseded"
+    }
+  ],
+  "ruleApplied": [
+    {
+      "canonicalId": "minimax/music-3.0",
+      "id": "music-3.0",
+      "kind": "rule",
+      "key": "minimax/music-3.0",
+      "from": "deprecated: true",
+      "to": "closed-to-new-accounts",
+      "url": "https://platform.minimax.cn/docs/api-reference/music-generation",
+      "note": "inventory.md 第三节：自 2026-08-20 起付费接口不再向新用户开放，历史付费用户可继续使用；music-3.0 仍是推荐型号"
+    },
+    {
+      "canonicalId": "volc/doubao-seedream-5-0-260128",
+      "id": "doubao-seedream-5-0-260128",
+      "kind": "rule",
+      "key": "seedream-5.0-lite",
+      "from": "deprecated: true",
+      "to": "sunsetting",
+      "url": "https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh",
+      "note": "inventory.md 第三节 + 下线公告：停止新购，2026-11-24 14:00（UTC+8）关停"
+    }
+  ],
+  "pendingReview": [
+    {
+      "providerId": "minimax/api",
+      "id": "MiniMax-M2.7",
+      "deprecated": true,
+      "description": "已停止向新用户开放；按量付费存量用户可调用至 2026-11-18，请提前迁移至 M3.1 Flash",
+      "missingSource": "未找到对应的官方下线/状态公告原文",
+      "handling": "lifecycle.status 保持 active，不写入任何非 active 状态"
+    },
+    {
+      "providerId": "aliyun/bailian",
+      "id": "qwen3-tts-instruct-flash",
+      "deprecated": true,
+      "description": "已于 2026-10-10 下线；仅保留旧画布引用，请改用 qwen3-tts-flash 或豆包语音",
+      "missingSource": "未找到对应的官方下线/状态公告原文",
+      "handling": "lifecycle.status 保持 active，不写入任何非 active 状态"
+    },
+    {
+      "providerId": "volc/ark-plan",
+      "id": "minimax-m3",
+      "deprecated": true,
+      "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位",
+      "missingSource": "未找到对应的官方下线/状态公告原文",
+      "handling": "lifecycle.status 保持 active，不写入任何非 active 状态"
+    },
+    {
+      "providerId": "volc/ark-plan",
+      "id": "kimi-k2.7-code",
+      "deprecated": true,
+      "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位",
+      "missingSource": "未找到对应的官方下线/状态公告原文",
+      "handling": "lifecycle.status 保持 active，不写入任何非 active 状态"
+    }
+  ],
+  "notTriggered": [
+    {
+      "item": "qwen-audio-3.0-tts-flash → superseded / qwen-audio-3.1-tts-flash → 默认 / qwen3-tts-flash 不当默认",
+      "reason": "plein 静态清单不含 Qwen-Audio-TTS 3.0/3.1 系列（仅在 MCP 侧），本次无对应声明；默认模型由 core 的 selectDefaultModel() 统一选，声明数据不写死默认标记；qwen3-tts-flash 保持 active。M3 补齐该系列后再落地默认切换。"
+    }
+  ],
+  "aliases": {
+    "shortWords": [
+      "audio",
+      "fast",
+      "flash",
+      "hd",
+      "highspeed",
+      "lite",
+      "max",
+      "mini",
+      "plus",
+      "pro",
+      "qwen",
+      "seedance",
+      "wan",
+      "z"
+    ],
+    "adopted": [
+      {
+        "canonicalId": "minimax/MiniMax-H3-Highspeed",
+        "short": ["highspeed"]
+      },
+      {
+        "canonicalId": "minimax/speech-2.8-hd",
+        "short": ["hd"]
+      },
+      {
+        "canonicalId": "aliyun/qwen3.7-plus",
+        "short": ["plus"]
+      },
+      {
+        "canonicalId": "volc/doubao-seed-2.0-mini",
+        "short": ["mini"]
+      }
+    ],
+    "omitted": [
+      {
+        "word": "flash",
+        "owners": [
+          "MiniMax-M3.1-Flash",
+          "qwen3.8-flash",
+          "qwen3-tts-flash",
+          "qwen3-tts-instruct-flash",
+          "deepseek-v4-flash",
+          "deepseek-v4.1-flash",
+          "glm-5.3-flash"
+        ],
+        "reason": "全局冲突（多个型号共用该简称）"
+      },
+      {
+        "word": "lite",
+        "owners": ["MiniMax-H3-Lite", "doubao-seed-2.1-lite"],
+        "reason": "全局冲突（多个型号共用该简称）"
+      },
+      {
+        "word": "max",
+        "owners": ["MiniMax-H3-Max", "qwen3.8-max"],
+        "reason": "全局冲突（多个型号共用该简称）"
+      },
+      {
+        "word": "pro",
+        "owners": [
+          "qwen-image-3.0-pro",
+          "wan2.7-image-pro",
+          "doubao-seed-2.1-pro",
+          "deepseek-v4-pro",
+          "kimi-k3.1-pro"
+        ],
+        "reason": "全局冲突（多个型号共用该简称）"
+      },
+      {
+        "word": "audio",
+        "owners": [],
+        "reason": "MCP 工具清单里是工具级参数别名或无法唯一映射到某个模型"
+      },
+      {
+        "word": "fast",
+        "owners": [],
+        "reason": "MCP 工具清单里是工具级参数别名或无法唯一映射到某个模型"
+      },
+      {
+        "word": "qwen",
+        "owners": [],
+        "reason": "MCP 工具清单里是工具级参数别名或无法唯一映射到某个模型"
+      },
+      {
+        "word": "seedance",
+        "owners": [],
+        "reason": "MCP 工具清单里是工具级参数别名或无法唯一映射到某个模型"
+      },
+      {
+        "word": "wan",
+        "owners": [],
+        "reason": "MCP 工具清单里是工具级参数别名或无法唯一映射到某个模型"
+      },
+      {
+        "word": "z",
+        "owners": [],
+        "reason": "MCP 工具清单里是工具级参数别名或无法唯一映射到某个模型"
+      }
+    ],
+    "official": [
+      {
+        "canonicalId": "volc/doubao-seedream-5-0-260128",
+        "alias": "doubao-seedream-5-0-lite-260128",
+        "note": "下线公告里的另一个官方 ID"
+      }
+    ]
+  },
+  "fieldTransforms": {
+    "deprecated": "映射为 lifecycle.status（见生命周期章节），声明不写 deprecated 字段",
+    "options": "zod 内部结构转成 optionsSchema（简单 JSON Schema），声明不写 options / def / innerType",
+    "added": "新增 canonicalId、channels、aliases、lifecycle、source（0003 要求）",
+    "capabilities": "沿用 plein 原有 9 种能力，未硬加 0003 新增的归一化能力"
+  },
+  "perDeclaration": [
+    {
+      "platform": "minimax",
+      "slug": "minimax-m3",
+      "file": "declarations/minimax/minimax-m3.json",
+      "canonicalId": "minimax/MiniMax-M3",
+      "id": "MiniMax-M3",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "MiniMax-M3"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "minimax-m3-1-flash",
+      "file": "declarations/minimax/minimax-m3-1-flash.json",
+      "canonicalId": "minimax/MiniMax-M3.1-Flash",
+      "id": "MiniMax-M3.1-Flash",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "MiniMax-M3.1-Flash"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "minimax-m2-7",
+      "file": "declarations/minimax/minimax-m2-7.json",
+      "canonicalId": "minimax/MiniMax-M2.7",
+      "id": "MiniMax-M2.7",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "MiniMax-M2.7"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "image-01",
+      "file": "declarations/minimax/image-01.json",
+      "canonicalId": "minimax/image-01",
+      "id": "image-01",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "image-01"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "image-01-live",
+      "file": "declarations/minimax/image-01-live.json",
+      "canonicalId": "minimax/image-01-live",
+      "id": "image-01-live",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "image-01-live"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "minimax-h3",
+      "file": "declarations/minimax/minimax-h3.json",
+      "canonicalId": "minimax/MiniMax-H3",
+      "id": "MiniMax-H3",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "MiniMax-H3"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "minimax-h3-highspeed",
+      "file": "declarations/minimax/minimax-h3-highspeed.json",
+      "canonicalId": "minimax/MiniMax-H3-Highspeed",
+      "id": "MiniMax-H3-Highspeed",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "MiniMax-H3-Highspeed"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "minimax-h3-lite",
+      "file": "declarations/minimax/minimax-h3-lite.json",
+      "canonicalId": "minimax/MiniMax-H3-Lite",
+      "id": "MiniMax-H3-Lite",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "MiniMax-H3-Lite"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "minimax-h3-max",
+      "file": "declarations/minimax/minimax-h3-max.json",
+      "canonicalId": "minimax/MiniMax-H3-Max",
+      "id": "MiniMax-H3-Max",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "MiniMax-H3-Max"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "speech-2-8-hd",
+      "file": "declarations/minimax/speech-2-8-hd.json",
+      "canonicalId": "minimax/speech-2.8-hd",
+      "id": "speech-2.8-hd",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "speech-2.8-hd"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "speech-2-8-turbo",
+      "file": "declarations/minimax/speech-2-8-turbo.json",
+      "canonicalId": "minimax/speech-2.8-turbo",
+      "id": "speech-2.8-turbo",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "speech-2.8-turbo"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "minimax",
+      "slug": "music-3-0",
+      "file": "declarations/minimax/music-3-0.json",
+      "canonicalId": "minimax/music-3.0",
+      "id": "music-3.0",
+      "sources": [
+        {
+          "providerId": "minimax/api",
+          "id": "music-3.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "doubao-speech",
+      "slug": "seed-tts-2-0",
+      "file": "declarations/doubao-speech/seed-tts-2-0.json",
+      "canonicalId": "doubao/seed-tts-2.0",
+      "id": "seed-tts-2.0",
+      "sources": [
+        {
+          "providerId": "doubao/speech",
+          "id": "seed-tts-2.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "doubao-speech",
+      "slug": "seed-icl-1-0",
+      "file": "declarations/doubao-speech/seed-icl-1-0.json",
+      "canonicalId": "doubao/seed-icl-1.0",
+      "id": "seed-icl-1.0",
+      "sources": [
+        {
+          "providerId": "doubao/speech",
+          "id": "seed-icl-1.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "doubao-speech",
+      "slug": "seed-icl-2-0",
+      "file": "declarations/doubao-speech/seed-icl-2-0.json",
+      "canonicalId": "doubao/seed-icl-2.0",
+      "id": "seed-icl-2.0",
+      "sources": [
+        {
+          "providerId": "doubao/speech",
+          "id": "seed-icl-2.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "doubao-speech",
+      "slug": "seed-audio-1-0",
+      "file": "declarations/doubao-speech/seed-audio-1-0.json",
+      "canonicalId": "doubao/seed-audio-1.0",
+      "id": "seed-audio-1.0",
+      "sources": [
+        {
+          "providerId": "doubao/speech",
+          "id": "seed-audio-1.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "doubao-speech",
+      "slug": "bigmodel",
+      "file": "declarations/doubao-speech/bigmodel.json",
+      "canonicalId": "doubao/bigmodel",
+      "id": "bigmodel",
+      "sources": [
+        {
+          "providerId": "doubao/speech",
+          "id": "bigmodel"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "openai",
+      "slug": "gpt-6-1-sol",
+      "file": "declarations/openai/gpt-6-1-sol.json",
+      "canonicalId": "openai/gpt-6.1-sol",
+      "id": "gpt-6.1-sol",
+      "sources": [
+        {
+          "providerId": "openai/api",
+          "id": "gpt-6.1-sol"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "openai",
+      "slug": "gpt-6-astra",
+      "file": "declarations/openai/gpt-6-astra.json",
+      "canonicalId": "openai/gpt-6-astra",
+      "id": "gpt-6-astra",
+      "sources": [
+        {
+          "providerId": "openai/api",
+          "id": "gpt-6-astra"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "openai",
+      "slug": "gpt-6-1-terra",
+      "file": "declarations/openai/gpt-6-1-terra.json",
+      "canonicalId": "openai/gpt-6.1-terra",
+      "id": "gpt-6.1-terra",
+      "sources": [
+        {
+          "providerId": "openai/api",
+          "id": "gpt-6.1-terra"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "openai",
+      "slug": "gpt-6-luna",
+      "file": "declarations/openai/gpt-6-luna.json",
+      "canonicalId": "openai/gpt-6-luna",
+      "id": "gpt-6-luna",
+      "sources": [
+        {
+          "providerId": "openai/api",
+          "id": "gpt-6-luna"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "openai",
+      "slug": "gpt-image-2-5-sunburst",
+      "file": "declarations/openai/gpt-image-2-5-sunburst.json",
+      "canonicalId": "openai/gpt-image-2.5-sunburst",
+      "id": "gpt-image-2.5-sunburst",
+      "sources": [
+        {
+          "providerId": "openai/api",
+          "id": "gpt-image-2.5-sunburst"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "openai",
+      "slug": "gpt-image-2-5-flare",
+      "file": "declarations/openai/gpt-image-2-5-flare.json",
+      "canonicalId": "openai/gpt-image-2.5-flare",
+      "id": "gpt-image-2.5-flare",
+      "sources": [
+        {
+          "providerId": "openai/api",
+          "id": "gpt-image-2.5-flare"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "qwen3-8-max",
+      "file": "declarations/bailian/qwen3-8-max.json",
+      "canonicalId": "aliyun/qwen3.8-max",
+      "id": "qwen3.8-max",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "qwen3.8-max"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "qwen3-7-plus",
+      "file": "declarations/bailian/qwen3-7-plus.json",
+      "canonicalId": "aliyun/qwen3.7-plus",
+      "id": "qwen3.7-plus",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "qwen3.7-plus"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "qwen3-8-flash",
+      "file": "declarations/bailian/qwen3-8-flash.json",
+      "canonicalId": "aliyun/qwen3.8-flash",
+      "id": "qwen3.8-flash",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "qwen3.8-flash"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "qwen-image-3-0-pro",
+      "file": "declarations/bailian/qwen-image-3-0-pro.json",
+      "canonicalId": "aliyun/qwen-image-3.0-pro",
+      "id": "qwen-image-3.0-pro",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "qwen-image-3.0-pro"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "qwen-image-3-0",
+      "file": "declarations/bailian/qwen-image-3-0.json",
+      "canonicalId": "aliyun/qwen-image-3.0",
+      "id": "qwen-image-3.0",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "qwen-image-3.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "wan2-7-image-pro",
+      "file": "declarations/bailian/wan2-7-image-pro.json",
+      "canonicalId": "aliyun/wan2.7-image-pro",
+      "id": "wan2.7-image-pro",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "wan2.7-image-pro"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "wanx2-1-imageedit",
+      "file": "declarations/bailian/wanx2-1-imageedit.json",
+      "canonicalId": "aliyun/wanx2.1-imageedit",
+      "id": "wanx2.1-imageedit",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "wanx2.1-imageedit"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "wan3-0-video",
+      "file": "declarations/bailian/wan3-0-video.json",
+      "canonicalId": "aliyun/wan3.0-video",
+      "id": "wan3.0-video",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "wan3.0-video"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "wan3-0-video-prime",
+      "file": "declarations/bailian/wan3-0-video-prime.json",
+      "canonicalId": "aliyun/wan3.0-video-prime",
+      "id": "wan3.0-video-prime",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "wan3.0-video-prime"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "qwen3-tts-flash",
+      "file": "declarations/bailian/qwen3-tts-flash.json",
+      "canonicalId": "aliyun/qwen3-tts-flash",
+      "id": "qwen3-tts-flash",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "qwen3-tts-flash"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "bailian",
+      "slug": "qwen3-tts-instruct-flash",
+      "file": "declarations/bailian/qwen3-tts-instruct-flash.json",
+      "canonicalId": "aliyun/qwen3-tts-instruct-flash",
+      "id": "qwen3-tts-instruct-flash",
+      "sources": [
+        {
+          "providerId": "aliyun/bailian",
+          "id": "qwen3-tts-instruct-flash"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seedream-5-0-pro-260628",
+      "file": "declarations/ark/doubao-seedream-5-0-pro-260628.json",
+      "canonicalId": "volc/doubao-seedream-5-0-pro-260628",
+      "id": "doubao-seedream-5-0-pro-260628",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seedream-5-0-pro-260628"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seedream-5-0-pro-260628"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seedream-5-0-flash-260915",
+      "file": "declarations/ark/doubao-seedream-5-0-flash-260915.json",
+      "canonicalId": "volc/doubao-seedream-5-0-flash-260915",
+      "id": "doubao-seedream-5-0-flash-260915",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seedream-5-0-flash-260915"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seedream-5-0-flash-260915"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seedance-2-5-260628",
+      "file": "declarations/ark/doubao-seedance-2-5-260628.json",
+      "canonicalId": "volc/doubao-seedance-2-5-260628",
+      "id": "doubao-seedance-2-5-260628",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seedance-2-5-260628"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seedance-2-5-260628"
+        }
+      ],
+      "fieldDiffs": [
+        {
+          "field": "options",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "{\"def\":{\"type\":\"object\",\"shape\":{\"adaptive_duration\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"return_last_frame\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"service_tier\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"default\":\"default\",\"flex\":\"flex\"}},\"type\":\"enum\",\"enum\":{\"default\":\"default\",\"flex\":\"flex\"},\"options\":[\"default\",\"flex\"]}},\"type\":\"optional\"},\"watermark\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"omni_reference_task_type\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"}},\"type\":\"enum\",\"enum\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"},\"options\":[\"auto\",\"reference\",\"edit\",\"extend\"]}},\"type\":\"optional\"},\"draft\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"}}},\"type\":\"object\"}",
+          "otherValue": "{\"def\":{\"type\":\"object\",\"shape\":{\"adaptive_duration\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"return_last_frame\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"service_tier\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"default\":\"default\",\"flex\":\"flex\"}},\"type\":\"enum\",\"enum\":{\"default\":\"default\",\"flex\":\"flex\"},\"options\":[\"default\",\"flex\"]}},\"type\":\"optional\"},\"watermark\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"boolean\"},\"type\":\"boolean\"}},\"type\":\"optional\"},\"omni_reference_task_type\":{\"def\":{\"type\":\"optional\",\"innerType\":{\"def\":{\"type\":\"enum\",\"entries\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"}},\"type\":\"enum\",\"enum\":{\"auto\":\"auto\",\"reference\":\"reference\",\"edit\":\"edit\",\"extend\":\"extend\"},\"options\":[\"auto\",\"reference\",\"edit\",\"extend\"]}},\"type\":\"optional\"}},\"checks\":[]},\"type\":\"object\"}"
+        }
+      ]
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seedance-2-0-260128",
+      "file": "declarations/ark/doubao-seedance-2-0-260128.json",
+      "canonicalId": "volc/doubao-seedance-2-0-260128",
+      "id": "doubao-seedance-2-0-260128",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seedance-2-0-260128"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seedance-2-0-260128"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seedance-2-0-fast-260128",
+      "file": "declarations/ark/doubao-seedance-2-0-fast-260128.json",
+      "canonicalId": "volc/doubao-seedance-2-0-fast-260128",
+      "id": "doubao-seedance-2-0-fast-260128",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seedance-2-0-fast-260128"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seedance-2-0-fast-260128"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seedance-2-0-mini-260615",
+      "file": "declarations/ark/doubao-seedance-2-0-mini-260615.json",
+      "canonicalId": "volc/doubao-seedance-2-0-mini-260615",
+      "id": "doubao-seedance-2-0-mini-260615",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seedance-2-0-mini-260615"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seedance-2-0-mini-260615"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "custom-image",
+      "file": "declarations/ark/custom-image.json",
+      "canonicalId": "volc/custom-image",
+      "id": "custom-image",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "custom-image"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "custom-image"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "custom-video",
+      "file": "declarations/ark/custom-video.json",
+      "canonicalId": "volc/custom-video",
+      "id": "custom-video",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "custom-video"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "custom-video"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "ark-code-latest",
+      "file": "declarations/ark/ark-code-latest.json",
+      "canonicalId": "volc/ark-code-latest",
+      "id": "ark-code-latest",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "ark-code-latest"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "minimax-m3",
+      "file": "declarations/ark/minimax-m3.json",
+      "canonicalId": "volc/minimax-m3",
+      "id": "minimax-m3",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "minimax-m3"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "kimi-k2-7-code",
+      "file": "declarations/ark/kimi-k2-7-code.json",
+      "canonicalId": "volc/kimi-k2.7-code",
+      "id": "kimi-k2.7-code",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "kimi-k2.7-code"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-2-0-mini",
+      "file": "declarations/ark/doubao-seed-2-0-mini.json",
+      "canonicalId": "volc/doubao-seed-2.0-mini",
+      "id": "doubao-seed-2.0-mini",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seed-2.0-mini"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-2-1-lite",
+      "file": "declarations/ark/doubao-seed-2-1-lite.json",
+      "canonicalId": "volc/doubao-seed-2.1-lite",
+      "id": "doubao-seed-2.1-lite",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seed-2.1-lite"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-2-1-pro",
+      "file": "declarations/ark/doubao-seed-2-1-pro.json",
+      "canonicalId": "volc/doubao-seed-2.1-pro",
+      "id": "doubao-seed-2.1-pro",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seed-2.1-pro"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-evolving",
+      "file": "declarations/ark/doubao-seed-evolving.json",
+      "canonicalId": "volc/doubao-seed-evolving",
+      "id": "doubao-seed-evolving",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seed-evolving"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seed-evolving"
+        }
+      ],
+      "fieldDiffs": [
+        {
+          "field": "title",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "\"Doubao Seed Evolving（快速迭代）\"",
+          "otherValue": "\"doubao-seed-evolving\""
+        },
+        {
+          "field": "description",
+          "providerId": "volc/ark-plan",
+          "otherValue": "\"Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位\""
+        },
+        {
+          "field": "features",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "[\"tools\",\"vision\",\"structured\"]",
+          "otherValue": "[\"tools\",\"structured\",\"vision\"]"
+        },
+        {
+          "field": "agentOnly",
+          "providerId": "volc/ark-plan",
+          "otherValue": "true"
+        }
+      ]
+    },
+    {
+      "platform": "ark",
+      "slug": "deepseek-v4-flash",
+      "file": "declarations/ark/deepseek-v4-flash.json",
+      "canonicalId": "volc/deepseek-v4-flash",
+      "id": "deepseek-v4-flash",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "deepseek-v4-flash"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "deepseek-v4-pro",
+      "file": "declarations/ark/deepseek-v4-pro.json",
+      "canonicalId": "volc/deepseek-v4-pro",
+      "id": "deepseek-v4-pro",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "deepseek-v4-pro"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "deepseek-v4-1-flash",
+      "file": "declarations/ark/deepseek-v4-1-flash.json",
+      "canonicalId": "volc/deepseek-v4.1-flash",
+      "id": "deepseek-v4.1-flash",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "deepseek-v4.1-flash"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "deepseek-v4-1-flash-economy",
+      "file": "declarations/ark/deepseek-v4-1-flash-economy.json",
+      "canonicalId": "volc/deepseek-v4.1-flash-economy",
+      "id": "deepseek-v4.1-flash-economy",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "deepseek-v4.1-flash-economy"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "glm-5-3",
+      "file": "declarations/ark/glm-5-3.json",
+      "canonicalId": "volc/glm-5.3",
+      "id": "glm-5.3",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "glm-5.3"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "glm-5-3-flash",
+      "file": "declarations/ark/glm-5-3-flash.json",
+      "canonicalId": "volc/glm-5.3-flash",
+      "id": "glm-5.3-flash",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "glm-5.3-flash"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "kimi-k2-8-preview",
+      "file": "declarations/ark/kimi-k2-8-preview.json",
+      "canonicalId": "volc/kimi-k2.8-preview",
+      "id": "kimi-k2.8-preview",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "kimi-k2.8-preview"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "kimi-k3",
+      "file": "declarations/ark/kimi-k3.json",
+      "canonicalId": "volc/kimi-k3",
+      "id": "kimi-k3",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "kimi-k3"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "kimi-k3-1-pro",
+      "file": "declarations/ark/kimi-k3-1-pro.json",
+      "canonicalId": "volc/kimi-k3.1-pro",
+      "id": "kimi-k3.1-pro",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "kimi-k3.1-pro"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "custom-chat",
+      "file": "declarations/ark/custom-chat.json",
+      "canonicalId": "volc/custom-chat",
+      "id": "custom-chat",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "custom-chat"
+        },
+        {
+          "providerId": "volc/ark",
+          "id": "custom-chat"
+        }
+      ],
+      "fieldDiffs": [
+        {
+          "field": "title",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "\"自定义对话模型（设置中填写）\"",
+          "otherValue": "\"自定义套餐对话模型\""
+        },
+        {
+          "field": "features",
+          "providerId": "volc/ark-plan",
+          "primaryValue": "[\"structured\"]",
+          "otherValue": "[\"tools\",\"structured\"]"
+        },
+        {
+          "field": "agentOnly",
+          "providerId": "volc/ark-plan",
+          "otherValue": "true"
+        }
+      ]
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-tts-2-0",
+      "file": "declarations/ark/doubao-seed-tts-2-0.json",
+      "canonicalId": "volc/doubao-seed-tts-2.0",
+      "id": "doubao-seed-tts-2.0",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seed-tts-2.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-asr-2-0",
+      "file": "declarations/ark/doubao-seed-asr-2-0.json",
+      "canonicalId": "volc/doubao-seed-asr-2.0",
+      "id": "doubao-seed-asr-2.0",
+      "sources": [
+        {
+          "providerId": "volc/ark-plan",
+          "id": "doubao-seed-asr-2.0"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-2-1-pro-260628",
+      "file": "declarations/ark/doubao-seed-2-1-pro-260628.json",
+      "canonicalId": "volc/doubao-seed-2-1-pro-260628",
+      "id": "doubao-seed-2-1-pro-260628",
+      "sources": [
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seed-2-1-pro-260628"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-2-1-pro-260915",
+      "file": "declarations/ark/doubao-seed-2-1-pro-260915.json",
+      "canonicalId": "volc/doubao-seed-2-1-pro-260915",
+      "id": "doubao-seed-2-1-pro-260915",
+      "sources": [
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seed-2-1-pro-260915"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-2-1-lite-260915",
+      "file": "declarations/ark/doubao-seed-2-1-lite-260915.json",
+      "canonicalId": "volc/doubao-seed-2-1-lite-260915",
+      "id": "doubao-seed-2-1-lite-260915",
+      "sources": [
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seed-2-1-lite-260915"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seed-2-1-turbo-260628",
+      "file": "declarations/ark/doubao-seed-2-1-turbo-260628.json",
+      "canonicalId": "volc/doubao-seed-2-1-turbo-260628",
+      "id": "doubao-seed-2-1-turbo-260628",
+      "sources": [
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seed-2-1-turbo-260628"
+        }
+      ],
+      "fieldDiffs": []
+    },
+    {
+      "platform": "ark",
+      "slug": "doubao-seedream-5-0-260128",
+      "file": "declarations/ark/doubao-seedream-5-0-260128.json",
+      "canonicalId": "volc/doubao-seedream-5-0-260128",
+      "id": "doubao-seedream-5-0-260128",
+      "sources": [
+        {
+          "providerId": "volc/ark",
+          "id": "doubao-seedream-5-0-260128"
+        }
+      ],
+      "fieldDiffs": []
+    }
+  ]
+}

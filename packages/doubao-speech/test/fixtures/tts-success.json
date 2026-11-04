@@ -1,0 +1,25 @@
+{
+  "note": "Unidirectional TTS success: two adjacent chunked JSON packets, the second marks completion.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/tts/unidirectional",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>",
+      "X-Api-Resource-Id": "seed-tts-2.0"
+    },
+    "body": {
+      "req_params": {
+        "text": "你好",
+        "speaker": "zh_female_vv_uranus_bigtts",
+        "audio_params": { "format": "mp3", "sample_rate": 24000, "speech_rate": 0 },
+        "additions": "{}"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "X-Api-Status-Code": "20000000" },
+    "text": "{\"code\":0,\"data\":\"AQID\"}{\"code\":20000000,\"data\":\"\"}"
+  }
+}

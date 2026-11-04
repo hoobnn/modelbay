@@ -1,0 +1,20 @@
+{
+  "note": "Podcast SSE: blank-line-terminated events with numeric event types.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/podcast/sse",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>"
+    },
+    "body": {
+      "action": 0,
+      "input_text": "两位主持人讨论模型迁移。",
+      "audio_config": { "format": "mp3", "sample_rate": 24000 }
+    }
+  },
+  "response": {
+    "status": 200,
+    "text": "event: 1\ndata: {\"round_id\":1}\n\nevent: 2\ndata: {\"data\":\"AQID\"}\n\n"
+  }
+}

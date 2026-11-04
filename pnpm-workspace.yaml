@@ -1,0 +1,18 @@
+packages:
+  - "packages/*"
+
+# 工具链和 plein 保持一致：搬过来的代码不用改风格，也不用改测试
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.4.0
+  vite-plus: 1.4.0
+  # zod 供全部包的 schema 共用，装出两份会破坏 instanceof 判断
+  zod: 4.6.7
+
+overrides:
+  vite@*: "catalog:"
+
+peerDependencyRules:
+  allowAny:
+    - vite
+  allowedVersions:
+    vite: "*"

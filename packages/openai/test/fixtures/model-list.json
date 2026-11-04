@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.openai.com/v1/models",
+    "headers": { "Authorization": "Bearer <redacted>" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        { "id": "gpt-6-1-sol", "owned_by": "openai", "created": 1760000000 },
+        { "id": "gpt-image-2-5-sunburst" },
+        { "id": "" }
+      ]
+    }
+  }
+}

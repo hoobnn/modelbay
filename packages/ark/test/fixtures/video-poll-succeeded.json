@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/cgt-2026-recorded-0001",
+    "headers": { "Authorization": "Bearer <redacted>" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "cgt-2026-recorded-0001",
+      "status": "succeeded",
+      "output_format": "mp4",
+      "duration": 5,
+      "content": {
+        "video_url": "https://ark-recorded.volces.com/video/out.mp4",
+        "last_frame_url": "https://ark-recorded.volces.com/image/last.jpg"
+      },
+      "usage": { "completion_tokens": 120 }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+import type { ModelDeclaration } from '@modelbay/core'
+
+export default {
+  canonicalId: 'volc/custom-chat',
+  id: 'custom-chat',
+  title: '自定义对话模型（设置中填写）',
+  capabilities: ['text.chat'],
+  features: ['structured'],
+  channels: [
+    { channel: 'ark', id: 'custom-chat' },
+    { channel: 'ark-plan', id: 'custom-chat' },
+  ],
+  aliases: { official: [], short: [] },
+  lifecycle: {
+    status: 'active',
+    source: {
+      url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+      checkedAt: '2026-11-04',
+    },
+  },
+  source: {
+    url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+    checkedAt: '2026-11-04',
+  },
+} satisfies ModelDeclaration

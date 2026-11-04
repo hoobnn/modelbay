@@ -1,0 +1,13 @@
+{
+  "note": "Query a cloned/designed voice training status.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/tts/get_voice",
+    "method": "POST",
+    "headers": { "Content-Type": "application/json", "X-Api-Key": "<redacted>" },
+    "body": { "speaker_id": "S_test123" }
+  },
+  "response": {
+    "status": 200,
+    "body": { "code": 0, "data": { "status": 2 } }
+  }
+}

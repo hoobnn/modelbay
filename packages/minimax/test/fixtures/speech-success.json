@@ -1,0 +1,24 @@
+{
+  "note": "audio.speech via /v1/t2a_v2 returns hex audio.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/t2a_v2",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "model": "speech-2.8-hd",
+      "text": "你好",
+      "stream": false,
+      "output_format": "hex",
+      "voice_setting": { "voice_id": "male-qn-qingse", "speed": 1, "vol": 1, "pitch": 0 },
+      "audio_setting": { "format": "mp3", "sample_rate": 32000, "bitrate": 128000, "channel": 1 }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "base_resp": { "status_code": 0 },
+      "data": { "audio": "0102" },
+      "extra_info": { "usage_characters": 2, "audio_length": 1500 }
+    }
+  }
+}

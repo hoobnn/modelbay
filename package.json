@@ -1,0 +1,42 @@
+{
+  "name": "modelbay-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "vp check && markdownlint '**/*.md' --ignore-path .gitignore",
+    "format": "vp check --fix && markdownlint '**/*.md' --ignore-path .gitignore --fix",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vp test",
+    "test:coverage": "vp test run --coverage",
+    "build": "pnpm -r build",
+    "check:coverage": "node scripts/check-coverage.mjs",
+    "check:packages": "node scripts/check-packages.mjs",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "check:core-runtime": "node scripts/check-core-runtime.mjs",
+    "check:declarations": "node scripts/check-declarations.mjs",
+    "verify": "pnpm dedupe --check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm check:coverage && pnpm check:declarations && pnpm build && pnpm check:packages && pnpm check:licenses && pnpm check:core-runtime",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@changesets/cli": "3.0.3",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "5.0.5",
+    "husky": "^9.1.7",
+    "markdownlint-cli": "0.50.0",
+    "publint": "0.3.25",
+    "typescript": "^7.0.2",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

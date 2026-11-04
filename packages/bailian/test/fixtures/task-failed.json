@@ -1,0 +1,18 @@
+{
+  "note": "GET /api/v1/tasks/{id} FAILED carries the upstream code and message.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/tasks/task-123",
+    "method": "GET",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": { "task_status": "FAILED", "code": "InternalError", "message": "生成失败" },
+      "request_id": "req-task-2"
+    }
+  }
+}

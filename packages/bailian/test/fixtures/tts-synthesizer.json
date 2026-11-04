@@ -1,0 +1,30 @@
+{
+  "note": "Qwen-Audio-TTS SpeechSynthesizer success (ported from Python media.py tts_request).",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "qwen-audio-3.1-tts-flash",
+      "input": {
+        "text": "你好，世界。",
+        "voice": "qwen-audio-3.1-tts-flash-custom",
+        "format": "wav",
+        "sample_rate": 24000,
+        "instruction": "用温柔的语气",
+        "language_hints": ["zh"]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": { "audio": { "url": "https://example.com/tts.wav" } },
+      "usage": { "characters": 5 },
+      "request_id": "req-tts-1"
+    }
+  }
+}

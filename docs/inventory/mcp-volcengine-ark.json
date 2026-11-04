@@ -1,818 +1,792 @@
 [
- {
-  "name": "chat",
-  "description": "调用方舟语言/多模态模型，pro=豆包Seed 2.1 pro；其他方舟模型（含目录中的 DeepSeek）传完整ID。不同平台的型号与权限不可通用。\nimages支持本地图片或URL，videos为公网URL。history用Chat消息格式，工具不保存对话。\nweb_search=true或传previous_response_id时使用Responses API，保留sources和response_id；否则走Chat API。\nthinking=true/false映射enabled/disabled；最新API不再列出auto。json_mode要求提示词明确JSON结构；parameters透传模型支持的高级字段。\nparameters.prompt_cache_key为可选缓存路由标识，Chat与Responses均支持；省略不关闭隐式缓存，设置也不保证命中。\n同一Endpoint和模型下连续上下文复用不可读内部Session ID，不同用户或并行会话使用不同值；不要传个人信息、凭证或prompt原文。\n官方建议单key总流量低于每分钟15个请求；这是路由建议而非硬限流，扩缩容等仍可能重新路由。\n返回content、reasoning、usage；include_response=true可取完整response。按token与搜索调用计费，模型和搜索服务须已开通；尚未完成云端验证。\n",
-  "inputSchema": {
-   "properties": {
-    "prompt": {
-     "title": "Prompt",
-     "type": "string"
-    },
-    "model": {
-     "default": "pro",
-     "title": "Model",
-     "type": "string"
-    },
-    "system": {
-     "anyOf": [
-      {
-       "type": "string"
+  {
+    "name": "chat",
+    "description": "调用方舟语言/多模态模型，pro=豆包Seed 2.1 pro；其他方舟模型（含目录中的 DeepSeek）传完整ID。不同平台的型号与权限不可通用。\nimages支持本地图片或URL，videos为公网URL。history用Chat消息格式，工具不保存对话。\nweb_search=true或传previous_response_id时使用Responses API，保留sources和response_id；否则走Chat API。\nthinking=true/false映射enabled/disabled；最新API不再列出auto。json_mode要求提示词明确JSON结构；parameters透传模型支持的高级字段。\nparameters.prompt_cache_key为可选缓存路由标识，Chat与Responses均支持；省略不关闭隐式缓存，设置也不保证命中。\n同一Endpoint和模型下连续上下文复用不可读内部Session ID，不同用户或并行会话使用不同值；不要传个人信息、凭证或prompt原文。\n官方建议单key总流量低于每分钟15个请求；这是路由建议而非硬限流，扩缩容等仍可能重新路由。\n返回content、reasoning、usage；include_response=true可取完整response。按token与搜索调用计费，模型和搜索服务须已开通；尚未完成云端验证。\n",
+    "inputSchema": {
+      "properties": {
+        "prompt": {
+          "title": "Prompt",
+          "type": "string"
+        },
+        "model": {
+          "default": "pro",
+          "title": "Model",
+          "type": "string"
+        },
+        "system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "System"
+        },
+        "history": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "History"
+        },
+        "images": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Images"
+        },
+        "videos": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Videos"
+        },
+        "thinking": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Thinking"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature"
+        },
+        "json_mode": {
+          "default": false,
+          "title": "Json Mode",
+          "type": "boolean"
+        },
+        "web_search": {
+          "default": false,
+          "title": "Web Search",
+          "type": "boolean"
+        },
+        "previous_response_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous Response Id"
+        },
+        "parameters": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameters"
+        },
+        "include_response": {
+          "default": false,
+          "description": "返回原始响应，默认false",
+          "title": "Include Response",
+          "type": "boolean"
+        }
       },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "System"
+      "required": ["prompt"],
+      "title": "chatArguments",
+      "type": "object"
     },
-    "history": {
-     "anyOf": [
-      {
-       "items": {
-        "additionalProperties": true,
-        "type": "object"
-       },
-       "type": "array"
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
       },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "History"
+      "additionalProperties": true
     },
-    "images": {
-     "anyOf": [
-      {
-       "items": {
-        "type": "string"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Images"
-    },
-    "videos": {
-     "anyOf": [
-      {
-       "items": {
-        "type": "string"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Videos"
-    },
-    "thinking": {
-     "anyOf": [
-      {
-       "type": "boolean"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Thinking"
-    },
-    "max_tokens": {
-     "anyOf": [
-      {
-       "type": "integer"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Max Tokens"
-    },
-    "temperature": {
-     "anyOf": [
-      {
-       "type": "number"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Temperature"
-    },
-    "json_mode": {
-     "default": false,
-     "title": "Json Mode",
-     "type": "boolean"
-    },
-    "web_search": {
-     "default": false,
-     "title": "Web Search",
-     "type": "boolean"
-    },
-    "previous_response_id": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Previous Response Id"
-    },
-    "parameters": {
-     "anyOf": [
-      {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Parameters"
-    },
-    "include_response": {
-     "default": false,
-     "description": "返回原始响应，默认false",
-     "title": "Include Response",
-     "type": "boolean"
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
-   },
-   "required": [
-    "prompt"
-   ],
-   "title": "chatArguments",
-   "type": "object"
   },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
+  {
+    "name": "embed",
+    "description": "方舟文本/多模态向量化，model必须显式指定。texts为文本列表；contents用官方格式，如\n[{\"type\":\"text\",\"text\":\"猫\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"/absolute/cat.png\"}}]。\n两项只能选一项；图片支持本地路径，视频须URL。parameters支持instructions、multi_embedding等模型选项。\n保留data和usage，不自动建索引或知识库；按输入计费。尚未完成云端验证。百炼 text-embedding / qwen3-vl-embedding 及 rerank 用 ali-bailian。\n",
+    "inputSchema": {
+      "properties": {
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "texts": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Texts"
+        },
+        "contents": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contents"
+        },
+        "dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dimensions"
+        },
+        "parameters": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameters"
+        },
+        "include_response": {
+          "default": false,
+          "description": "返回原始响应，默认false",
+          "title": "Include Response",
+          "type": "boolean"
+        }
+      },
+      "required": ["model"],
+      "title": "embedArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
-   },
-   "additionalProperties": true
   },
-  "annotations": {
-   "readOnlyHint": false,
-   "destructiveHint": false,
-   "idempotentHint": false,
-   "openWorldHint": true
+  {
+    "name": "generate_image",
+    "description": "Seedream 生成或编辑图片；图层拆分、透明背景、组图选这里，海报文字渲染可改用 ali-bailian 的 qwen。model=pro（默认）或flash支持layers/transparent，最多10张参考图；fast仅pro支持；lite支持group/web_search/3K/4K，最多14张参考图，参考数+group<=15。images为本地路径或URL；layers/transparent只能传1张。size默认2K，宽高比写入prompt。按成功张数计费，组图/图层会生成多张。返回job_id、job_state、files、artifacts、usage；recover_job只补交付。未列出的官方字段放parameters。完整尺寸、图层与提示词用法见get_tool_help。",
+    "inputSchema": {
+      "properties": {
+        "prompt": {
+          "default": "",
+          "title": "Prompt",
+          "type": "string"
+        },
+        "model": {
+          "default": "pro",
+          "title": "Model",
+          "type": "string"
+        },
+        "images": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Images"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size"
+        },
+        "output_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Format"
+        },
+        "transparent": {
+          "default": false,
+          "title": "Transparent",
+          "type": "boolean"
+        },
+        "layers": {
+          "default": false,
+          "title": "Layers",
+          "type": "boolean"
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group"
+        },
+        "web_search": {
+          "default": false,
+          "title": "Web Search",
+          "type": "boolean"
+        },
+        "fast": {
+          "default": false,
+          "title": "Fast",
+          "type": "boolean"
+        },
+        "watermark": {
+          "default": false,
+          "title": "Watermark",
+          "type": "boolean"
+        },
+        "out_dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Out Dir"
+        },
+        "parameters": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameters"
+        }
+      },
+      "title": "generate_imageArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "generate_video",
+    "description": "调用火山方舟 Seedance 生成视频。seedance=2.5，seedance-2/seedance-fast/seedance-mini=2.0 系列，也可传完整模型或 Endpoint ID。本地参考视频/音频需改用 ali-bailian 的 generate_video（自动上传）。\n支持文生、首帧、首尾帧、多模态参考；2.5 可在 prompt 明确写视频编辑或延长意图，编辑须 duration=-1、ratio=adaptive。\n图片支持本地路径/URL，参考视频和音频须公网 URL 或 asset://ID；本工具不上传本地视频/音频。\n具体素材数量、时长、分辨率由模型校验。parameters 透传官方顶层选项，如 draft、return_last_frame、output_format、omni_reference_task_type。\ndraft=true 须用 480p，Draft ID 自 created_at 起有效，2026-10-28 10:00(UTC+8)起创建的为 14 天、此前 7 天；本工具尚不支持 content.draft_task 转正式成片。\n2.5时长4–30秒，2.0系列4–15秒（均支持-1）；首尾帧与参考素材互斥。mini/fast最高720p，2.0支持4k。\nseed/frames仅支持1.0系列；2.5 edit任务可显式传omni_reference_task_type=edit以提前校验。\nwait=0 默认只提交，1–90 秒可轮询，返回 task_id/job_id；之后用 get_job 查进度并在完成时自动下载，下载失败用 recover_job 补。\n按生成视频计费；账户需开通模型。所有新增能力尚未完成云端验证，返回文件仅表示下载完成。\n",
+    "inputSchema": {
+      "properties": {
+        "prompt": {
+          "default": "",
+          "title": "Prompt",
+          "type": "string"
+        },
+        "model": {
+          "default": "seedance",
+          "title": "Model",
+          "type": "string"
+        },
+        "first_frame": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Frame"
+        },
+        "last_frame": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Frame"
+        },
+        "reference_images": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Images"
+        },
+        "reference_videos": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Videos"
+        },
+        "reference_audios": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Audios"
+        },
+        "resolution": {
+          "default": "720p",
+          "title": "Resolution",
+          "type": "string"
+        },
+        "ratio": {
+          "default": "adaptive",
+          "title": "Ratio",
+          "type": "string"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        },
+        "audio": {
+          "default": true,
+          "title": "Audio",
+          "type": "boolean"
+        },
+        "watermark": {
+          "default": false,
+          "title": "Watermark",
+          "type": "boolean"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seed"
+        },
+        "wait": {
+          "default": 0,
+          "maximum": 90,
+          "minimum": 0,
+          "title": "Wait",
+          "type": "integer"
+        },
+        "out_dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Out Dir"
+        },
+        "parameters": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameters"
+        }
+      },
+      "title": "generate_videoArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_job",
+    "description": "查任务进度和结果，job_id 或 task_id 二选一（都给时须属于同一任务）。\n视频还在生成时查询方舟一次（wait 1–90 秒可轮询），完成即下载到原输出目录；已结束的任务只读本地记录。\n只给 task_id 且本地没有记录（如别处提交的 Seedance 任务）时，新建本地记录再查询。不会重新提交生成。\n返回 job_state（running/delivered/failed/download_failed 等）、completed、files、usage；ok=false 表示查询或交付失败。\n",
+    "inputSchema": {
+      "properties": {
+        "job_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Job Id"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        },
+        "wait": {
+          "default": 0,
+          "maximum": 90,
+          "minimum": 0,
+          "title": "Wait",
+          "type": "integer"
+        },
+        "include_response": {
+          "default": false,
+          "description": "返回原始响应，默认false",
+          "title": "Include Response",
+          "type": "boolean"
+        }
+      },
+      "title": "get_jobArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "get_tool_help",
+    "description": "按工具名读取完整用法、模型限制与示例，不联网、不计费。",
+    "inputSchema": {
+      "properties": {
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": ["tool"],
+      "title": "get_tool_helpArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "list_capabilities",
+    "description": "列出本MCP的方舟能力和官方来源，不联网，不代表当前账号权限；新增功能尚未完成云端验证。",
+    "inputSchema": {
+      "properties": {},
+      "title": "list_capabilitiesArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "list_jobs",
+    "description": "列出最近本地任务，不联网。工具超时未拿到job_id时可按时间/model/summary找回记录；limit=1–100，kind可筛选image/video/tts等。",
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        }
+      },
+      "title": "list_jobsArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "recover_job",
+    "description": "修复已有任务的交付：图片只补下载；视频重新查询原task_id刷新结果URL再下载。跳过校验完整的本地文件。\n正常查进度用 get_job；本工具用于 download_failed 或链接过期。\n不重新生成；状态未知且没有task_id的任务不可自动恢复。wait=0查一次，最多90秒。临时链接过期可能无法恢复。\n",
+    "inputSchema": {
+      "properties": {
+        "job_id": {
+          "title": "Job Id",
+          "type": "string"
+        },
+        "wait": {
+          "default": 0,
+          "maximum": 90,
+          "minimum": 0,
+          "title": "Wait",
+          "type": "integer"
+        },
+        "include_response": {
+          "default": false,
+          "description": "返回原始响应，默认false",
+          "title": "Include Response",
+          "type": "boolean"
+        }
+      },
+      "required": ["job_id"],
+      "title": "recover_jobArguments",
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
   }
- },
- {
-  "name": "embed",
-  "description": "方舟文本/多模态向量化，model必须显式指定。texts为文本列表；contents用官方格式，如\n[{\"type\":\"text\",\"text\":\"猫\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"/absolute/cat.png\"}}]。\n两项只能选一项；图片支持本地路径，视频须URL。parameters支持instructions、multi_embedding等模型选项。\n保留data和usage，不自动建索引或知识库；按输入计费。尚未完成云端验证。百炼 text-embedding / qwen3-vl-embedding 及 rerank 用 ali-bailian。\n",
-  "inputSchema": {
-   "properties": {
-    "model": {
-     "title": "Model",
-     "type": "string"
-    },
-    "texts": {
-     "anyOf": [
-      {
-       "items": {
-        "type": "string"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Texts"
-    },
-    "contents": {
-     "anyOf": [
-      {
-       "items": {
-        "additionalProperties": true,
-        "type": "object"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Contents"
-    },
-    "dimensions": {
-     "anyOf": [
-      {
-       "type": "integer"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Dimensions"
-    },
-    "parameters": {
-     "anyOf": [
-      {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Parameters"
-    },
-    "include_response": {
-     "default": false,
-     "description": "返回原始响应，默认false",
-     "title": "Include Response",
-     "type": "boolean"
-    }
-   },
-   "required": [
-    "model"
-   ],
-   "title": "embedArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": false,
-   "destructiveHint": false,
-   "idempotentHint": false,
-   "openWorldHint": true
-  }
- },
- {
-  "name": "generate_image",
-  "description": "Seedream 生成或编辑图片；图层拆分、透明背景、组图选这里，海报文字渲染可改用 ali-bailian 的 qwen。model=pro（默认）或flash支持layers/transparent，最多10张参考图；fast仅pro支持；lite支持group/web_search/3K/4K，最多14张参考图，参考数+group<=15。images为本地路径或URL；layers/transparent只能传1张。size默认2K，宽高比写入prompt。按成功张数计费，组图/图层会生成多张。返回job_id、job_state、files、artifacts、usage；recover_job只补交付。未列出的官方字段放parameters。完整尺寸、图层与提示词用法见get_tool_help。",
-  "inputSchema": {
-   "properties": {
-    "prompt": {
-     "default": "",
-     "title": "Prompt",
-     "type": "string"
-    },
-    "model": {
-     "default": "pro",
-     "title": "Model",
-     "type": "string"
-    },
-    "images": {
-     "anyOf": [
-      {
-       "items": {
-        "type": "string"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Images"
-    },
-    "size": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Size"
-    },
-    "output_format": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Output Format"
-    },
-    "transparent": {
-     "default": false,
-     "title": "Transparent",
-     "type": "boolean"
-    },
-    "layers": {
-     "default": false,
-     "title": "Layers",
-     "type": "boolean"
-    },
-    "group": {
-     "anyOf": [
-      {
-       "type": "integer"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Group"
-    },
-    "web_search": {
-     "default": false,
-     "title": "Web Search",
-     "type": "boolean"
-    },
-    "fast": {
-     "default": false,
-     "title": "Fast",
-     "type": "boolean"
-    },
-    "watermark": {
-     "default": false,
-     "title": "Watermark",
-     "type": "boolean"
-    },
-    "out_dir": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Out Dir"
-    },
-    "parameters": {
-     "anyOf": [
-      {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Parameters"
-    }
-   },
-   "title": "generate_imageArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": false,
-   "destructiveHint": false,
-   "idempotentHint": false,
-   "openWorldHint": true
-  }
- },
- {
-  "name": "generate_video",
-  "description": "调用火山方舟 Seedance 生成视频。seedance=2.5，seedance-2/seedance-fast/seedance-mini=2.0 系列，也可传完整模型或 Endpoint ID。本地参考视频/音频需改用 ali-bailian 的 generate_video（自动上传）。\n支持文生、首帧、首尾帧、多模态参考；2.5 可在 prompt 明确写视频编辑或延长意图，编辑须 duration=-1、ratio=adaptive。\n图片支持本地路径/URL，参考视频和音频须公网 URL 或 asset://ID；本工具不上传本地视频/音频。\n具体素材数量、时长、分辨率由模型校验。parameters 透传官方顶层选项，如 draft、return_last_frame、output_format、omni_reference_task_type。\ndraft=true 须用 480p，Draft ID 自 created_at 起有效，2026-10-28 10:00(UTC+8)起创建的为 14 天、此前 7 天；本工具尚不支持 content.draft_task 转正式成片。\n2.5时长4–30秒，2.0系列4–15秒（均支持-1）；首尾帧与参考素材互斥。mini/fast最高720p，2.0支持4k。\nseed/frames仅支持1.0系列；2.5 edit任务可显式传omni_reference_task_type=edit以提前校验。\nwait=0 默认只提交，1–90 秒可轮询，返回 task_id/job_id；之后用 get_job 查进度并在完成时自动下载，下载失败用 recover_job 补。\n按生成视频计费；账户需开通模型。所有新增能力尚未完成云端验证，返回文件仅表示下载完成。\n",
-  "inputSchema": {
-   "properties": {
-    "prompt": {
-     "default": "",
-     "title": "Prompt",
-     "type": "string"
-    },
-    "model": {
-     "default": "seedance",
-     "title": "Model",
-     "type": "string"
-    },
-    "first_frame": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "First Frame"
-    },
-    "last_frame": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Last Frame"
-    },
-    "reference_images": {
-     "anyOf": [
-      {
-       "items": {
-        "type": "string"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Reference Images"
-    },
-    "reference_videos": {
-     "anyOf": [
-      {
-       "items": {
-        "type": "string"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Reference Videos"
-    },
-    "reference_audios": {
-     "anyOf": [
-      {
-       "items": {
-        "type": "string"
-       },
-       "type": "array"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Reference Audios"
-    },
-    "resolution": {
-     "default": "720p",
-     "title": "Resolution",
-     "type": "string"
-    },
-    "ratio": {
-     "default": "adaptive",
-     "title": "Ratio",
-     "type": "string"
-    },
-    "duration": {
-     "anyOf": [
-      {
-       "type": "integer"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Duration"
-    },
-    "audio": {
-     "default": true,
-     "title": "Audio",
-     "type": "boolean"
-    },
-    "watermark": {
-     "default": false,
-     "title": "Watermark",
-     "type": "boolean"
-    },
-    "seed": {
-     "anyOf": [
-      {
-       "type": "integer"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Seed"
-    },
-    "wait": {
-     "default": 0,
-     "maximum": 90,
-     "minimum": 0,
-     "title": "Wait",
-     "type": "integer"
-    },
-    "out_dir": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Out Dir"
-    },
-    "parameters": {
-     "anyOf": [
-      {
-       "additionalProperties": true,
-       "type": "object"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Parameters"
-    }
-   },
-   "title": "generate_videoArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": false,
-   "destructiveHint": false,
-   "idempotentHint": false,
-   "openWorldHint": true
-  }
- },
- {
-  "name": "get_job",
-  "description": "查任务进度和结果，job_id 或 task_id 二选一（都给时须属于同一任务）。\n视频还在生成时查询方舟一次（wait 1–90 秒可轮询），完成即下载到原输出目录；已结束的任务只读本地记录。\n只给 task_id 且本地没有记录（如别处提交的 Seedance 任务）时，新建本地记录再查询。不会重新提交生成。\n返回 job_state（running/delivered/failed/download_failed 等）、completed、files、usage；ok=false 表示查询或交付失败。\n",
-  "inputSchema": {
-   "properties": {
-    "job_id": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Job Id"
-    },
-    "task_id": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Task Id"
-    },
-    "wait": {
-     "default": 0,
-     "maximum": 90,
-     "minimum": 0,
-     "title": "Wait",
-     "type": "integer"
-    },
-    "include_response": {
-     "default": false,
-     "description": "返回原始响应，默认false",
-     "title": "Include Response",
-     "type": "boolean"
-    }
-   },
-   "title": "get_jobArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": false,
-   "destructiveHint": false,
-   "idempotentHint": true,
-   "openWorldHint": true
-  }
- },
- {
-  "name": "get_tool_help",
-  "description": "按工具名读取完整用法、模型限制与示例，不联网、不计费。",
-  "inputSchema": {
-   "properties": {
-    "tool": {
-     "title": "Tool",
-     "type": "string"
-    }
-   },
-   "required": [
-    "tool"
-   ],
-   "title": "get_tool_helpArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": true,
-   "destructiveHint": false,
-   "idempotentHint": true,
-   "openWorldHint": false
-  }
- },
- {
-  "name": "list_capabilities",
-  "description": "列出本MCP的方舟能力和官方来源，不联网，不代表当前账号权限；新增功能尚未完成云端验证。",
-  "inputSchema": {
-   "properties": {},
-   "title": "list_capabilitiesArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": true,
-   "destructiveHint": false,
-   "idempotentHint": true,
-   "openWorldHint": false
-  }
- },
- {
-  "name": "list_jobs",
-  "description": "列出最近本地任务，不联网。工具超时未拿到job_id时可按时间/model/summary找回记录；limit=1–100，kind可筛选image/video/tts等。",
-  "inputSchema": {
-   "properties": {
-    "limit": {
-     "default": 20,
-     "maximum": 100,
-     "minimum": 1,
-     "title": "Limit",
-     "type": "integer"
-    },
-    "kind": {
-     "anyOf": [
-      {
-       "type": "string"
-      },
-      {
-       "type": "null"
-      }
-     ],
-     "default": null,
-     "title": "Kind"
-    }
-   },
-   "title": "list_jobsArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": true,
-   "destructiveHint": false,
-   "idempotentHint": true,
-   "openWorldHint": false
-  }
- },
- {
-  "name": "recover_job",
-  "description": "修复已有任务的交付：图片只补下载；视频重新查询原task_id刷新结果URL再下载。跳过校验完整的本地文件。\n正常查进度用 get_job；本工具用于 download_failed 或链接过期。\n不重新生成；状态未知且没有task_id的任务不可自动恢复。wait=0查一次，最多90秒。临时链接过期可能无法恢复。\n",
-  "inputSchema": {
-   "properties": {
-    "job_id": {
-     "title": "Job Id",
-     "type": "string"
-    },
-    "wait": {
-     "default": 0,
-     "maximum": 90,
-     "minimum": 0,
-     "title": "Wait",
-     "type": "integer"
-    },
-    "include_response": {
-     "default": false,
-     "description": "返回原始响应，默认false",
-     "title": "Include Response",
-     "type": "boolean"
-    }
-   },
-   "required": [
-    "job_id"
-   ],
-   "title": "recover_jobArguments",
-   "type": "object"
-  },
-  "outputSchema": {
-   "type": "object",
-   "required": [
-    "ok"
-   ],
-   "properties": {
-    "ok": {
-     "type": "boolean"
-    }
-   },
-   "additionalProperties": true
-  },
-  "annotations": {
-   "readOnlyHint": false,
-   "destructiveHint": false,
-   "idempotentHint": false,
-   "openWorldHint": true
-  }
- }
 ]

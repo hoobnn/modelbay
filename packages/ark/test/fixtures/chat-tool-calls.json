@@ -1,0 +1,61 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "doubao-seed-2.1-pro",
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "让我查一下",
+          "encrypted_content": "<redacted>",
+          "reasoning_content": "需要调用工具"
+        },
+        { "role": "tool", "tool_call_id": "call_1", "content": "晴" }
+      ],
+      "stream": false,
+      "previous_response_id": "resp_<redacted>",
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "查天气",
+            "parameters": { "type": "object", "properties": { "city": { "type": "string" } } }
+          }
+        }
+      ],
+      "tool_choice": "auto"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "chatcmpl-recorded-0002",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": "继续思考",
+            "encrypted_content": "<redacted>",
+            "tool_calls": [
+              {
+                "id": "call_2",
+                "type": "function",
+                "function": { "name": "get_weather", "arguments": "{\"city\":\"北京\"}" }
+              }
+            ]
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": { "prompt_tokens": 30, "completion_tokens": 15 }
+    }
+  }
+}

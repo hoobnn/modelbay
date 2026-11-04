@@ -1,0 +1,18 @@
+{
+  "note": "Native context-ir: POST /v2/h3_context_ir, structured prompt enhancement.",
+  "request": {
+    "url": "https://api.minimax.cn/v2/h3_context_ir",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "model": "MiniMax-H3",
+      "content": [{ "type": "text", "text": "一只猫在海边" }],
+      "duration": 5,
+      "ratio": "16:9"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "task_id": "ctx-1", "id": "req-ctx-1" }
+  }
+}

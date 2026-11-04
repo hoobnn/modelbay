@@ -1,0 +1,25 @@
+{
+  "note": "Meeting minutes submit.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/auc/lark/submit",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>",
+      "X-Api-Resource-Id": "volc.lark.minutes",
+      "X-Api-Sequence": "-1"
+    },
+    "body": {
+      "Input": { "Offline": { "FileURL": "https://example.com/meeting.wav", "FileType": "audio" } },
+      "Params": {
+        "AudioTranscriptionEnable": true,
+        "AllActivate": false,
+        "SummarizationEnabled": true
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "code": 0, "Data": { "TaskID": "minutes-1" } }
+  }
+}

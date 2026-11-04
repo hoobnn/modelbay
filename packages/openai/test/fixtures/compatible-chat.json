@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://llm.example.com/v1/chat/completions",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "my-custom-model",
+      "messages": [{ "role": "user", "content": "Hello" }],
+      "stream": false
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "chatcmpl-compatible-recorded-0001",
+      "choices": [
+        {
+          "index": 0,
+          "message": { "role": "assistant", "content": "你好！" },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": { "prompt_tokens": 5, "completion_tokens": 3 }
+    }
+  }
+}

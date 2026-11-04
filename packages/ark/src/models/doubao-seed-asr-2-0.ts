@@ -1,0 +1,21 @@
+import type { ModelDeclaration } from '@modelbay/core'
+
+export default {
+  canonicalId: 'volc/doubao-seed-asr-2.0',
+  id: 'doubao-seed-asr-2.0',
+  title: '豆包语音识别 2.0',
+  capabilities: ['audio.transcribe'],
+  channels: [{ channel: 'ark-plan', id: 'doubao-seed-asr-2.0' }],
+  aliases: { official: [], short: [] },
+  lifecycle: {
+    status: 'active',
+    source: {
+      url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+      checkedAt: '2026-11-04',
+    },
+  },
+  source: {
+    url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+    checkedAt: '2026-11-04',
+  },
+} satisfies ModelDeclaration

@@ -1,0 +1,33 @@
+{
+  "note": "voice-enrollment create_voice (design) with preview audio.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "voice-enrollment",
+      "input": {
+        "action": "create_voice",
+        "target_model": "qwen-audio-3.1-tts-flash",
+        "voice_prompt": "三十岁左右的男声，低沉温和",
+        "preview_text": "你好，欢迎收听今天的节目，我是主持人。",
+        "prefix": "custom"
+      },
+      "parameters": { "sample_rate": 24000, "response_format": "wav" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": {
+        "voice_id": "qwen-audio-3.1-tts-flash-custom-def",
+        "preview_audio": { "data": "AAEC", "response_format": "wav" }
+      },
+      "request_id": "req-voice-2",
+      "usage": { "characters": 1 }
+    }
+  }
+}

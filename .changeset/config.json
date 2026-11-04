@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@modelbay/core",
+      "@modelbay/ark",
+      "@modelbay/bailian",
+      "@modelbay/minimax",
+      "@modelbay/doubao-speech",
+      "@modelbay/openai",
+      "@modelbay/mcp",
+      "@modelbay/cli",
+      "modelbay"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}

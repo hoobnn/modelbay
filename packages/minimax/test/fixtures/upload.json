@@ -1,0 +1,13 @@
+{
+  "note": "upload-file: multipart POST /v1/files/upload returns file_id.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/files/upload",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>" },
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "file": { "file_id": 123456789 } }
+  }
+}

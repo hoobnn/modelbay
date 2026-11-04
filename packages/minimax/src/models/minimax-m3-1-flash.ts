@@ -1,0 +1,16 @@
+import type { ModelDeclaration } from '@modelbay/core'
+
+export default {
+  canonicalId: 'minimax/MiniMax-M3.1-Flash',
+  id: 'MiniMax-M3.1-Flash',
+  title: 'MiniMax M3.1 Flash',
+  capabilities: ['text.chat'],
+  features: ['vision', 'structured'],
+  channels: [{ channel: 'minimax', id: 'MiniMax-M3.1-Flash' }],
+  aliases: { official: [], short: [] },
+  lifecycle: {
+    status: 'active',
+    source: { url: 'https://platform.minimax.cn/docs/api-reference', checkedAt: '2026-11-04' },
+  },
+  source: { url: 'https://platform.minimax.cn/docs/api-reference', checkedAt: '2026-11-04' },
+} satisfies ModelDeclaration

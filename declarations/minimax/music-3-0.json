@@ -1,0 +1,33 @@
+{
+  "canonicalId": "minimax/music-3.0",
+  "id": "music-3.0",
+  "title": "Music 3.0",
+  "capabilities": ["audio.music"],
+  "description": "官方已退役；仅保留旧画布引用",
+  "limits": {
+    "duration": false,
+    "promptMaxLength": 2000
+  },
+  "channels": [
+    {
+      "channel": "minimax",
+      "id": "music-3.0"
+    }
+  ],
+  "aliases": {
+    "official": [],
+    "short": []
+  },
+  "lifecycle": {
+    "status": "closed-to-new-accounts",
+    "since": "2026-08-20",
+    "source": {
+      "url": "https://platform.minimax.cn/docs/api-reference/music-generation",
+      "checkedAt": "2026-11-04"
+    }
+  },
+  "source": {
+    "url": "https://platform.minimax.cn/docs/api-reference",
+    "checkedAt": "2026-11-04"
+  }
+}

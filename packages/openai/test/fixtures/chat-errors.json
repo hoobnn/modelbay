@@ -1,0 +1,42 @@
+{
+  "cases": [
+    {
+      "status": 401,
+      "body": {
+        "error": {
+          "code": "invalid_api_key",
+          "message": "Incorrect API key provided: sk-<redacted>. 账号 <redacted>"
+        }
+      },
+      "code": "auth"
+    },
+    {
+      "status": 429,
+      "body": {
+        "error": { "code": "rate_limit_exceeded", "message": "请求过于频繁" }
+      },
+      "code": "rate_limit"
+    },
+    {
+      "status": 503,
+      "body": {
+        "error": { "code": "server_error", "message": "服务暂时不可用" }
+      },
+      "code": "unavailable"
+    },
+    {
+      "status": 400,
+      "body": {
+        "error": { "code": "insufficient_quota", "message": "余额不足" }
+      },
+      "code": "quota"
+    },
+    {
+      "status": 400,
+      "body": {
+        "error": { "code": "content_policy_violation", "message": "内容不合规" }
+      },
+      "code": "content_policy"
+    }
+  ]
+}

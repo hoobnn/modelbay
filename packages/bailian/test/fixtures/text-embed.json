@@ -1,0 +1,25 @@
+{
+  "note": "Native text embedding through the OpenAI-compatible embeddings endpoint.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "text-embedding-v4",
+      "input": ["你好"],
+      "encoding_format": "float",
+      "dimensions": 1024
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [{ "embedding": [0.1, 0.2, 0.3], "index": 0 }],
+      "usage": { "prompt_tokens": 2 },
+      "request_id": "req-embed-1"
+    }
+  }
+}

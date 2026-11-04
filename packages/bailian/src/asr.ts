@@ -1,0 +1,122 @@
+/**
+ * Qwen ASR (HTTP, non-streaming), ported from the Python MCP
+ * `ali_bailian_mcp/media.py::speech_to_text`. Uses `/compatible-mode/v1/chat/completions`.
+ */
+import { ProviderError, toBase64, type AssetRef } from '@modelbay/core'
+import type { AdapterContext } from '@modelbay/core'
+import { asJson, arr, requestJson, type Json } from './http'
+
+export const ASR_MODEL = 'qwen3-asr-flash'
+export const ASR_PATH = '/compatible-mode/v1/chat/completions'
+
+const AUDIO_MIME: Record<string, string> = {
+  mp3: 'mpeg',
+  wav: 'wav',
+  m4a: 'mp4',
+  aac: 'aac',
+  flac: 'flac',
+  ogg: 'ogg',
+  opus: 'opus',
+  amr: 'amr',
+  webm: 'webm',
+}
+
+export interface AsrOptions {
+  /** Public URL, `data:` URI, `oss://` address, or an AssetRef resolved via `ctx.assets`. */
+  audio: string | AssetRef
+  model?: string
+  context?: string
+  language?: string
+  itn?: boolean
+  /** Extra official top-level fields (cannot override model/messages/stream). */
+  parameters?: Json
+}
+
+export interface AsrRequest {
+  path: string
+  body: Json
+}
+
+/** Reject retired date-snapshot IDs and protocols that use a different ASR endpoint. */
+export function checkAsrModel(model: string): string | null {
+  if (/^qwen3-asr-flash-\d{4}-\d{2}-\d{2}(?:-[a-z]+)?$/.test(model))
+    return `${model} is a retired date snapshot; use qwen3-asr-flash`
+  if (model !== ASR_MODEL) return 'Only qwen3-asr-flash is supported by this HTTP ASR endpoint'
+  return null
+}
+
+/** Build the chat/completions body; `data` is already a URL or data URI. */
+export function buildAsrRequest(opts: AsrOptions, audioData: string): AsrRequest {
+  const model = opts.model ?? ASR_MODEL
+  const problem = checkAsrModel(model)
+  if (problem) throw new ProviderError('invalid_input', problem)
+  const messages: Json[] = []
+  if (opts.context)
+    messages.push({ role: 'system', content: [{ type: 'text', text: opts.context }] })
+  messages.push({
+    role: 'user',
+    content: [{ type: 'input_audio', input_audio: { data: audioData } }],
+  })
+  const asrOptions: Json = { enable_itn: opts.itn ?? true }
+  if (opts.language) asrOptions.language = opts.language
+  const body: Json = { model, messages, asr_options: asrOptions }
+  const extra = opts.parameters ?? {}
+  if (Object.keys(extra).some((key) => ['model', 'messages', 'stream'].includes(key)))
+    throw new ProviderError('invalid_input', 'parameters must not override model/messages/stream')
+  Object.assign(body, extra)
+  return { path: ASR_PATH, body }
+}
+
+export interface AsrResult {
+  text: string
+  language?: string
+  emotion?: string
+  usage?: Json
+}
+
+/** Parse `choices[0].message` plus the `audio_info` annotation. */
+export function parseAsrResponse(data: Json): AsrResult {
+  const choice = asJson(arr(data.choices)[0])
+  const message = asJson(choice.message)
+  const info = arr(message.annotations)
+    .map(asJson)
+    .find((annotation) => annotation.type === 'audio_info')
+  return {
+    text: typeof message.content === 'string' ? message.content : '',
+    ...(typeof info?.language === 'string' ? { language: info.language } : {}),
+    ...(typeof info?.emotion === 'string' ? { emotion: info.emotion } : {}),
+    ...(data.usage !== undefined ? { usage: asJson(data.usage) } : {}),
+  }
+}
+
+function isRemote(src: string): boolean {
+  return /^(?:https?:\/\/|oss:\/\/|data:)/.test(src)
+}
+
+/** Resolve an audio reference to a URL/data URI using the host-provided asset source. */
+export async function resolveAudio(src: string | AssetRef, ctx: AdapterContext): Promise<string> {
+  if (typeof src === 'string') {
+    if (!src) throw new ProviderError('invalid_input', 'ASR audio is required')
+    if (isRemote(src)) return src
+    throw new ProviderError(
+      'invalid_input',
+      'Local paths are not supported; pass a URL, data URI or AssetRef',
+    )
+  }
+  if (!ctx.assets)
+    throw new ProviderError('invalid_input', 'An assets source is required for AssetRef audio')
+  const loaded = await ctx.assets.load(src.assetId)
+  const mime = (loaded.mime || src.mime || '').toLowerCase()
+  const subtype = mime.split('/')[1] ?? ''
+  const encoded = AUDIO_MIME[subtype]
+  if (!encoded) throw new ProviderError('invalid_input', `Unsupported ASR audio MIME: ${mime}`)
+  if (!loaded.data.length) throw new ProviderError('invalid_input', 'ASR audio is empty')
+  return `data:audio/${encoded};base64,${toBase64(loaded.data)}`
+}
+
+export async function transcribeAudio(ctx: AdapterContext, opts: AsrOptions): Promise<AsrResult> {
+  const audioData = await resolveAudio(opts.audio, ctx)
+  const { path, body } = buildAsrRequest(opts, audioData)
+  const data = await requestJson(ctx, path, body)
+  return parseAsrResponse(data)
+}

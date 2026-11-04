@@ -1,0 +1,17 @@
+{
+  "note": "voice-design: POST /v1/voice_design returns a generated voice_id.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/voice_design",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "voice_id": "DesignVoice_1",
+      "prompt": "温暖的女声",
+      "preview_text": "你好，欢迎收听。"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "voice_id": "generated-voice-1" }
+  }
+}

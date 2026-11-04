@@ -1,0 +1,37 @@
+{
+  "name": "modelbay",
+  "version": "0.1.0",
+  "description": "One SDK for AI model platforms",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "build": "vp pack"
+  },
+  "peerDependencies": {
+    "zod": "^4.6"
+  },
+  "dependencies": {
+    "@modelbay/core": "workspace:*",
+    "@modelbay/ark": "workspace:*",
+    "@modelbay/bailian": "workspace:*",
+    "@modelbay/minimax": "workspace:*",
+    "@modelbay/doubao-speech": "workspace:*",
+    "@modelbay/openai": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "zod": "catalog:"
+  }
+}

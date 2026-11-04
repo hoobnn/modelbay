@@ -1,0 +1,35 @@
+{
+  "canonicalId": "volc/custom-video",
+  "id": "custom-video",
+  "title": "自定义视频模型（设置中填写）",
+  "capabilities": ["video.generate"],
+  "limits": {
+    "videoModes": ["text", "image", "frames", "reference"],
+    "defaultResolution": "720p"
+  },
+  "channels": [
+    {
+      "channel": "ark",
+      "id": "custom-video"
+    },
+    {
+      "channel": "ark-plan",
+      "id": "custom-video"
+    }
+  ],
+  "aliases": {
+    "official": [],
+    "short": []
+  },
+  "lifecycle": {
+    "status": "active",
+    "source": {
+      "url": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
+      "checkedAt": "2026-11-04"
+    }
+  },
+  "source": {
+    "url": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
+    "checkedAt": "2026-11-04"
+  }
+}

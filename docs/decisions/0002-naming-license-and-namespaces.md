@@ -13,15 +13,15 @@
 - **产品名叫 Modelbay。** model 加 bay（港湾、泊位，也是录音棚里的跳线盘），意思是各家模型停靠在同一个港口，任何来源都能接到任何去处。
 - 包名与仓库：
 
-  | 角色 | 名字 |
-  | --- | --- |
-  | 汇总入口 | `modelbay` |
-  | 核心运行时 | `@modelbay/core` |
+  | 角色       | 名字                                                                                                     |
+  | ---------- | -------------------------------------------------------------------------------------------------------- |
+  | 汇总入口   | `modelbay`                                                                                               |
+  | 核心运行时 | `@modelbay/core`                                                                                         |
   | 平台适配器 | `@modelbay/ark`、`@modelbay/bailian`、`@modelbay/minimax`、`@modelbay/doubao-speech`、`@modelbay/openai` |
-  | MCP | `@modelbay/mcp`，命令名 `modelbay-<平台>-mcp` |
-  | CLI | `@modelbay/cli`，命令名 `modelbay` |
-  | 仓库 | `github.com/ikuyu-labs/modelbay` |
-  | 文档站 | `modelbay.ikuyu.com` |
+  | MCP        | `@modelbay/mcp`，命令名 `modelbay-<平台>-mcp`                                                            |
+  | CLI        | `@modelbay/cli`，命令名 `modelbay`                                                                       |
+  | 仓库       | `github.com/ikuyu-labs/modelbay`                                                                         |
+  | 文档站     | `modelbay.ikuyu.com`                                                                                     |
 
 - **许可证用 MIT。**
 

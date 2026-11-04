@@ -1,0 +1,84 @@
+{
+  "name": "@modelbay/core",
+  "version": "0.1.0",
+  "description": "Runtime-agnostic core types, validation and model declarations for Modelbay",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./provider": {
+      "types": "./dist/provider.d.mts",
+      "default": "./dist/provider.mjs"
+    },
+    "./model-params": {
+      "types": "./dist/model-params.d.mts",
+      "default": "./dist/model-params.mjs"
+    },
+    "./media-requirements": {
+      "types": "./dist/media-requirements.d.mts",
+      "default": "./dist/media-requirements.mjs"
+    },
+    "./image-input": {
+      "types": "./dist/image-input.d.mts",
+      "default": "./dist/image-input.mjs"
+    },
+    "./video-input": {
+      "types": "./dist/video-input.d.mts",
+      "default": "./dist/video-input.mjs"
+    },
+    "./ids": {
+      "types": "./dist/ids.d.mts",
+      "default": "./dist/ids.mjs"
+    },
+    "./ports": {
+      "types": "./dist/ports.d.mts",
+      "default": "./dist/ports.mjs"
+    },
+    "./media": {
+      "types": "./dist/media.d.mts",
+      "default": "./dist/media.mjs"
+    },
+    "./reference-tokens": {
+      "types": "./dist/reference-tokens.d.mts",
+      "default": "./dist/reference-tokens.mjs"
+    },
+    "./capabilities": {
+      "types": "./dist/capabilities.d.mts",
+      "default": "./dist/capabilities.mjs"
+    },
+    "./declarations": {
+      "types": "./dist/declarations.d.mts",
+      "default": "./dist/declarations.mjs"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.mts",
+      "default": "./dist/schema.mjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.mts",
+      "default": "./dist/runtime.mjs"
+    },
+    "./adapter": {
+      "types": "./dist/adapter.d.mts",
+      "default": "./dist/adapter.mjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "build": "vp pack"
+  },
+  "peerDependencies": {
+    "zod": "^4.6"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "zod": "catalog:"
+  }
+}

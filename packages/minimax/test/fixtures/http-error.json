@@ -1,0 +1,12 @@
+{
+  "note": "HTTP 429 with a rate-limit business code.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/models",
+    "method": "GET",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" }
+  },
+  "response": {
+    "status": 429,
+    "body": { "base_resp": { "status_code": 1002, "status_msg": "rate limit" } }
+  }
+}

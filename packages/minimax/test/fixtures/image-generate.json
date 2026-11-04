@@ -1,0 +1,23 @@
+{
+  "note": "image.generate through /v1/image_generation with url response format.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/image_generation",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "model": "image-01",
+      "prompt": "一只猫",
+      "n": 1,
+      "response_format": "url",
+      "aspect_ratio": "1:1"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "base_resp": { "status_code": 0 },
+      "data": { "image_urls": ["https://example.com/cat.jpeg"] },
+      "id": "req-image-1"
+    }
+  }
+}

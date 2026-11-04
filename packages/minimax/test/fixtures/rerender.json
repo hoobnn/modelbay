@@ -1,0 +1,13 @@
+{
+  "note": "Native video-2k-rerender: POST /v2/video_regeneration by source task id.",
+  "request": {
+    "url": "https://api.minimax.cn/v2/video_regeneration",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": { "model": "MiniMax-H3", "source_task_id": "task-1" }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "task_id": "re-1", "id": "req-re-1" }
+  }
+}

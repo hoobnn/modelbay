@@ -1,0 +1,43 @@
+{
+  "name": "@modelbay/mcp",
+  "version": "0.1.0",
+  "description": "MCP tool generator and per-platform servers",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "bin": {
+    "modelbay-ark-mcp": "./dist/bin/ark-mcp.mjs",
+    "modelbay-minimax-mcp": "./dist/bin/minimax-mcp.mjs",
+    "modelbay-bailian-mcp": "./dist/bin/bailian-mcp.mjs",
+    "modelbay-doubao-speech-mcp": "./dist/bin/doubao-speech-mcp.mjs"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "gen:catalog": "node scripts/gen-catalog.mjs",
+    "build": "vp pack"
+  },
+  "peerDependencies": {
+    "zod": "^4.6"
+  },
+  "dependencies": {
+    "@modelbay/core": "workspace:*",
+    "@modelbay/ark": "workspace:*",
+    "@modelbay/bailian": "workspace:*",
+    "@modelbay/minimax": "workspace:*",
+    "@modelbay/doubao-speech": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "zod": "catalog:"
+  }
+}

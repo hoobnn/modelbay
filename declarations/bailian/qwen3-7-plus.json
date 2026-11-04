@@ -1,0 +1,28 @@
+{
+  "canonicalId": "aliyun/qwen3.7-plus",
+  "id": "qwen3.7-plus",
+  "title": "qwen3.7-plus",
+  "capabilities": ["text.chat"],
+  "features": ["tools", "vision", "structured"],
+  "channels": [
+    {
+      "channel": "bailian",
+      "id": "qwen3.7-plus"
+    }
+  ],
+  "aliases": {
+    "official": [],
+    "short": ["plus"]
+  },
+  "lifecycle": {
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/models",
+      "checkedAt": "2026-11-04"
+    }
+  },
+  "source": {
+    "url": "https://help.aliyun.com/zh/model-studio/models",
+    "checkedAt": "2026-11-04"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "note": "HTTP 401 with an upstream error code; the key in the message is redacted.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/tasks/bad",
+    "method": "GET",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    }
+  },
+  "response": {
+    "status": 401,
+    "body": {
+      "error": { "code": "InvalidApiKey", "message": "invalid api key <redacted>" },
+      "request_id": "req-err-1"
+    }
+  }
+}

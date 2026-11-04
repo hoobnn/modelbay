@@ -1,0 +1,17 @@
+{
+  "note": "Meeting minutes query by TaskID.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/auc/lark/query",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>",
+      "X-Api-Resource-Id": "volc.lark.minutes"
+    },
+    "body": { "TaskID": "minutes-1" }
+  },
+  "response": {
+    "status": 200,
+    "body": { "code": 0, "Data": { "Status": "success" } }
+  }
+}

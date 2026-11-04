@@ -1,0 +1,39 @@
+{
+  "note": "qwen3-asr-flash through /compatible-mode/v1/chat/completions, non-streaming.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "qwen3-asr-flash",
+      "messages": [
+        { "role": "system", "content": [{ "type": "text", "text": "会议录音" }] },
+        {
+          "role": "user",
+          "content": [
+            { "type": "input_audio", "input_audio": { "data": "https://example.com/a.wav" } }
+          ]
+        }
+      ],
+      "asr_options": { "enable_itn": true, "language": "zh" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "choices": [
+        {
+          "message": {
+            "content": "今天讨论模型迁移。",
+            "annotations": [{ "type": "audio_info", "language": "zh", "emotion": "neutral" }]
+          }
+        }
+      ],
+      "usage": { "prompt_tokens": 12, "completion_tokens": 9 },
+      "request_id": "req-asr-1"
+    }
+  }
+}

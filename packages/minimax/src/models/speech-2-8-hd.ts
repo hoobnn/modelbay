@@ -1,0 +1,25 @@
+import type { ModelDeclaration } from '@modelbay/core'
+
+export default {
+  canonicalId: 'minimax/speech-2.8-hd',
+  id: 'speech-2.8-hd',
+  title: 'speech-2.8-hd',
+  capabilities: ['audio.speech'],
+  limits: { speed: { min: 0.5, max: 2 }, instruction: false, promptMaxLength: 9999 },
+  optionsSchema: {
+    type: 'object',
+    properties: {
+      emotion: {
+        type: 'string',
+        enum: ['happy', 'sad', 'angry', 'fearful', 'disgusted', 'surprised', 'calm'],
+      },
+    },
+  },
+  channels: [{ channel: 'minimax', id: 'speech-2.8-hd' }],
+  aliases: { official: [], short: ['hd'] },
+  lifecycle: {
+    status: 'active',
+    source: { url: 'https://platform.minimax.cn/docs/api-reference', checkedAt: '2026-11-04' },
+  },
+  source: { url: 'https://platform.minimax.cn/docs/api-reference', checkedAt: '2026-11-04' },
+} satisfies ModelDeclaration

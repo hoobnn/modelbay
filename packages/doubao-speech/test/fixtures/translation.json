@@ -1,0 +1,17 @@
+{
+  "note": "Seed-X machine translation.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/machine_translation/matx_translate",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Api-Key": "<redacted>",
+      "X-Api-Resource-Id": "volc.speech.mt"
+    },
+    "body": { "text_list": ["你好"], "target_language": "en" }
+  },
+  "response": {
+    "status": 200,
+    "body": { "code": 0, "data": { "translations": ["hello"] } }
+  }
+}

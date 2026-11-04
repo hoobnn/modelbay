@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "doubao-seedance-2-0-260128",
+      "content": [{ "type": "text", "text": "海浪拍岸" }],
+      "resolution": "720p",
+      "ratio": "16:9",
+      "generate_audio": true
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "id": "cgt-2026-recorded-0001" }
+  }
+}

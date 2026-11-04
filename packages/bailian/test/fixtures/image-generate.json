@@ -1,0 +1,26 @@
+{
+  "note": "image.generate through multimodal-generation/generation.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "qwen-image-3.0",
+      "input": { "messages": [{ "role": "user", "content": [{ "text": "一只猫" }] }] },
+      "parameters": { "watermark": false, "n": 1 }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": {
+        "choices": [{ "message": { "content": [{ "image": "http://example.com/cat.png" }] } }]
+      },
+      "usage": { "image_count": 1 },
+      "request_id": "req-image-1"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+name: Release (manual, maintainer approved)
+
+# 发布需要维护者批准：
+# - 本工作流只由 workflow_dispatch 手动触发；故意不配置 push: branches: [main]，
+#   仓库里不存在「推到 main 就自动 npm publish」的路径。
+# - publish job 绑定 GitHub Environment `release`，需在仓库设置里配置 required
+#   reviewers；维护者在 Environment 审批通过后才会执行带 provenance 的发布。
+# - 实施 agent 不执行 `npm publish`、不打发布标签。每次发布都由维护者批准并触发。
+# - changesets 的 Version Packages PR 由维护者用 `pnpm changeset` /
+#   `pnpm version-packages` 生成并合并；fixed 组保证所有包同版本号。
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 只校验、不发布
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # npm provenance (OIDC)
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release # 受保护环境：维护者批准前不会运行
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+      - run: pnpm install --frozen-lockfile
+      - name: 发布前全量校验（含 build / publint / attw / 许可 / core-runtime 检查）
+        run: pnpm verify
+      - name: Publish with npm provenance (changesets)
+        if: ${{ !inputs.dry_run }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: pnpm exec changeset publish
+      - name: Dry run summary
+        if: ${{ inputs.dry_run }}
+        run: echo "dry run：已通过 pnpm verify，未执行发布。正式发布仍需维护者在 release Environment 批准。"

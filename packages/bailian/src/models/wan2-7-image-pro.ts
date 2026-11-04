@@ -1,0 +1,47 @@
+import type { ModelDeclaration } from '@modelbay/core'
+
+export default {
+  canonicalId: 'aliyun/wan2.7-image-pro',
+  id: 'wan2.7-image-pro',
+  title: 'wan2.7-image-pro',
+  capabilities: ['image.generate'],
+  limits: {
+    aspectRatios: ['auto', '21:9', '16:9', '3:2', '4:3', '1:1', '3:4', '2:3', '9:16'],
+    resolutions: ['1K', '2K', '4K'],
+    count: { max: 4 },
+    references: { max: 9 },
+    seed: { min: 0, max: 2147483647 },
+    promptMaxLength: 5000,
+    image: {
+      referenceResolutions: ['1K', '2K'],
+      sequential: { option: 'enable_sequential', maxCount: 12, resolutions: ['1K', '2K'] },
+      size: {
+        minPixels: 589824,
+        maxPixels: 16777216,
+        maxPixelsWithReferences: 4194304,
+        maxPixelsSequential: 4194304,
+        minRatio: 0.125,
+        maxRatio: 8,
+        tiers: ['1K', '2K', '4K'],
+      },
+    },
+  },
+  optionsSchema: {
+    type: 'object',
+    properties: {
+      negative_prompt: { type: 'string' },
+      prompt_extend: { type: 'boolean' },
+      thinking_mode: { type: 'boolean' },
+      enable_sequential: { type: 'boolean' },
+      size: { type: 'string' },
+      watermark: { type: 'boolean' },
+    },
+  },
+  channels: [{ channel: 'bailian', id: 'wan2.7-image-pro' }],
+  aliases: { official: [], short: [] },
+  lifecycle: {
+    status: 'active',
+    source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-04' },
+  },
+  source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-04' },
+} satisfies ModelDeclaration

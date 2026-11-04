@@ -1,0 +1,22 @@
+{
+  "note": "voice-enrollment query_voice status.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/customization",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "voice-enrollment",
+      "input": { "action": "query_voice", "voice_id": "v1" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": { "status": "OK", "voice_id": "v1", "target_model": "qwen-audio-3.0-tts-flash" },
+      "request_id": "req-voice-4"
+    }
+  }
+}

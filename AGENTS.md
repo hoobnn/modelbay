@@ -8,15 +8,15 @@
 
 ## 从哪里开始
 
-| 要做的事 | 先读 |
-| --- | --- |
-| 要做到什么、不做什么、每步怎么验收 | [目标与里程碑](docs/goals.md) |
-| 工具链、目录、测试、提交与发布 | [工程规范](docs/engineering.md) |
-| 了解为什么做、整体怎么分层 | [0001 单一实现与四层架构](docs/decisions/0001-single-implementation-architecture.md) |
-| 命名、许可、npm / GitHub 命名空间 | [0002](docs/decisions/0002-naming-license-and-namespaces.md) |
-| 新增能力、写或改模型声明 | [0003](docs/decisions/0003-capabilities-and-model-declarations.md) |
-| 查现有两份实现覆盖了什么 | [盘点](docs/inventory.md) |
-| 做高成本取舍 | [决策记录规则](docs/decisions/README.md) |
+| 要做的事                           | 先读                                                                                 |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| 要做到什么、不做什么、每步怎么验收 | [目标与里程碑](docs/goals.md)                                                        |
+| 工具链、目录、测试、提交与发布     | [工程规范](docs/engineering.md)                                                      |
+| 了解为什么做、整体怎么分层         | [0001 单一实现与四层架构](docs/decisions/0001-single-implementation-architecture.md) |
+| 命名、许可、npm / GitHub 命名空间  | [0002](docs/decisions/0002-naming-license-and-namespaces.md)                         |
+| 新增能力、写或改模型声明           | [0003](docs/decisions/0003-capabilities-and-model-declarations.md)                   |
+| 查现有两份实现覆盖了什么           | [盘点](docs/inventory.md)                                                            |
+| 做高成本取舍                       | [决策记录规则](docs/decisions/README.md)                                             |
 
 ## 硬规则
 

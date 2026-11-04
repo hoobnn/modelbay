@@ -1,0 +1,18 @@
+{
+  "note": "voice-clone: POST /v1/voice_clone after the sample upload.",
+  "request": {
+    "url": "https://api.minimax.cn/v1/voice_clone",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "file_id": "123456789",
+      "voice_id": "MyVoice_123",
+      "need_noise_reduction": false,
+      "need_volume_normalization": false
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "id": "req-clone-1" }
+  }
+}

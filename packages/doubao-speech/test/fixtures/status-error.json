@@ -1,0 +1,14 @@
+{
+  "note": "HTTP 200 but a non-success X-Api-Status-Code.",
+  "request": {
+    "url": "https://openspeech.bytedance.com/api/v3/tts/query",
+    "method": "POST",
+    "headers": { "Content-Type": "application/json", "X-Api-Key": "<redacted>" },
+    "body": { "task_id": "bad" }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "X-Api-Status-Code": "55000001" },
+    "body": { "header": { "code": 55000001, "message": "service unavailable" } }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "note": "HTTP 200 with a business error in base_resp (auth).",
+  "request": {
+    "url": "https://api.minimax.cn/v1/models",
+    "method": "GET",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 1004, "status_msg": "invalid api key <redacted>" } }
+  }
+}

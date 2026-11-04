@@ -1,0 +1,19 @@
+{
+  "note": "video.generate async submission returns task_id.",
+  "request": {
+    "url": "https://api.minimax.cn/v2/video_generation",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
+    "body": {
+      "model": "MiniMax-H3",
+      "content": [{ "type": "text", "text": "海浪" }],
+      "duration": 5,
+      "resolution": "768P",
+      "ratio": "16:9"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "base_resp": { "status_code": 0 }, "task_id": "task-1", "id": "req-video-1" }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "note": "GET /v2/query/video_generation/{id} succeeded.",
+  "request": {
+    "url": "https://api.minimax.cn/v2/query/video_generation/task-1",
+    "method": "GET",
+    "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "base_resp": { "status_code": 0 },
+      "task": {
+        "id": "task-1",
+        "status": "succeeded",
+        "content": { "url": "https://example.com/v.mp4" },
+        "duration": 5
+      }
+    }
+  }
+}
