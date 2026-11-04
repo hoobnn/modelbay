@@ -1,0 +1,4895 @@
+[
+ {
+  "export": "mockProvider",
+  "id": "plein/mock",
+  "title": "Mock（开发测试用）",
+  "models": [
+   {
+    "id": "agent",
+    "title": "Mock 智能体",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "tools",
+     "structured"
+    ]
+   },
+   {
+    "id": "agent-vision",
+    "title": "Mock 视觉智能体",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ]
+   },
+   {
+    "id": "chat",
+    "title": "Mock 对话",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "structured"
+    ]
+   },
+   {
+    "id": "image",
+    "title": "Mock 图片",
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "resolutions": [
+      "1K",
+      "2K"
+     ]
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "image-process",
+    "title": "Mock 图片精修",
+    "capabilities": [
+     "image.process"
+    ],
+    "limits": {
+     "imageOperations": [
+      "upscale",
+      "outpaint",
+      "cutout"
+     ]
+    }
+   },
+   {
+    "id": "image-edit",
+    "title": "Mock 局部重绘",
+    "capabilities": [
+     "image.edit"
+    ],
+    "limits": {
+     "count": {
+      "max": 4
+     }
+    }
+   },
+   {
+    "id": "video",
+    "title": "Mock 视频",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "referenceMedia": {
+      "video": 10,
+      "audio": 10
+     },
+     "resolutions": [
+      "480p",
+      "720p",
+      "1080p"
+     ],
+     "duration": {
+      "min": 2,
+      "max": 10
+     },
+     "seed": false
+    }
+   },
+   {
+    "id": "audio",
+    "title": "Mock 音频",
+    "capabilities": [
+     "audio.speech",
+     "audio.music",
+     "audio.sfx",
+     "audio.transcribe"
+    ],
+    "voices": [
+     {
+      "id": "mock-female",
+      "title": "Mock 女声",
+      "gender": "female"
+     },
+     {
+      "id": "mock-male",
+      "title": "Mock 男声",
+      "gender": "male"
+     },
+     {
+      "id": "mock-uncle",
+      "title": "Mock 大叔",
+      "gender": "male",
+      "age": "mature"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "export": "minimaxProvider",
+  "id": "minimax/api",
+  "title": "MiniMax",
+  "models": [
+   {
+    "id": "MiniMax-M3",
+    "title": "MiniMax M3",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "vision",
+     "structured"
+    ]
+   },
+   {
+    "id": "MiniMax-M3.1-Flash",
+    "title": "MiniMax M3.1 Flash",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "vision",
+     "structured"
+    ]
+   },
+   {
+    "id": "MiniMax-M2.7",
+    "title": "MiniMax M2.7（纯文本）",
+    "description": "已停止向新用户开放；按量付费存量用户可调用至 2026-11-18，请提前迁移至 M3.1 Flash",
+    "deprecated": true,
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "structured"
+    ]
+   },
+   {
+    "id": "image-01",
+    "title": "image-01",
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "prompt_optimizer": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "aigc_watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    },
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "2K"
+     ],
+     "image": {
+      "resolutionsByAspectRatio": {
+       "21:9": [
+        "2K"
+       ]
+      }
+     },
+     "count": {
+      "max": 9
+     },
+     "references": {
+      "max": 1
+     },
+     "customSize": {
+      "min": 512,
+      "max": 2048,
+      "multiple": 8
+     },
+     "negativePrompt": false,
+     "promptMaxLength": 1500
+    }
+   },
+   {
+    "id": "image-01-live",
+    "title": "image-01-live",
+    "description": "中国区官方支持的画风模型；国际区官方文档未列出，未做国际区云端验收",
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "prompt_optimizer": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "aigc_watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "style_type": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "漫画": "漫画",
+            "元气": "元气",
+            "中世纪": "中世纪",
+            "水彩": "水彩"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "漫画": "漫画",
+           "元气": "元气",
+           "中世纪": "中世纪",
+           "水彩": "水彩"
+          },
+          "options": [
+           "漫画",
+           "元气",
+           "中世纪",
+           "水彩"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "style_weight": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "number",
+           "checks": [
+            {},
+            {}
+           ]
+          },
+          "type": "number",
+          "isFinite": true
+         }
+        },
+        "type": "optional"
+       }
+      },
+      "checks": [
+       {
+        "def": {
+         "type": "custom",
+         "check": "custom",
+         "path": [
+          "style_type"
+         ]
+        },
+        "type": "custom"
+       }
+      ]
+     },
+     "type": "object"
+    },
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "count": {
+      "max": 9
+     },
+     "references": {
+      "max": 1
+     },
+     "customSize": false,
+     "negativePrompt": false,
+     "promptMaxLength": 1500
+    }
+   },
+   {
+    "id": "MiniMax-H3",
+    "title": "MiniMax-H3",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "promptMaxLength": 7000,
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "768P",
+      "2K"
+     ],
+     "defaultResolution": "2K",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "audio": false,
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": true
+     },
+     "media": {
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 50,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 23.976,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    }
+   },
+   {
+    "id": "MiniMax-H3-Highspeed",
+    "title": "MiniMax-H3-Highspeed",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "promptMaxLength": 7000,
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480P",
+      "768P"
+     ],
+     "defaultResolution": "768P",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "audio": false,
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": true
+     },
+     "media": {
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 50,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 23.976,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    }
+   },
+   {
+    "id": "MiniMax-H3-Lite",
+    "title": "MiniMax-H3-Lite",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "promptMaxLength": 7000,
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480P",
+      "768P"
+     ],
+     "defaultResolution": "768P",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "audio": false,
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": true
+     },
+     "media": {
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 50,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 23.976,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    }
+   },
+   {
+    "id": "MiniMax-H3-Max",
+    "title": "MiniMax-H3-Max",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "promptMaxLength": 7000,
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480P",
+      "768P"
+     ],
+     "defaultResolution": "768P",
+     "duration": {
+      "min": 5,
+      "max": 15
+     },
+     "seed": false,
+     "audio": false,
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": true
+     },
+     "media": {
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 50,
+       "minEdge": 256,
+       "maxEdge": 5760,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 23.976,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    }
+   },
+   {
+    "id": "speech-2.8-hd",
+    "title": "speech-2.8-hd",
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": {
+      "min": 0.5,
+      "max": 2
+     },
+     "instruction": false,
+     "promptMaxLength": 9999
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "emotion": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "happy": "happy",
+            "sad": "sad",
+            "angry": "angry",
+            "fearful": "fearful",
+            "disgusted": "disgusted",
+            "surprised": "surprised",
+            "calm": "calm"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "happy": "happy",
+           "sad": "sad",
+           "angry": "angry",
+           "fearful": "fearful",
+           "disgusted": "disgusted",
+           "surprised": "surprised",
+           "calm": "calm"
+          },
+          "options": [
+           "happy",
+           "sad",
+           "angry",
+           "fearful",
+           "disgusted",
+           "surprised",
+           "calm"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "speech-2.8-turbo",
+    "title": "speech-2.8-turbo",
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": {
+      "min": 0.5,
+      "max": 2
+     },
+     "instruction": false,
+     "promptMaxLength": 9999
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "emotion": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "happy": "happy",
+            "sad": "sad",
+            "angry": "angry",
+            "fearful": "fearful",
+            "disgusted": "disgusted",
+            "surprised": "surprised",
+            "calm": "calm"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "happy": "happy",
+           "sad": "sad",
+           "angry": "angry",
+           "fearful": "fearful",
+           "disgusted": "disgusted",
+           "surprised": "surprised",
+           "calm": "calm"
+          },
+          "options": [
+           "happy",
+           "sad",
+           "angry",
+           "fearful",
+           "disgusted",
+           "surprised",
+           "calm"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "music-3.0",
+    "title": "Music 3.0",
+    "description": "官方已退役；仅保留旧画布引用",
+    "deprecated": true,
+    "capabilities": [
+     "audio.music"
+    ],
+    "limits": {
+     "duration": false,
+     "promptMaxLength": 2000
+    }
+   }
+  ]
+ },
+ {
+  "export": "doubaoProvider",
+  "id": "doubao/speech",
+  "title": "豆包语音",
+  "models": [
+   {
+    "id": "seed-tts-2.0",
+    "title": "豆包语音合成 2.0",
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": {
+      "min": 0.5,
+      "max": 2
+     },
+     "promptMaxLength": 3000
+    },
+    "voices": [
+     {
+      "id": "zh_female_vv_uranus_bigtts",
+      "title": "Vivi 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_xiaohe_uranus_bigtts",
+      "title": "小何 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_linjianvhai_uranus_bigtts",
+      "title": "邻家女孩 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_gaolengyujie_uranus_bigtts",
+      "title": "高冷御姐 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_wenroushunv_uranus_bigtts",
+      "title": "温柔淑女 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_zhixingnv_uranus_bigtts",
+      "title": "知性女声 2.0",
+      "gender": "female",
+      "age": "mature"
+     },
+     {
+      "id": "zh_female_wenroumama_uranus_bigtts",
+      "title": "温柔妈妈 2.0",
+      "gender": "female",
+      "age": "mature"
+     },
+     {
+      "id": "zh_female_popo_uranus_bigtts",
+      "title": "婆婆 2.0",
+      "gender": "female",
+      "age": "mature"
+     },
+     {
+      "id": "zh_male_m191_uranus_bigtts",
+      "title": "云舟 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_taocheng_uranus_bigtts",
+      "title": "小天 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_shaonianzixin_uranus_bigtts",
+      "title": "少年梓辛 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_aojiaobazong_uranus_bigtts",
+      "title": "傲娇霸总 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_gaolengchenwen_uranus_bigtts",
+      "title": "高冷沉稳 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_baqiqingshu_uranus_bigtts",
+      "title": "霸气青叔 2.0",
+      "gender": "male",
+      "age": "mature"
+     },
+     {
+      "id": "zh_male_yuanboxiaoshu_uranus_bigtts",
+      "title": "渊博小叔 2.0",
+      "gender": "male",
+      "age": "mature"
+     },
+     {
+      "id": "zh_male_xuanyijieshuo_uranus_bigtts",
+      "title": "悬疑解说 2.0",
+      "gender": "male",
+      "age": "mature"
+     }
+    ]
+   },
+   {
+    "id": "seed-icl-1.0",
+    "title": "豆包声音复刻 1.0（已有音色）",
+    "description": "历史 V3 接口兼容项；新接入请使用声音复刻 2.0",
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": {
+      "min": 0.5,
+      "max": 2
+     },
+     "promptMaxLength": 3000
+    }
+   },
+   {
+    "id": "seed-icl-2.0",
+    "title": "豆包声音复刻 2.0（已有音色）",
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": {
+      "min": 0.5,
+      "max": 2
+     },
+     "promptMaxLength": 3000
+    }
+   },
+   {
+    "id": "seed-audio-1.0",
+    "title": "Seed Audio 1.0",
+    "capabilities": [
+     "audio.music",
+     "audio.sfx"
+    ],
+    "limits": {
+     "duration": {
+      "min": 1,
+      "max": 120
+     },
+     "promptMaxLength": 2971
+    }
+   },
+   {
+    "id": "bigmodel",
+    "title": "录音文件识别极速版",
+    "capabilities": [
+     "audio.transcribe"
+    ],
+    "limits": {
+     "media": {
+      "audio": {
+       "mime": [
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/ogg",
+        "audio/flac",
+        "audio/mp4"
+       ],
+       "maxMB": 100,
+       "minBytes": 1
+      }
+     }
+    }
+   }
+  ]
+ },
+ {
+  "export": "openaiProvider",
+  "id": "openai/api",
+  "title": "OpenAI",
+  "models": [
+   {
+    "id": "gpt-6.1-sol",
+    "title": "gpt-6.1-sol",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "vision",
+     "tools",
+     "structured"
+    ],
+    "limits": {
+     "temperature": false
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "reasoning_effort": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "low": "low",
+            "medium": "medium",
+            "high": "high"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "low": "low",
+           "medium": "medium",
+           "high": "high"
+          },
+          "options": [
+           "low",
+           "medium",
+           "high"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "gpt-6-astra",
+    "title": "gpt-6-astra",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "vision",
+     "tools",
+     "structured"
+    ],
+    "limits": {
+     "temperature": false
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "reasoning_effort": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "low": "low",
+            "medium": "medium",
+            "high": "high"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "low": "low",
+           "medium": "medium",
+           "high": "high"
+          },
+          "options": [
+           "low",
+           "medium",
+           "high"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "gpt-6.1-terra",
+    "title": "gpt-6.1-terra",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "vision",
+     "tools",
+     "structured"
+    ],
+    "limits": {
+     "temperature": false
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "reasoning_effort": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "low": "low",
+            "medium": "medium",
+            "high": "high"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "low": "low",
+           "medium": "medium",
+           "high": "high"
+          },
+          "options": [
+           "low",
+           "medium",
+           "high"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "gpt-6-luna",
+    "title": "gpt-6-luna",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "vision",
+     "tools",
+     "structured"
+    ],
+    "limits": {
+     "temperature": false
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "reasoning_effort": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "low": "low",
+            "medium": "medium",
+            "high": "high"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "low": "low",
+           "medium": "medium",
+           "high": "high"
+          },
+          "options": [
+           "low",
+           "medium",
+           "high"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "gpt-image-2.5-sunburst",
+    "title": "gpt-image-2.5-sunburst",
+    "capabilities": [
+     "image.generate",
+     "image.edit"
+    ],
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "quality": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "auto": "auto",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": "max"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "auto": "auto",
+           "low": "low",
+           "medium": "medium",
+           "high": "high",
+           "xhigh": "xhigh",
+           "max": "max"
+          },
+          "options": [
+           "auto",
+           "low",
+           "medium",
+           "high",
+           "xhigh",
+           "max"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "background": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "auto": "auto",
+            "opaque": "opaque",
+            "transparent": "transparent"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "auto": "auto",
+           "opaque": "opaque",
+           "transparent": "transparent"
+          },
+          "options": [
+           "auto",
+           "opaque",
+           "transparent"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "output_format": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "png": "png",
+            "jpeg": "jpeg",
+            "webp": "webp"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "png": "png",
+           "jpeg": "jpeg",
+           "webp": "webp"
+          },
+          "options": [
+           "png",
+           "jpeg",
+           "webp"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    },
+    "description": "支持多参考图与蒙版引导编辑；蒙版边界不保证像素级保留。",
+    "limits": {
+     "promptMaxLength": 32000,
+     "aspectRatios": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16"
+     ],
+     "count": {
+      "max": 10
+     },
+     "references": {
+      "max": 16
+     },
+     "seed": false
+    }
+   },
+   {
+    "id": "gpt-image-2.5-flare",
+    "title": "gpt-image-2.5-flare",
+    "capabilities": [
+     "image.generate",
+     "image.edit"
+    ],
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "quality": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "auto": "auto",
+            "low": "low",
+            "medium": "medium",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": "max"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "auto": "auto",
+           "low": "low",
+           "medium": "medium",
+           "high": "high",
+           "xhigh": "xhigh",
+           "max": "max"
+          },
+          "options": [
+           "auto",
+           "low",
+           "medium",
+           "high",
+           "xhigh",
+           "max"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "background": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "auto": "auto",
+            "opaque": "opaque",
+            "transparent": "transparent"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "auto": "auto",
+           "opaque": "opaque",
+           "transparent": "transparent"
+          },
+          "options": [
+           "auto",
+           "opaque",
+           "transparent"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "output_format": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "png": "png",
+            "jpeg": "jpeg",
+            "webp": "webp"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "png": "png",
+           "jpeg": "jpeg",
+           "webp": "webp"
+          },
+          "options": [
+           "png",
+           "jpeg",
+           "webp"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    },
+    "description": "支持多参考图与蒙版引导编辑；蒙版边界不保证像素级保留。",
+    "limits": {
+     "promptMaxLength": 32000,
+     "aspectRatios": [
+      "1:1",
+      "3:2",
+      "2:3",
+      "16:9",
+      "9:16"
+     ],
+     "count": {
+      "max": 10
+     },
+     "references": {
+      "max": 16
+     },
+     "seed": false
+    }
+   }
+  ]
+ },
+ {
+  "export": "bailianProvider",
+  "id": "aliyun/bailian",
+  "title": "阿里云百炼",
+  "models": [
+   {
+    "id": "qwen3.8-max",
+    "title": "qwen3.8-max",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ]
+   },
+   {
+    "id": "qwen3.7-plus",
+    "title": "qwen3.7-plus",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ]
+   },
+   {
+    "id": "qwen3.8-flash",
+    "title": "qwen3.8-flash",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ]
+   },
+   {
+    "id": "qwen-image-3.0-pro",
+    "title": "qwen-image-3.0-pro",
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "2K"
+     ],
+     "count": {
+      "max": 6
+     },
+     "references": {
+      "max": 3
+     },
+     "seed": {
+      "min": 0,
+      "max": 2147483647
+     },
+     "image": {
+      "referenceForbiddenOptions": {
+       "prompt_extend_mode": [
+        "agent"
+       ]
+      },
+      "resolutionRequiresAspectRatio": true,
+      "size": {
+       "minPixels": 262144,
+       "maxPixels": 4194304,
+       "minRatio": 0.125,
+       "maxRatio": 8,
+       "auto": true
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "negative_prompt": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "string"
+          },
+          "type": "string"
+         }
+        },
+        "type": "optional"
+       },
+       "size": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "string"
+          },
+          "type": "string"
+         }
+        },
+        "type": "optional"
+       },
+       "prompt_extend": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "prompt_extend_mode": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "direct": "direct",
+            "agent": "agent"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "direct": "direct",
+           "agent": "agent"
+          },
+          "options": [
+           "direct",
+           "agent"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "enable_thinking": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "qwen-image-3.0",
+    "title": "qwen-image-3.0",
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "2K"
+     ],
+     "count": {
+      "max": 6
+     },
+     "references": {
+      "max": 3
+     },
+     "seed": {
+      "min": 0,
+      "max": 2147483647
+     },
+     "image": {
+      "referenceForbiddenOptions": {
+       "prompt_extend_mode": [
+        "agent"
+       ]
+      },
+      "resolutionRequiresAspectRatio": true,
+      "size": {
+       "minPixels": 262144,
+       "maxPixels": 4194304,
+       "minRatio": 0.125,
+       "maxRatio": 8,
+       "auto": true
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "negative_prompt": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "string"
+          },
+          "type": "string"
+         }
+        },
+        "type": "optional"
+       },
+       "size": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "string"
+          },
+          "type": "string"
+         }
+        },
+        "type": "optional"
+       },
+       "prompt_extend": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "prompt_extend_mode": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "direct": "direct",
+            "agent": "agent"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "direct": "direct",
+           "agent": "agent"
+          },
+          "options": [
+           "direct",
+           "agent"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "enable_thinking": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "wan2.7-image-pro",
+    "title": "wan2.7-image-pro",
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "2K",
+      "4K"
+     ],
+     "count": {
+      "max": 4
+     },
+     "references": {
+      "max": 9
+     },
+     "seed": {
+      "min": 0,
+      "max": 2147483647
+     },
+     "promptMaxLength": 5000,
+     "image": {
+      "referenceResolutions": [
+       "1K",
+       "2K"
+      ],
+      "sequential": {
+       "option": "enable_sequential",
+       "maxCount": 12,
+       "resolutions": [
+        "1K",
+        "2K"
+       ]
+      },
+      "size": {
+       "minPixels": 589824,
+       "maxPixels": 16777216,
+       "maxPixelsWithReferences": 4194304,
+       "maxPixelsSequential": 4194304,
+       "minRatio": 0.125,
+       "maxRatio": 8,
+       "tiers": [
+        "1K",
+        "2K",
+        "4K"
+       ]
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "negative_prompt": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "string"
+          },
+          "type": "string"
+         }
+        },
+        "type": "optional"
+       },
+       "prompt_extend": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "thinking_mode": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "enable_sequential": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "size": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "string"
+          },
+          "type": "string"
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "wanx2.1-imageedit",
+    "title": "万相图像编辑（局部重绘）",
+    "description": "Legacy，仅华北2（北京）地域；按蒙版只重绘白色区域，原生蒙版能力",
+    "capabilities": [
+     "image.edit",
+     "image.process"
+    ],
+    "limits": {
+     "count": {
+      "max": 1
+     },
+     "promptMaxLength": 800,
+     "imageOperations": [
+      "upscale",
+      "outpaint"
+     ],
+     "process": {
+      "scale": {
+       "min": 1,
+       "max": 4
+      },
+      "expansion": {
+       "min": 1,
+       "max": 2
+      }
+     },
+     "media": {
+      "process": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/bmp",
+        "image/tiff",
+        "image/webp"
+       ],
+       "maxMB": 10,
+       "minEdge": 512,
+       "maxEdge": 4096
+      }
+     }
+    }
+   },
+   {
+    "id": "wan3.0-video",
+    "title": "wan3.0-video",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480P",
+      "720P",
+      "1080P"
+     ],
+     "defaultResolution": "720P",
+     "duration": {
+      "min": 2,
+      "max": 30
+     },
+     "references": {
+      "max": 10
+     },
+     "referenceMedia": {
+      "video": 5,
+      "audio": 5
+     },
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "image": {
+       "mime": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/bmp",
+        "image/tiff"
+       ],
+       "maxMB": 20
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 100,
+       "minDuration": 0,
+       "totalDurationMax": 15,
+       "totalWithOutputMax": 30,
+       "outputDurationDefault": 5
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg"
+       ],
+       "maxMB": 15,
+       "minDuration": 0,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "prompt_extend": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "wan3.0-video-prime",
+    "title": "wan3.0-video-prime",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480P",
+      "720P",
+      "1080P"
+     ],
+     "defaultResolution": "720P",
+     "duration": {
+      "min": 2,
+      "max": 30
+     },
+     "references": {
+      "max": 10
+     },
+     "referenceMedia": {
+      "video": 5,
+      "audio": 5
+     },
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "image": {
+       "mime": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/bmp",
+        "image/tiff"
+       ],
+       "maxMB": 20
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 100,
+       "minDuration": 0,
+       "totalDurationMax": 15,
+       "totalWithOutputMax": 30,
+       "outputDurationDefault": 5
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg"
+       ],
+       "maxMB": 15,
+       "minDuration": 0,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "prompt_extend": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "qwen3-tts-flash",
+    "title": "qwen3-tts-flash",
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": false,
+     "instruction": false,
+     "promptMaxLength": 600
+    }
+   },
+   {
+    "id": "qwen3-tts-instruct-flash",
+    "title": "qwen3-tts-instruct-flash",
+    "description": "已于 2026-10-10 下线；仅保留旧画布引用，请改用 qwen3-tts-flash 或豆包语音",
+    "deprecated": true,
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": false,
+     "promptMaxLength": 600
+    }
+   }
+  ]
+ },
+ {
+  "export": "arkPlanProvider",
+  "id": "volc/ark-plan",
+  "title": "火山方舟 Agent Plan",
+  "models": [
+   {
+    "id": "doubao-seedream-5-0-pro-260628",
+    "title": "Seedream 5.0 Pro",
+    "capabilities": [
+     "image.generate",
+     "image.process"
+    ],
+    "limits": {
+     "imageOperations": [
+      "cutout"
+     ],
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "1.5K",
+      "2K"
+     ],
+     "defaultResolution": "2K",
+     "count": {
+      "max": 1
+     },
+     "references": {
+      "max": 10
+     },
+     "seed": false,
+     "negativePrompt": false,
+     "image": {
+      "size": {
+       "minPixels": 921600,
+       "maxPixels": 4624220,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "tiers": [
+        "1K",
+        "1.5K",
+        "2K"
+       ]
+      }
+     },
+     "media": {
+      "process": {
+       "mime": [
+        "image/png",
+        "image/jpeg"
+       ],
+       "maxMB": 30,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "minPixels": 262144,
+       "maxPixels": 36000000
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "watermark": {
+        "def": {
+         "type": "default",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         },
+         "defaultValue": false
+        },
+        "type": "default"
+       },
+       "output_format": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "jpeg": "jpeg",
+            "png": "png"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "jpeg": "jpeg",
+           "png": "png"
+          },
+          "options": [
+           "jpeg",
+           "png"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedream-5-0-flash-260915",
+    "title": "Seedream 5.0 Flash",
+    "capabilities": [
+     "image.generate",
+     "image.process"
+    ],
+    "limits": {
+     "imageOperations": [
+      "cutout"
+     ],
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "1.5K",
+      "2K"
+     ],
+     "defaultResolution": "2K",
+     "count": {
+      "max": 1
+     },
+     "references": {
+      "max": 10
+     },
+     "seed": false,
+     "negativePrompt": false,
+     "image": {
+      "size": {
+       "minPixels": 921600,
+       "maxPixels": 4624220,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "tiers": [
+        "1K",
+        "1.5K",
+        "2K"
+       ]
+      }
+     },
+     "media": {
+      "process": {
+       "mime": [
+        "image/png",
+        "image/jpeg"
+       ],
+       "maxMB": 30,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "minPixels": 262144,
+       "maxPixels": 36000000
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "watermark": {
+        "def": {
+         "type": "default",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         },
+         "defaultValue": false
+        },
+        "type": "default"
+       },
+       "output_format": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "jpeg": "jpeg",
+            "png": "png"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "jpeg": "jpeg",
+           "png": "png"
+          },
+          "options": [
+           "jpeg",
+           "png"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-5-260628",
+    "title": "Seedance 2.5",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p",
+      "1080p"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 30
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4",
+      "mov"
+     ],
+     "references": {
+      "max": 30
+     },
+     "referenceMedia": {
+      "video": 10,
+      "audio": 10,
+      "audioOnly": true
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 30,
+       "totalDurationMax": 30,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 30,
+       "totalDurationMax": 30
+      },
+      "videoTasks": {
+       "edit": {
+        "minDuration": 4
+       }
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "omni_reference_task_type": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "auto": "auto",
+            "reference": "reference",
+            "edit": "edit",
+            "extend": "extend"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "auto": "auto",
+           "reference": "reference",
+           "edit": "edit",
+           "extend": "extend"
+          },
+          "options": [
+           "auto",
+           "reference",
+           "edit",
+           "extend"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      },
+      "checks": []
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-0-260128",
+    "title": "Seedance 2.0",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p",
+      "1080p",
+      "4k"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4"
+     ],
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": false
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-0-fast-260128",
+    "title": "Seedance 2.0 Fast",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4"
+     ],
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": false
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-0-mini-260615",
+    "title": "Seedance 2.0 Mini",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4"
+     ],
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": false
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "custom-image",
+    "title": "自定义图片模型（设置中填写）",
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "defaultResolution": "2K"
+    }
+   },
+   {
+    "id": "custom-video",
+    "title": "自定义视频模型（设置中填写）",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "defaultResolution": "720p"
+    }
+   },
+   {
+    "id": "ark-code-latest",
+    "title": "Auto（套餐自动路由）",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "minimax-m3",
+    "title": "minimax-m3",
+    "deprecated": true,
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "kimi-k2.7-code",
+    "title": "kimi-k2.7-code",
+    "deprecated": true,
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "doubao-seed-2.0-mini",
+    "title": "doubao-seed-2.0-mini",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "doubao-seed-2.1-lite",
+    "title": "doubao-seed-2.1-lite",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured",
+     "vision"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "doubao-seed-2.1-pro",
+    "title": "doubao-seed-2.1-pro",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured",
+     "vision"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "doubao-seed-evolving",
+    "title": "doubao-seed-evolving",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured",
+     "vision"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "deepseek-v4-flash",
+    "title": "deepseek-v4-flash",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "deepseek-v4-pro",
+    "title": "deepseek-v4-pro",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "deepseek-v4.1-flash",
+    "title": "deepseek-v4.1-flash",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured",
+     "vision"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "deepseek-v4.1-flash-economy",
+    "title": "deepseek-v4.1-flash-economy",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured",
+     "vision"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "glm-5.3",
+    "title": "glm-5.3",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "glm-5.3-flash",
+    "title": "glm-5.3-flash",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured",
+     "vision"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "kimi-k2.8-preview",
+    "title": "kimi-k2.8-preview",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "kimi-k3",
+    "title": "kimi-k3",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "kimi-k3.1-pro",
+    "title": "kimi-k3.1-pro",
+    "capabilities": [
+     "text.chat"
+    ],
+    "agentOnly": true,
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "description": "Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位"
+   },
+   {
+    "id": "custom-chat",
+    "title": "自定义套餐对话模型",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "tools",
+     "structured"
+    ],
+    "agentOnly": true
+   },
+   {
+    "id": "doubao-seed-tts-2.0",
+    "title": "豆包语音合成 2.0",
+    "capabilities": [
+     "audio.speech"
+    ],
+    "limits": {
+     "speed": {
+      "min": 0.5,
+      "max": 2
+     },
+     "promptMaxLength": 3000
+    },
+    "voices": [
+     {
+      "id": "zh_female_vv_uranus_bigtts",
+      "title": "Vivi 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_xiaohe_uranus_bigtts",
+      "title": "小何 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_linjianvhai_uranus_bigtts",
+      "title": "邻家女孩 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_gaolengyujie_uranus_bigtts",
+      "title": "高冷御姐 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_wenroushunv_uranus_bigtts",
+      "title": "温柔淑女 2.0",
+      "gender": "female"
+     },
+     {
+      "id": "zh_female_zhixingnv_uranus_bigtts",
+      "title": "知性女声 2.0",
+      "gender": "female",
+      "age": "mature"
+     },
+     {
+      "id": "zh_female_wenroumama_uranus_bigtts",
+      "title": "温柔妈妈 2.0",
+      "gender": "female",
+      "age": "mature"
+     },
+     {
+      "id": "zh_female_popo_uranus_bigtts",
+      "title": "婆婆 2.0",
+      "gender": "female",
+      "age": "mature"
+     },
+     {
+      "id": "zh_male_m191_uranus_bigtts",
+      "title": "云舟 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_taocheng_uranus_bigtts",
+      "title": "小天 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_shaonianzixin_uranus_bigtts",
+      "title": "少年梓辛 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_aojiaobazong_uranus_bigtts",
+      "title": "傲娇霸总 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_gaolengchenwen_uranus_bigtts",
+      "title": "高冷沉稳 2.0",
+      "gender": "male"
+     },
+     {
+      "id": "zh_male_baqiqingshu_uranus_bigtts",
+      "title": "霸气青叔 2.0",
+      "gender": "male",
+      "age": "mature"
+     },
+     {
+      "id": "zh_male_yuanboxiaoshu_uranus_bigtts",
+      "title": "渊博小叔 2.0",
+      "gender": "male",
+      "age": "mature"
+     },
+     {
+      "id": "zh_male_xuanyijieshuo_uranus_bigtts",
+      "title": "悬疑解说 2.0",
+      "gender": "male",
+      "age": "mature"
+     }
+    ]
+   },
+   {
+    "id": "doubao-seed-asr-2.0",
+    "title": "豆包语音识别 2.0",
+    "capabilities": [
+     "audio.transcribe"
+    ]
+   }
+  ]
+ },
+ {
+  "export": "arkProvider",
+  "id": "volc/ark",
+  "title": "火山方舟",
+  "models": [
+   {
+    "id": "doubao-seed-2-1-pro-260628",
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ],
+    "title": "Doubao Seed 2.1 Pro（260628）",
+    "capabilities": [
+     "text.chat"
+    ]
+   },
+   {
+    "id": "doubao-seed-2-1-pro-260915",
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ],
+    "title": "Doubao Seed 2.1 Pro（260915）",
+    "capabilities": [
+     "text.chat"
+    ]
+   },
+   {
+    "id": "doubao-seed-2-1-lite-260915",
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ],
+    "title": "Doubao Seed 2.1 Lite",
+    "capabilities": [
+     "text.chat"
+    ]
+   },
+   {
+    "id": "doubao-seed-2-1-turbo-260628",
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ],
+    "title": "Doubao Seed 2.1 Turbo",
+    "capabilities": [
+     "text.chat"
+    ]
+   },
+   {
+    "id": "doubao-seed-evolving",
+    "features": [
+     "tools",
+     "vision",
+     "structured"
+    ],
+    "title": "Doubao Seed Evolving（快速迭代）",
+    "capabilities": [
+     "text.chat"
+    ]
+   },
+   {
+    "id": "doubao-seedream-5-0-pro-260628",
+    "title": "Seedream 5.0 Pro",
+    "capabilities": [
+     "image.generate",
+     "image.process"
+    ],
+    "limits": {
+     "imageOperations": [
+      "cutout"
+     ],
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "1.5K",
+      "2K"
+     ],
+     "defaultResolution": "2K",
+     "count": {
+      "max": 1
+     },
+     "references": {
+      "max": 10
+     },
+     "seed": false,
+     "negativePrompt": false,
+     "image": {
+      "size": {
+       "minPixels": 921600,
+       "maxPixels": 4624220,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "tiers": [
+        "1K",
+        "1.5K",
+        "2K"
+       ]
+      }
+     },
+     "media": {
+      "process": {
+       "mime": [
+        "image/png",
+        "image/jpeg"
+       ],
+       "maxMB": 30,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "minPixels": 262144,
+       "maxPixels": 36000000
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "watermark": {
+        "def": {
+         "type": "default",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         },
+         "defaultValue": false
+        },
+        "type": "default"
+       },
+       "output_format": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "jpeg": "jpeg",
+            "png": "png"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "jpeg": "jpeg",
+           "png": "png"
+          },
+          "options": [
+           "jpeg",
+           "png"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedream-5-0-flash-260915",
+    "title": "Seedream 5.0 Flash",
+    "capabilities": [
+     "image.generate",
+     "image.process"
+    ],
+    "limits": {
+     "imageOperations": [
+      "cutout"
+     ],
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "1K",
+      "1.5K",
+      "2K"
+     ],
+     "defaultResolution": "2K",
+     "count": {
+      "max": 1
+     },
+     "references": {
+      "max": 10
+     },
+     "seed": false,
+     "negativePrompt": false,
+     "image": {
+      "size": {
+       "minPixels": 921600,
+       "maxPixels": 4624220,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "tiers": [
+        "1K",
+        "1.5K",
+        "2K"
+       ]
+      }
+     },
+     "media": {
+      "process": {
+       "mime": [
+        "image/png",
+        "image/jpeg"
+       ],
+       "maxMB": 30,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "minPixels": 262144,
+       "maxPixels": 36000000
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "watermark": {
+        "def": {
+         "type": "default",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         },
+         "defaultValue": false
+        },
+        "type": "default"
+       },
+       "output_format": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "jpeg": "jpeg",
+            "png": "png"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "jpeg": "jpeg",
+           "png": "png"
+          },
+          "options": [
+           "jpeg",
+           "png"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedream-5-0-260128",
+    "title": "Seedream 5.0 Lite（支持组图）",
+    "description": "已停止新购，计划于 2026-11-24 14:00（UTC+8）下线；现有接入请提前迁移，Pro / Flash 不支持组图",
+    "deprecated": true,
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "1:1",
+      "3:4",
+      "2:3",
+      "9:16"
+     ],
+     "resolutions": [
+      "2K",
+      "3K",
+      "4K"
+     ],
+     "defaultResolution": "2K",
+     "references": {
+      "max": 14
+     },
+     "count": {
+      "max": 15
+     },
+     "seed": false,
+     "negativePrompt": false,
+     "image": {
+      "maxTotalImages": 15,
+      "size": {
+       "minPixels": 3686400,
+       "maxPixels": 16777216,
+       "minRatio": 0.0625,
+       "maxRatio": 16,
+       "tiers": [
+        "2K",
+        "3K",
+        "4K"
+       ]
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "watermark": {
+        "def": {
+         "type": "default",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         },
+         "defaultValue": false
+        },
+        "type": "default"
+       },
+       "output_format": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "jpeg": "jpeg",
+            "png": "png"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "jpeg": "jpeg",
+           "png": "png"
+          },
+          "options": [
+           "jpeg",
+           "png"
+          ]
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-5-260628",
+    "title": "Seedance 2.5",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p",
+      "1080p"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 30
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4",
+      "mov"
+     ],
+     "references": {
+      "max": 30
+     },
+     "referenceMedia": {
+      "video": 10,
+      "audio": 10,
+      "audioOnly": true
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 30,
+       "totalDurationMax": 30,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 30,
+       "totalDurationMax": 30
+      },
+      "videoTasks": {
+       "edit": {
+        "minDuration": 4
+       }
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "omni_reference_task_type": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "auto": "auto",
+            "reference": "reference",
+            "edit": "edit",
+            "extend": "extend"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "auto": "auto",
+           "reference": "reference",
+           "edit": "edit",
+           "extend": "extend"
+          },
+          "options": [
+           "auto",
+           "reference",
+           "edit",
+           "extend"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "draft": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-0-260128",
+    "title": "Seedance 2.0",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p",
+      "1080p",
+      "4k"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4"
+     ],
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": false
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-0-fast-260128",
+    "title": "Seedance 2.0 Fast",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4"
+     ],
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": false
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "doubao-seedance-2-0-mini-260615",
+    "title": "Seedance 2.0 Mini",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "aspectRatios": [
+      "auto",
+      "21:9",
+      "16:9",
+      "4:3",
+      "1:1",
+      "3:4",
+      "9:16"
+     ],
+     "resolutions": [
+      "480p",
+      "720p"
+     ],
+     "defaultResolution": "720p",
+     "duration": {
+      "min": 4,
+      "max": 15
+     },
+     "seed": false,
+     "outputFormats": [
+      "mp4"
+     ],
+     "references": {
+      "max": 9
+     },
+     "referenceMedia": {
+      "video": 3,
+      "audio": 3,
+      "audioOnly": false
+     },
+     "optionalVideoPrompt": true,
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "media": {
+      "frame": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true
+      },
+      "image": {
+       "mime": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/bmp",
+        "image/tiff",
+        "image/gif",
+        "image/heic",
+        "image/heif"
+       ],
+       "maxMB": 30,
+       "maxMBExclusive": true,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5
+      },
+      "video": {
+       "mime": [
+        "video/mp4",
+        "video/quicktime"
+       ],
+       "maxMB": 200,
+       "minEdge": 300,
+       "maxEdge": 6000,
+       "minRatio": 0.4,
+       "maxRatio": 2.5,
+       "minPixels": 407696,
+       "maxPixels": 8295044,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15,
+       "videoCodecs": [
+        "h264",
+        "hevc"
+       ],
+       "minFrameRate": 24,
+       "maxFrameRate": 60,
+       "audioCodecs": [
+        "aac",
+        "mp3"
+       ],
+       "pcmAudioMimes": [
+        "video/quicktime"
+       ]
+      },
+      "audio": {
+       "mime": [
+        "audio/wav",
+        "audio/x-wav",
+        "audio/mpeg",
+        "audio/mp3"
+       ],
+       "maxMB": 15,
+       "minDuration": 2,
+       "maxDuration": 15,
+       "totalDurationMax": 15
+      }
+     }
+    },
+    "options": {
+     "def": {
+      "type": "object",
+      "shape": {
+       "adaptive_duration": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "return_last_frame": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       },
+       "service_tier": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "enum",
+           "entries": {
+            "default": "default",
+            "flex": "flex"
+           }
+          },
+          "type": "enum",
+          "enum": {
+           "default": "default",
+           "flex": "flex"
+          },
+          "options": [
+           "default",
+           "flex"
+          ]
+         }
+        },
+        "type": "optional"
+       },
+       "watermark": {
+        "def": {
+         "type": "optional",
+         "innerType": {
+          "def": {
+           "type": "boolean"
+          },
+          "type": "boolean"
+         }
+        },
+        "type": "optional"
+       }
+      }
+     },
+     "type": "object"
+    }
+   },
+   {
+    "id": "custom-chat",
+    "title": "自定义对话模型（设置中填写）",
+    "capabilities": [
+     "text.chat"
+    ],
+    "features": [
+     "structured"
+    ]
+   },
+   {
+    "id": "custom-image",
+    "title": "自定义图片模型（设置中填写）",
+    "capabilities": [
+     "image.generate"
+    ],
+    "limits": {
+     "defaultResolution": "2K"
+    }
+   },
+   {
+    "id": "custom-video",
+    "title": "自定义视频模型（设置中填写）",
+    "capabilities": [
+     "video.generate"
+    ],
+    "limits": {
+     "videoModes": [
+      "text",
+      "image",
+      "frames",
+      "reference"
+     ],
+     "defaultResolution": "720p"
+    }
+   }
+  ]
+ }
+]

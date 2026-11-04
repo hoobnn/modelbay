@@ -1,0 +1,1991 @@
+[
+ {
+  "name": "clone_voice",
+  "description": "声音复刻：用一段录音注册或重新训练音色。speaker_id 是控制台已分配的 S_ 音色 ID（用自定义 ID 时传\nspeaker_id='custom_speaker_id' 并填 custom_speaker_id）。audio_file：本地录音（wav/mp3/ogg/m4a/aac/pcm，10MB 内），\n清晰单人、少噪音。text：录音对应文本，服务会比对，差异过大会失败。language：zh（默认）、en、ja、es、de、fr、ko、\nit、ru、pt、pt-br 等。demo_text：试听文本 4–300 字。parameters：官方请求其余字段（如 extra_params、model_type），深度合并。\n会消耗训练次数，不自动重试。之后用 get_voice 查训练状态，合成时把 speaker_id 作为 text_to_speech 的 voice；复刻的音色只能用于豆包合成。\n录音技巧见 get_speech_usage_examples(product='voice')。\n",
+  "inputSchema": {
+   "properties": {
+    "speaker_id": {
+     "title": "Speaker Id",
+     "type": "string"
+    },
+    "audio_file": {
+     "title": "Audio File",
+     "type": "string"
+    },
+    "text": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Text"
+    },
+    "language": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Language"
+    },
+    "demo_text": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Demo Text"
+    },
+    "custom_speaker_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Custom Speaker Id"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "speaker_id",
+    "audio_file"
+   ],
+   "title": "clone_voiceArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "close_realtime_session",
+  "description": "优雅关闭实时会话，等待session.closed，释放连接。退出MCP也会清理会话；历史session.id可用于后续官方会话接续。",
+  "inputSchema": {
+   "properties": {
+    "session_id": {
+     "title": "Session Id",
+     "type": "string"
+    },
+    "timeout": {
+     "default": 10,
+     "exclusiveMinimum": 0,
+     "maximum": 60,
+     "title": "Timeout",
+     "type": "number"
+    }
+   },
+   "required": [
+    "session_id"
+   ],
+   "title": "close_realtime_sessionArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "design_voice",
+  "description": "音色设计：用文字描述或一张图片生成新音色。speaker_id 是控制台已分配的音色 ID。preview_text：试听台词，最多 300 字。\ndescription：声音描述，最多 200 字，如「三十岁左右的男声，低沉温和，语速偏慢」；image：本地图片或 URL（10MB 内），\n按画面人物生成声音。两者至少给一个，都给时图片优先。parameters：官方请求其余字段，深度合并。\n会消耗训练次数。返回音色和试听信息。声线描述技巧见 get_speech_usage_examples(product='voice')。\n",
+  "inputSchema": {
+   "properties": {
+    "speaker_id": {
+     "title": "Speaker Id",
+     "type": "string"
+    },
+    "preview_text": {
+     "title": "Preview Text",
+     "type": "string"
+    },
+    "description": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Description"
+    },
+    "image": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Image"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "speaker_id",
+    "preview_text"
+   ],
+   "title": "design_voiceArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "generate_audio",
+  "description": "Seed Audio生成对白、唱歌、音效或配乐；只朗读文字用 text_to_speech。prompt<=3000字，可用speaker或最多3段reference_audios；reference_image不能同时配音频参考或speaker。参考素材支持本地路径/URL。format=mp3/wav/ogg_opus/pcm；ogg_opus仅48000Hz，其他采样率见完整说明。subtitles开启字幕，model选择已开通模型。返回files、duration、subtitle，按服务规则计费。未列出的官方字段放parameters。对白与时间戳提示词示例见get_speech_usage_examples；完整参数见get_tool_help。",
+  "inputSchema": {
+   "properties": {
+    "prompt": {
+     "title": "Prompt",
+     "type": "string"
+    },
+    "speaker": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Speaker"
+    },
+    "reference_audios": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Reference Audios"
+    },
+    "reference_image": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Reference Image"
+    },
+    "format": {
+     "default": "mp3",
+     "title": "Format",
+     "type": "string"
+    },
+    "sample_rate": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Sample Rate"
+    },
+    "speech_rate": {
+     "default": 0,
+     "title": "Speech Rate",
+     "type": "integer"
+    },
+    "loudness_rate": {
+     "default": 0,
+     "title": "Loudness Rate",
+     "type": "integer"
+    },
+    "pitch_rate": {
+     "default": 0,
+     "title": "Pitch Rate",
+     "type": "integer"
+    },
+    "subtitles": {
+     "default": false,
+     "title": "Subtitles",
+     "type": "boolean"
+    },
+    "model": {
+     "default": "seed-audio-1.0",
+     "title": "Model",
+     "type": "string"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "prompt"
+   ],
+   "title": "generate_audioArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "generate_podcast",
+  "description": "生成双人对谈播客。输入四选一：\n- text：一篇文章，模型改写成对谈（推荐 12000 字以内，超出会截断）。\n- url：网页 / PDF / doc / txt 的公开链接，内容同 text。\n- topic：一个话题，模型联网搜索后生成；它只是话题，不能写格式要求。\n- dialogue：逐轮脚本直接演绎，如 [{\"speaker\":\"音色ID\",\"text\":\"本轮台词\"}]，每轮最多 300 字、总共 1 万字。\nspeakers：两个播客音色 ID（按给出的顺序），不传用官方默认。script_only=true 只生成脚本不合成音频（text/url 适用）。\nformat：mp3（默认）、pcm、aac、ogg_opus。parameters：官方请求里其余字段（如 retry_info 续传、input_info.input_text_max_length），深度合并。\ntransport默认sse（POST /api/v3/podcast/sse）；websocket仅用于历史接口兼容。\nSSE须收到152且code=20000000才成功；363或HTTP200不能视为成功。返回音频路径、完整rounds、usage、\ntask_id（首次150的真实session_id，续传仍用原ID）、session_id（本次会话）、last_finished_round_id；断线、轮次失败或服务端取消\n（151，canceled=true）时 files 里的 .partial 只含已完整结束的轮次，可用 parameters.retry_info 显式续传后按序拼接；\n未完成轮次的分片另存 diagnostic_file（字节数 discarded_bytes），仅供排查，不能作为续传输入。SSE的progress_file在150和完整362时保存原请求和可续传边界，MCP取消也保留。按官方播客计费，可能超过 300 秒；须同时提高客户端超时和MCP_TOOL_TIMEOUT_SEC。技巧见 get_speech_usage_examples(product='podcast')。\n",
+  "inputSchema": {
+   "properties": {
+    "text": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Text"
+    },
+    "url": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Url"
+    },
+    "topic": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Topic"
+    },
+    "dialogue": {
+     "anyOf": [
+      {
+       "items": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Dialogue"
+    },
+    "speakers": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Speakers"
+    },
+    "script_only": {
+     "default": false,
+     "title": "Script Only",
+     "type": "boolean"
+    },
+    "format": {
+     "default": "mp3",
+     "title": "Format",
+     "type": "string"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    },
+    "transport": {
+     "default": "sse",
+     "title": "Transport",
+     "type": "string"
+    }
+   },
+   "title": "generate_podcastArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "get_job",
+  "description": "查异步任务的进度和结果，job_id 或 task_id 二选一。任务还在进行时查询豆包一次（wait 1–90 秒可轮询），\n完成即把结果保存到原输出目录；已结束的任务只读本地记录。不会重新提交。\n返回 job_state（running/delivered/failed/download_failed）、completed、files、text（识别）、error。\n",
+  "inputSchema": {
+   "properties": {
+    "job_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Job Id"
+    },
+    "task_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Task Id"
+    },
+    "wait": {
+     "default": 0,
+     "maximum": 90,
+     "minimum": 0,
+     "title": "Wait",
+     "type": "integer"
+    },
+    "include_response": {
+     "default": false,
+     "description": "返回原始响应，默认false",
+     "title": "Include Response",
+     "type": "boolean"
+    }
+   },
+   "title": "get_jobArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "get_speech_usage_examples",
+  "description": "查询官方示例的归纳、改写的MCP调用参数、使用技巧和来源；纯本地，无鉴权，不调用云服务。\nproduct=audio/tts/voice/podcast/asr/translation/minutes/realtime。\naudio支持category=text/reference/timing/multilingual；不传category返回该产品全部示例。\n示例包括参考绑定、时间戳卡点、多语种、引用上文、音色设计/复刻、播客四种输入、热词/上下文/说话人分离等。\n路径、URL、音色ID和会话ID占位符需替换；示例未经真实云端生成验证。\n",
+  "inputSchema": {
+   "properties": {
+    "product": {
+     "default": "audio",
+     "title": "Product",
+     "type": "string"
+    },
+    "category": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Category"
+    }
+   },
+   "title": "get_speech_usage_examplesArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": true,
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": false
+  }
+ },
+ {
+  "name": "get_tool_help",
+  "description": "按工具名读取完整用法、模型限制与示例，不联网、不计费。",
+  "inputSchema": {
+   "properties": {
+    "tool": {
+     "title": "Tool",
+     "type": "string"
+    }
+   },
+   "required": [
+    "tool"
+   ],
+   "title": "get_tool_helpArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": true,
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": false
+  }
+ },
+ {
+  "name": "get_voice",
+  "description": "查询复刻 / 设计音色的训练状态、剩余训练次数和试听信息。不计费。",
+  "inputSchema": {
+   "properties": {
+    "speaker_id": {
+     "title": "Speaker Id",
+     "type": "string"
+    },
+    "custom_speaker_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Custom Speaker Id"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "speaker_id"
+   ],
+   "title": "get_voiceArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": true,
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "interpret_audio",
+  "description": "同声传译 2.0，处理本地 16kHz / 16bit / 单声道 WAV 或 PCM 文件。source_language / target_language 如 zh / en。\nmode=s2t 只出原文和译文字幕；s2s 另外合成目标语音，output_format=pcm（16kHz）或 ogg_opus（48kHz），voice 指定音色。\nhotwords 提高识别率；glossary 固定术语译法，如 {\"火山引擎\":\"Volcengine\"}。\nparameters：官方 TranslateRequest 其余字段，深度合并，如 {\"request\":{\"enable_source_language_detect\":true}}。\n返回原文/译文字幕、usage 和本地音频。实时麦克风需客户端采集，本工具只处理文件。按同传服务计费。\n",
+  "inputSchema": {
+   "properties": {
+    "audio": {
+     "title": "Audio",
+     "type": "string"
+    },
+    "source_language": {
+     "title": "Source Language",
+     "type": "string"
+    },
+    "target_language": {
+     "title": "Target Language",
+     "type": "string"
+    },
+    "mode": {
+     "default": "s2t",
+     "title": "Mode",
+     "type": "string"
+    },
+    "hotwords": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hotwords"
+    },
+    "glossary": {
+     "anyOf": [
+      {
+       "additionalProperties": {
+        "type": "string"
+       },
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Glossary"
+    },
+    "voice": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Voice"
+    },
+    "output_format": {
+     "default": "pcm",
+     "title": "Output Format",
+     "type": "string"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "audio",
+    "source_language",
+    "target_language"
+   ],
+   "title": "interpret_audioArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "list_jobs",
+  "description": "列出最近的异步任务（长文本合成 tts_long、录音识别 asr、妙记 minutes），不联网。调用超时没拿到 job_id 时用它找回。",
+  "inputSchema": {
+   "properties": {
+    "limit": {
+     "default": 20,
+     "maximum": 100,
+     "minimum": 1,
+     "title": "Limit",
+     "type": "integer"
+    },
+    "kind": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Kind"
+    }
+   },
+   "title": "list_jobsArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": true,
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": false
+  }
+ },
+ {
+  "name": "list_speech_capabilities",
+  "description": "列出豆包语音产品、工具、未启用的工具组及启用方法、管理 Action、官方链接和接入边界；不联网、不计费。",
+  "inputSchema": {
+   "properties": {},
+   "title": "list_speech_capabilitiesArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": true,
+   "destructiveHint": false,
+   "idempotentHint": true,
+   "openWorldHint": false
+  }
+ },
+ {
+  "name": "manage_word_table",
+  "description": "热词/替换词词表管理。action取Create/Update/Delete/Get/ListBoostingTable，或对应CorrectTable（具体支持列表见list_speech_capabilities）。\nparameters按官方字段传入BoostingTableID/BoostingTableName或TableID/TableName；创建/更新时content为词表文本，自动multipart上传。\n热词默认API Key，替换词用auth='aksk'，需要VOLC_ACCESS_KEY_ID/VOLC_SECRET_ACCESS_KEY。术语表通过翻译/同传corpus使用，官方未公开术语CRUD API。\n",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "title": "Action",
+     "type": "string"
+    },
+    "parameters": {
+     "additionalProperties": true,
+     "title": "Parameters",
+     "type": "object"
+    },
+    "content": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Content"
+    },
+    "auth": {
+     "default": "api_key",
+     "title": "Auth",
+     "type": "string"
+    }
+   },
+   "required": [
+    "action",
+    "parameters"
+   ],
+   "title": "manage_word_tableArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "open_realtime_session",
+  "description": "打开持久实时会话。mode=legacy（默认）为Seeduplex 3.0 / model=1.2.6.1；mode=seed为Doubao-Seed-Realtime-1.0 / model=1.3.0.0，使用独立seedrealtime入口。\n最简session={audio:{output:{voice:'zh_female_vv_jupiter_bigtts'}}}，输入pcm16k/输出pcm_s16le24k；seed图像需加extension={video:{frame_format:'JPEG',frame_rate:'2'}}。\n可传instructions、tools（function定义）、audio配置；输入格式支持pcm/speech_opus（opus别名自动规范化），extension顶层支持asr/tts/dialog、热词、联网搜索、唱歌等。\n两种模式均可客户端response.cancel打断；seed播报状态由response.created/canceled/done驱动，ASR仅作转写。返回客户端session_id，后续send/receive/close；只在本MCP进程内有效，生成音频写本地文件。按实时服务计费。\n",
+  "inputSchema": {
+   "properties": {
+    "session": {
+     "additionalProperties": true,
+     "title": "Session",
+     "type": "object"
+    },
+    "extension": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Extension"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    },
+    "timeout": {
+     "default": 30,
+     "exclusiveMinimum": 0,
+     "maximum": 120,
+     "title": "Timeout",
+     "type": "number"
+    },
+    "mode": {
+     "default": "legacy",
+     "title": "Mode",
+     "type": "string"
+    }
+   },
+   "required": [
+    "session"
+   ],
+   "title": "open_realtime_sessionArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "receive_realtime_events",
+  "description": "接收实时会话事件（等待最多timeout秒，<=60秒），返回ASR、回复文本、Function Calling、上下文、usage等。\n音频delta会转换为audio_file/chunk_bytes/audio_format/sample_rate，不返回巨大base64。收到工具调用后执行本地工具，再send_realtime_event回传call_id结果。\nseed返回playback_state与顶层clear_playback_buffer（取消事件也带此标记）；true时客户端必须立即停播并清空已缓冲音频，队列溢出也保留该信号。ASR事件不切换播放状态。\n",
+  "inputSchema": {
+   "properties": {
+    "session_id": {
+     "title": "Session Id",
+     "type": "string"
+    },
+    "max_events": {
+     "default": 100,
+     "maximum": 500,
+     "minimum": 1,
+     "title": "Max Events",
+     "type": "integer"
+    },
+    "timeout": {
+     "default": 10,
+     "exclusiveMinimum": 0,
+     "maximum": 60,
+     "title": "Timeout",
+     "type": "number"
+    }
+   },
+   "required": [
+    "session_id"
+   ],
+   "title": "receive_realtime_eventsArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "recover_job",
+  "description": "修复交付：结果下载失败或本地文件丢失时重新保存，链接过期则重新查询一次。正常查进度用 get_job。不会重新提交。",
+  "inputSchema": {
+   "properties": {
+    "job_id": {
+     "title": "Job Id",
+     "type": "string"
+    },
+    "include_response": {
+     "default": false,
+     "description": "返回原始响应，默认false",
+     "title": "Include Response",
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "job_id"
+   ],
+   "title": "recover_jobArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "send_realtime_event",
+  "description": "向持久实时会话发送官方JSON事件。event须有type：input_audio_buffer.append + audio(base64)，input_audio_buffer.commit强制判停；response.cancel打断进行中的回复（legacy与seed均可）；session.update更新配置。\nconversation.item.create/retrieve/delete管理上下文，role=tool+call_id回传Function Calling结果；input_audio_mute.commit/unmute.commit处理静音。\naudio_file可传16kHz/mono/int16裸.pcm，自动20ms分包，文件结束后再发送commit。seed的input_image_buffer.append可传image(base64)或image_file本地PNG/JPEG，须匹配extension.video.frame_format；本地发送间隔至少0.5秒（2FPS），JSON事件上限2MB。音视频独立节流。会话开闭用专用工具。\n",
+  "inputSchema": {
+   "properties": {
+    "session_id": {
+     "title": "Session Id",
+     "type": "string"
+    },
+    "event": {
+     "additionalProperties": true,
+     "title": "Event",
+     "type": "object"
+    },
+    "audio_file": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Audio File"
+    },
+    "timeout": {
+     "default": 30,
+     "exclusiveMinimum": 0,
+     "maximum": 120,
+     "title": "Timeout",
+     "type": "number"
+    },
+    "image_file": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Image File"
+    }
+   },
+   "required": [
+    "session_id",
+    "event"
+   ],
+   "title": "send_realtime_eventArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "speech_console",
+  "description": "控制台OpenAPI：音色、API Key、服务开停、资源包/声音复刻订单、用量、配额、项目标签管理。action和parameters按官方契约；list_speech_capabilities给出支持动作。\n需要VOLC_ACCESS_KEY_ID/VOLC_SECRET_ACCESS_KEY（IAM AK/SK，区别于语音API Key）。version默认按动作选择。会执行指定动作，包括创建、删除、下单；查询优先使用List/Get/QuotaMonitoring/UsageMonitoring。\n",
+  "inputSchema": {
+   "properties": {
+    "action": {
+     "title": "Action",
+     "type": "string"
+    },
+    "parameters": {
+     "additionalProperties": true,
+     "title": "Parameters",
+     "type": "object"
+    },
+    "version": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Version"
+    }
+   },
+   "required": [
+    "action",
+    "parameters"
+   ],
+   "title": "speech_consoleArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "speech_raw_request",
+  "description": "兜底入口：按官方请求体原样调用，其他工具覆盖不到时才用。端点固定，不接收任意 URL。\n- product=tts / asr_flash / audio：HTTP 合成、极速识别、音频生成，request 为官方完整请求体；音频 base64 换成本地文件。\n- product=tts_websocket：WebSocket 合成，mode=unidirectional 或 bidirectional（默认，text_chunks 按顺序流式输入）；\n  音色列表标注「仅限单向流」的音色用 bidirectional 会在本地拒绝，需改 mode=unidirectional。\n- product=asr_stream：一句话 / 实时流式识别本地 16bit 单声道 WAV/PCM，audio 为文件路径，mode=realtime 或 sentence。\n- product=legacy：历史 HTTP 产品（字幕生成、打轴、旧 TTS/ASR），operation 见 list_speech_capabilities，\n  request 为 JSON 体、query 为 URL 参数；需要 VOLC_SPEECH_APP_ID / VOLC_SPEECH_ACCESS_TOKEN。\n返回完整官方响应。按对应服务计费，提交类请求不自动轮询或重试。\n",
+  "inputSchema": {
+   "properties": {
+    "product": {
+     "title": "Product",
+     "type": "string"
+    },
+    "request": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Request"
+    },
+    "operation": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Operation"
+    },
+    "query": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Query"
+    },
+    "audio": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Audio"
+    },
+    "mode": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Mode"
+    },
+    "text_chunks": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Text Chunks"
+    },
+    "resource_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Resource Id"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    }
+   },
+   "required": [
+    "product"
+   ],
+   "title": "speech_raw_requestArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "speech_to_text",
+  "description": "用豆包录音文件识别大模型把音频转成文字。返回情绪和语种标签的千问 ASR 用 ali-bailian。\n\n- audio：本地绝对路径或 http(s) URL。支持 wav、mp3、ogg（opus）、m4a、aac、amr、spx。\n- mode：\n  auto（默认）：要 speakers 时用 standard，否则用 flash。\n  flash：极速版，同步返回，本地文件或 URL，不超过 100MB、2 小时；一小时音频通常十几秒到一分钟出结果。\n  standard：标准版异步，只接受可下载 URL，最大 512MB、5 小时；立即返回 job_id，用 get_job 查结果，\n  完成后保存 transcript.txt 和完整 result.json。idle：闲时版，同 standard，更便宜但更慢。\n- language：已知语种时指定，如 zh-CN、en-US、ja-JP、ko-KR、yue-CN（粤语）；不传自动识别中英粤和多种方言。\n- hotwords：热词，提高人名、品牌、术语识别率，如 [\"Kubernetes\", \"火山引擎\"]。\n- context：背景文字，如「这是一段关于 Rust 异步运行时的技术分享」，最多约 500 token。\n- utterances：返回分句（起止毫秒、文本、说话人）。speakers：区分说话人（10 人以内效果较好），需 standard/idle。\n- itn：口语数字转阿拉伯数字，默认开；punc：加标点，默认开；ddc：去掉「嗯」「那个」等口头禅，默认关。\n- format：URL 或文件没有扩展名时手动指定格式。\n- parameters：官方请求体（{\"audio\":{...},\"request\":{...}}）里其余字段，深度合并，如\n  {\"request\":{\"ssd_version\":\"300\"}}（长会议说话人分离）。\n\n按音频时长计费。flash 返回 text、duration_ms、utterances；standard/idle 返回 job_id、job_state。\n实时流式识别和一句话识别用 speech_raw_request(product='asr_stream')。\n录音版本选型与功能对比见 https://docs.volcengine.com/docs/doubao-voice/access-must-read-1?lang=zh ，\n流式接口选型、音频要求和交互流程见 https://docs.volcengine.com/docs/doubao-voice/access-must-read-1-1?lang=zh 。\n",
+  "inputSchema": {
+   "properties": {
+    "audio": {
+     "title": "Audio",
+     "type": "string"
+    },
+    "mode": {
+     "default": "auto",
+     "title": "Mode",
+     "type": "string"
+    },
+    "language": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Language"
+    },
+    "hotwords": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hotwords"
+    },
+    "context": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Context"
+    },
+    "utterances": {
+     "default": false,
+     "title": "Utterances",
+     "type": "boolean"
+    },
+    "speakers": {
+     "default": false,
+     "title": "Speakers",
+     "type": "boolean"
+    },
+    "itn": {
+     "default": true,
+     "title": "Itn",
+     "type": "boolean"
+    },
+    "punc": {
+     "default": true,
+     "title": "Punc",
+     "type": "boolean"
+    },
+    "ddc": {
+     "default": false,
+     "title": "Ddc",
+     "type": "boolean"
+    },
+    "format": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Format"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "audio"
+   ],
+   "title": "speech_to_textArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "summarize_meeting",
+  "description": "豆包语音妙记：会议 / 课程录音或视频的转写，加全文总结、章节、待办、问答提取、翻译。异步：立即返回 job_id，\n之后用 get_job 查进度，完成后把各项结果 JSON 下载到本地（官方链接 24 小时有效）。\n\n- file_url：可下载的 http(s) 链接。file_type=audio（MP3/WAV/AAC/FLAC/OGG）或 video（MP4/AVI/MKV/MOV/FLV/WMV）。\n- language：原始语种 zh_cn 或 en_us。\n- summary 全文总结（默认开）、chapters 章节总结、todos 待办提取、qa 问答提取；translate_to=zh_cn / en_us 翻译转写文本。\n  至少开一项；只要转写文字请用 speech_to_text。\n- speakers 区分说话人（默认开），speaker_count 已知人数时填写，0 自动识别。hotwords 热词。word_timestamps 词级时间。\n- bundle_billing：官方 AllActivate，选择打包计费；它只决定计费方式，不会自动打开任何功能。\n- parameters：官方请求体（Input / Params）其余字段，深度合并。\n按妙记服务计费。\n",
+  "inputSchema": {
+   "properties": {
+    "file_url": {
+     "title": "File Url",
+     "type": "string"
+    },
+    "language": {
+     "default": "zh_cn",
+     "title": "Language",
+     "type": "string"
+    },
+    "file_type": {
+     "default": "audio",
+     "title": "File Type",
+     "type": "string"
+    },
+    "summary": {
+     "default": true,
+     "title": "Summary",
+     "type": "boolean"
+    },
+    "chapters": {
+     "default": false,
+     "title": "Chapters",
+     "type": "boolean"
+    },
+    "todos": {
+     "default": false,
+     "title": "Todos",
+     "type": "boolean"
+    },
+    "qa": {
+     "default": false,
+     "title": "Qa",
+     "type": "boolean"
+    },
+    "translate_to": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Translate To"
+    },
+    "speakers": {
+     "default": true,
+     "title": "Speakers",
+     "type": "boolean"
+    },
+    "speaker_count": {
+     "default": 0,
+     "title": "Speaker Count",
+     "type": "integer"
+    },
+    "hotwords": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Hotwords"
+    },
+    "word_timestamps": {
+     "default": false,
+     "title": "Word Timestamps",
+     "type": "boolean"
+    },
+    "bundle_billing": {
+     "default": false,
+     "title": "Bundle Billing",
+     "type": "boolean"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "file_url"
+   ],
+   "title": "summarize_meetingArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "text_to_speech",
+  "description": "豆包语音合成（中文音色、方言、字幕、长文本首选；千问音色用 ali-bailian），text为文本，voice为官方音色ID或S_复刻ID；instructions控制语气，dialect/language控制方言/语言，pronunciations指定读音。format=mp3或wav；多段字幕必须wav，sample_rate为采样率。支持subtitles输出SRT，按段合成，失败保留已完成段。超过5000字自动改走异步长文本（long_text可强制），返回job_id后用get_job取结果。SSML、水印等未列出的官方字段放parameters。按字数计费。完整音色与调节范围见get_tool_help。",
+  "inputSchema": {
+   "properties": {
+    "text": {
+     "title": "Text",
+     "type": "string"
+    },
+    "voice": {
+     "default": "zh_female_vv_uranus_bigtts",
+     "title": "Voice",
+     "type": "string"
+    },
+    "instructions": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Instructions"
+    },
+    "dialect": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Dialect"
+    },
+    "language": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Language"
+    },
+    "speech_rate": {
+     "default": 0,
+     "title": "Speech Rate",
+     "type": "integer"
+    },
+    "loudness_rate": {
+     "default": 0,
+     "title": "Loudness Rate",
+     "type": "integer"
+    },
+    "pitch": {
+     "default": 0,
+     "title": "Pitch",
+     "type": "integer"
+    },
+    "format": {
+     "default": "mp3",
+     "title": "Format",
+     "type": "string"
+    },
+    "sample_rate": {
+     "default": 24000,
+     "title": "Sample Rate",
+     "type": "integer"
+    },
+    "subtitles": {
+     "default": false,
+     "title": "Subtitles",
+     "type": "boolean"
+    },
+    "pronunciations": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Pronunciations"
+    },
+    "model": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Model"
+    },
+    "resource_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Resource Id"
+    },
+    "long_text": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Long Text"
+    },
+    "out_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Out Dir"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "text"
+   ],
+   "title": "text_to_speechArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "translate_text",
+  "description": "Seed-X 机器翻译。texts 一次 1–16 条，每条最多 1024 tokens（服务端校验），按原顺序返回。\ntarget_language 如 en / zh / ja；source_language 不传自动检测。\nglossary 指定术语译法，如 {\"火山引擎\":\"Volcengine\"}，优先于术语表；glossary_table_id 使用控制台建好的术语表。\nparameters：官方请求体其余字段，深度合并。返回 translation_list、检测到的语种、token 用量。按 token 计费。\n",
+  "inputSchema": {
+   "properties": {
+    "texts": {
+     "items": {
+      "type": "string"
+     },
+     "title": "Texts",
+     "type": "array"
+    },
+    "target_language": {
+     "title": "Target Language",
+     "type": "string"
+    },
+    "source_language": {
+     "default": "",
+     "title": "Source Language",
+     "type": "string"
+    },
+    "glossary": {
+     "anyOf": [
+      {
+       "additionalProperties": {
+        "type": "string"
+       },
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Glossary"
+    },
+    "glossary_table_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Glossary Table Id"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "texts",
+    "target_language"
+   ],
+   "title": "translate_textArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": false,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ },
+ {
+  "name": "upgrade_voice",
+  "description": "把已有复刻音色升级到新版模型（不可撤回）。parameters：官方升级参数，深度合并。之后用 get_voice 查状态。",
+  "inputSchema": {
+   "properties": {
+    "speaker_id": {
+     "title": "Speaker Id",
+     "type": "string"
+    },
+    "custom_speaker_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Custom Speaker Id"
+    },
+    "parameters": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Parameters"
+    }
+   },
+   "required": [
+    "speaker_id"
+   ],
+   "title": "upgrade_voiceArguments",
+   "type": "object"
+  },
+  "outputSchema": {
+   "type": "object",
+   "required": [
+    "ok"
+   ],
+   "properties": {
+    "ok": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": true
+  },
+  "annotations": {
+   "readOnlyHint": false,
+   "destructiveHint": true,
+   "idempotentHint": false,
+   "openWorldHint": true
+  }
+ }
+]
