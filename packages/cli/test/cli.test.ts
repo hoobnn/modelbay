@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { USAGE, parseCommand, runCli } from '../src/index'
-import type { CliDeclaration, CliDeps, CliGenerateRequest, CliIO } from '../src/index'
+import { USAGE, parseCommand, runCli } from '../src/commands'
+import type { CliDeclaration, CliDeps, CliGenerateRequest, CliIO } from '../src/commands'
 
 function fakeIO(): { io: CliIO; out: string[]; err: string[] } {
   const out: string[] = []

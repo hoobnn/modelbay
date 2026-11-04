@@ -1,0 +1,9 @@
+{
+  // 只给 `vp pack` 的 dts 生成用：清掉 `paths`，让跨包依赖解析到已发布的
+  // dist 声明，而不是兄弟包的 src 源码。否则 tsc 会把兄弟包的源码也拉进
+  // 声明程序，并在那些源码旁边写出 .d.ts 产物。
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {}
+  }
+}

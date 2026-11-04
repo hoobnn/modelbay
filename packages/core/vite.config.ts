@@ -32,7 +32,7 @@ export default defineConfig({
     ],
     outDir: 'dist',
     format: 'esm',
-    dts: true,
+    dts: { tsconfig: 'tsconfig.build.json' },
     unbundle: true,
     clean: true,
   },

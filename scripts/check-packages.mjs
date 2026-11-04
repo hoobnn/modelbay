@@ -1,5 +1,6 @@
 // 发布前检查：每个可发布包都要过 publint 和 @arethetypeswrong/cli。
-import { existsSync, readFileSync, readdirSync, spawnSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 

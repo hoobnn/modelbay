@@ -4,7 +4,7 @@
 
 ## 环境
 
-- 工作目录 `/Users/haobin/WorkBuddy/Worktrees/modelbay/main-9d6bb45e`。
+- 工作目录 `/Users/haobin/Code/personal/active/modelbay`。
 - 参考资料（只读）：同级目录 `plein/`（TypeScript 实现）和 `hoobnn-mcps/`（Python MCP 实现）。
 - Node 用 `/opt/homebrew/opt/node@26/bin` 下的 26；pnpm 12.11.2；工具链是 Vite+（`vp`）。
 - 各并行任务**不要运行** `pnpm install`、`pnpm verify`、`pnpm build`，也不要修改根目录配置、`packages/core/**` 或 `scripts/check-*.mjs`（另有授权除外）。统一由整合者安装、构建、排错。

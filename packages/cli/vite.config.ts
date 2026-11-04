@@ -12,10 +12,12 @@ const packageAliases = [
 export default defineConfig({
   test: { alias: packageAliases },
   pack: {
-    entry: ['src/index.ts', 'src/cli.ts'],
+    // commands / deps / main 是 index.ts 的内部依赖，单独列出来只是为了让
+    // dist 里每个模块都带上对应的 .d.mts；对外只暴露 "." 这一条。
+    entry: ['src/index.ts', 'src/cli.ts', 'src/commands.ts', 'src/deps.ts', 'src/main.ts'],
     outDir: 'dist',
     format: 'esm',
-    dts: true,
+    dts: { tsconfig: 'tsconfig.build.json' },
     unbundle: true,
     clean: true,
   },

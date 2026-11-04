@@ -20,7 +20,7 @@ export default defineConfig({
     entry: ['src/index.ts', 'src/node/index.ts', 'src/models/index.ts', 'src/models/**/*.ts'],
     outDir: 'dist',
     format: 'esm',
-    dts: true,
+    dts: { tsconfig: 'tsconfig.build.json' },
     unbundle: true,
     clean: true,
   },

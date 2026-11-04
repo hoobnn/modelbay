@@ -48,9 +48,12 @@ modelbay generate --capability audio.speech --prompt "你好，世界"
 
 ## Design notes
 
-- The library entry (`src/index.ts`) contains no `console.*` and no runtime
+- `src/index.ts` is a re-export barrel. The command parsing and dispatch logic
+  lives in `src/commands.ts`, which contains no `console.*` and no runtime
   imports of the SDK; `runCli()` receives its I/O and data sources through
   injection, which keeps it unit-testable without network access.
+- `src/deps.ts` adapts the SDK entry into the data sources the command layer
+  needs; `src/main.ts` wires argv, output channels and exit codes together.
 - `src/cli.ts` is the bin entry and is the only module that touches
   `process.stdout` / `process.stderr` / `process.argv`.
 - Results are printed as URLs or byte counts; the CLI never downloads or stores
