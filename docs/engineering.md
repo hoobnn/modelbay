@@ -110,7 +110,7 @@ PR 合并前，`pnpm verify` 必须通过。CI（GitHub Actions）跑的就是�
 ## 和 plein 联调
 
 - plein 的 main 分支只能依赖已经发布的 `@modelbay/*` 版本号。
-- 发布之前，在 plein 的功能分支里用 pnpm 的 `link:` 指向本地的 `../modelbay/packages/<包名>`。这个改动不能合进 plein 的 main。
+- 发布之前，在 plein 功能分支根目录的 `pnpm-workspace.yaml` 里加 `overrides`，例如 `"@modelbay/core": "link:../modelbay/packages/core"`。路径按 plein 根目录解析，要求两个仓库放在同一个父目录下。各包的 `package.json` 照常写版本号依赖，不写 `link:`。这一行 override 不能合进 plein 的 main。
 - 每做完一个涉及 plein 的里程碑，在 plein 那边单独开一个 PR，验收标准按 [目标与里程碑](goals.md) 里写的执行。
 
 ## Git

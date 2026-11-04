@@ -41,7 +41,7 @@
 验收：
 
 1. 在 modelbay 仓库里，`pnpm verify` 通过（见 [工程规范](engineering.md#命令)）。从 plein 搬来的测试全部保留并通过。
-2. core 的类型检查不加载 Node 类型，也没有 `node:` 导入（规则见工程规范）。
+2. core 的类型检查不加载 Node 类型，也没有 `node:` 导入（规则见工程规范）。2026-11-04 查过，要搬的这几个文件没有用到 `Buffer`、`process` 或 `node:`，而且在 plein 里本来就按 `tsconfig.dom.json` 编译，所以这一步是原样搬运，不需要改写。
 3. `@plein/plugin-sdk` 改为从 `@modelbay/core` 再导出这些符号，plein 其他代码的 import 一行不改。`PLUGIN_API_VERSION` 不变。
 4. plein 分支上 `pnpm verify` 通过。
 5. 发布前，plein 分支用本地链接引用 core（方法见工程规范）。合进 plein 的 main 之前，`@modelbay/core` 必须先在 npm 发出 0.x 版本，plein 改成依赖这个版本号。**发布要等维护者批准。**
