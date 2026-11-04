@@ -14,7 +14,7 @@
 - 包名与仓库：
 
   | 角色 | 名字 |
-  |---|---|
+  | --- | --- |
   | 汇总入口 | `modelbay` |
   | 核心运行时 | `@modelbay/core` |
   | 平台适配器 | `@modelbay/ark`、`@modelbay/bailian`、`@modelbay/minimax`、`@modelbay/doubao-speech`、`@modelbay/openai` |

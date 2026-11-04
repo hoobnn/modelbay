@@ -20,7 +20,7 @@
 2. 分四层：
 
    | 层 | 包 | 职责 |
-   |---|---|---|
+   | --- | --- | --- |
    | 核心运行时 | `@modelbay/core` | 能力类型、输入输出、错误归一化、HTTP（重试 / 超时 / 代理）、异步任务生命周期、按声明校验、素材上传策略接口 |
    | 模型声明 | 放在各适配器包内 | 纯数据，格式见 [0003](0003-capabilities-and-model-declarations.md) |
    | 平台适配器 | `@modelbay/ark`、`@modelbay/bailian`、`@modelbay/minimax`、`@modelbay/doubao-speech`、`@modelbay/openai` | 只写各家不同的部分：鉴权、路由、请求和响应映射、错误码映射 |

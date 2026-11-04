@@ -13,7 +13,7 @@
 P 表示 plein 有，M 表示 MCP 有，— 表示都没有。
 
 | 能力 | 方舟 | 百炼 | MiniMax | 豆包语音 | OpenAI |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | 对话 `text.chat` | P M | P M | P | — | P |
 | 生图 `image.generate` | P M | P M | P M | — | P |
 | 蒙版重绘 `image.edit` | — | P | — | — | P |
@@ -70,7 +70,7 @@ OpenAI（gpt-6.1-sol、gpt-6-astra、gpt-6.1-terra、gpt-6-luna，以及 gpt-ima
 2026-11-04 读取官方原文核对，并对照两边代码和文档复查。最初盘点时看到的三处「冲突」，复查后只有一处是真正的分歧，其余两处是盘点本身看漏了。
 
 | 项目 | 官方原文 | plein | MCP | 状态 / 处理 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | MiniMax `music-3.0` | 自 2026-08-20 起付费接口不再向新用户开放，历史付费用户可继续使用；`*-free` 停止服务。`music-3.0` 仍是推荐型号 | 行为正确（`deprecated: true`，不当默认，但还能运行）；说明写成了「官方已退役」，不准确。**已改正** | 工具描述已写明这条公告，无需改动 | `closed-to-new-accounts` |
 | Seedream 5.0 Lite（`doubao-seedream-5-0-260128` / `-lite-260128`） | [下线公告](https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh)：停止新购，2026-11-24 14:00（UTC+8）关停；模型列表标「即将下线」 | 已标注日期，不当默认 | 有生命周期提示，到期后本地拒绝 | **不是冲突**，两边一致。状态为 `sunsetting`，日期 2026-11-24 |
 | 百炼 TTS 默认模型 | 官方推荐 `qwen-audio-3.1-tts-flash`（低延迟）和 `-plus`（音质）；`qwen3-tts-flash` 仍作为独立系列列出 | 默认 `qwen3-tts-flash`，而且不支持 Qwen-Audio-TTS 系列 | 原来默认也是 `qwen3-tts-flash`（复刻 / 设计的默认目标是 3.0-flash）。**已在 0.8.0 改为 3.1-flash**，兼容旧的 qwen3 音色调用 | 3.1-flash 设为 `active` 并作为默认；3.0-flash 记为 `superseded`；qwen3-tts-flash 保持 `active` 但不当默认。plein 缺的 Qwen-Audio-TTS 支持随迁移第 3 步补上 |
