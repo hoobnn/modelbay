@@ -466,6 +466,18 @@ describe('HTTP 契约', () => {
   })
 })
 
+describe('MCP 目录参数', () => {
+  it('渠道前缀的模型 ID 与 instructions 参数都能到达请求', async () => {
+    const { ctx, fetch, body } = setup([new Response('{"code":20000000,"data":"AQI="}')])
+    await adapter.submit(
+      speech('doubao-speech:seed-tts-2.0', { text: '你好', instructions: '温柔' }),
+      ctx,
+    )
+    expect(fetch.mock.calls[0]![1]!.headers).toMatchObject({ 'X-Api-Resource-Id': 'seed-tts-2.0' })
+    expect(JSON.parse(body().req_params.additions)).toEqual({ context_texts: ['温柔'] })
+  })
+})
+
 describe('submission 回传', () => {
   it('响应头到达时回传脱敏的 logId 与状态，请求 ID 用宿主给的', async () => {
     const response = vi.fn()

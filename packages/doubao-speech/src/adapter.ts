@@ -185,7 +185,9 @@ export function createDoubaoAdapter(
     voiceDesign: { design: designVoice },
 
     async submit(request: AdapterRequest, ctx: AdapterContext): Promise<SubmitResult> {
-      const { capability, model } = request
+      const { capability } = request
+      // MCP 传「渠道:渠道内ID」，去掉渠道前缀后才是平台资源 ID
+      const model = request.model.replace(/^doubao-speech:/, '')
       const declared = models.find(
         (m) => m.id === model || m.canonicalId === model || m.channels.some((c) => c.id === model),
       )

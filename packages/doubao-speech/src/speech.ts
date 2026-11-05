@@ -121,6 +121,9 @@ export function buildSpeechRequest(
   if (model.startsWith('seed-icl-') && !cloned)
     throw new ProviderError('invalid_input', '声音复刻模型需要已创建的复刻或设计音色 ID')
   const resource = cloned ? (model === 'seed-icl-1.0' ? 'seed-icl-1.0' : 'seed-icl-2.0') : model
+  // MCP 目录里的参数名是 instructions
+  const instruction =
+    input.instruction ?? (input as { instructions?: string | null }).instructions ?? undefined
   const speed = input.speed ?? settings.speed
   if (!Number.isFinite(speed) || speed < 0.5 || speed > 2)
     throw new ProviderError('invalid_input', '语速须在 0.5 至 2 之间')
@@ -133,7 +136,7 @@ export function buildSpeechRequest(
         sample_rate: Number(settings.sampleRate),
         speech_rate: Math.round((speed - 1) * 100),
       },
-      additions: JSON.stringify(input.instruction ? { context_texts: [input.instruction] } : {}),
+      additions: JSON.stringify(instruction ? { context_texts: [instruction] } : {}),
     },
   }
   return {
