@@ -113,6 +113,12 @@ describe('apiKey / baseUrl / errorCode', () => {
       ),
     ).toBe('https://proxy')
   })
+  it('宿主给了 settings.region 时忽略 MINIMAX_BASE_URL 覆盖', () => {
+    const { ctx } = fakeContext([], {
+      secrets: { MINIMAX_API_KEY: 'k', MINIMAX_BASE_URL: 'https://proxy' },
+    })
+    expect(baseUrl({ ...ctx, settings: { region: 'global' } })).toBe(GLOBAL_BASE_URL)
+  })
   it('maps MiniMax codes', () => {
     const cases: Array<[string | number, ProviderErrorCode]> = [
       [410, 'unavailable'],

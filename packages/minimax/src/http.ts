@@ -142,7 +142,9 @@ export function region(ctx: Pick<AdapterContext, 'settings' | 'secret'>): 'cn' |
 }
 
 export function baseUrl(ctx: AdapterContext): string {
-  const override = ctx.secret('MINIMAX_BASE_URL')?.trim()
+  // 宿主显式给了地域（plein 设置）就以它为准，不再读环境式覆盖；覆盖只服务没有 settings 的 MCP 场景
+  const hostRegion = ctx.settings?.region === 'cn' || ctx.settings?.region === 'global'
+  const override = hostRegion ? undefined : ctx.secret('MINIMAX_BASE_URL')?.trim()
   if (override) return override
   return region(ctx) === 'global' ? GLOBAL_BASE_URL : CN_BASE_URL
 }

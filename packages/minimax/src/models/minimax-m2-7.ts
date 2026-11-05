@@ -10,7 +10,8 @@ export default {
   channels: [{ channel: 'minimax', id: 'MiniMax-M2.7' }],
   aliases: { official: [], short: [] },
   lifecycle: {
-    status: 'active',
+    status: 'sunsetting',
+    since: '2026-11-18',
     source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
   },
   source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
