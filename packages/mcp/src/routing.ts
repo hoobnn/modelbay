@@ -11,9 +11,12 @@ import type {
   ModelDeclaration,
   PlatformAdapter,
   PlatformSecrets,
+  PollResult,
+  SubmitResult,
 } from '@modelbay/core'
 import { normalizeArguments } from './arguments'
 import { listTools } from './generate'
+import { JobRegistry, deliver, outputDirectory, pollUntil, settle, waitSeconds } from './jobs'
 import type {
   CallToolContent,
   CallToolResult,
@@ -173,12 +176,6 @@ function localResult(
           : { voices: [], note: '当前声明未登记预置音色；音色列表来自平台侧，需联网查询' },
       )
     }
-    case 'jobs': {
-      return result({
-        note: '本地任务记录由 @modelbay/core 的 JobStore 管理；MCP server 不落盘、不缓存 job 记录。',
-        echo: args,
-      })
-    }
     case 'usage-examples': {
       return result({
         note: '按工具名调用 get_tool_help 读取完整用法；工具清单见 tools/list。',
@@ -195,13 +192,80 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
   const models: readonly ModelDeclaration[] = adapter?.models ?? []
   const fallbackCapability = firstCapability(set)
 
+  const jobs = new JobRegistry()
+
+  /** 任务结果：交付文件（给了输出目录就落盘），异步任务带上 job_id / task_id。 */
+  async function jobResult(
+    tool: string,
+    id: string | undefined,
+    value: SubmitResult | PollResult,
+    outDir: string | undefined,
+  ): Promise<CallToolResult> {
+    const ids = id ? { job_id: id, task_id: id } : {}
+    const record = id ? jobs.get(id) : undefined
+    if (value.state === 'pending') {
+      return result({
+        ...ids,
+        job_state: 'running',
+        completed: false,
+        ...('progress' in value && value.progress !== undefined
+          ? { progress: value.progress }
+          : {}),
+        ...(id ? { next: '用 get_job 查询进度，可传 wait（1–90 秒）等待完成' } : {}),
+      })
+    }
+    if (value.state === 'failed') {
+      if (record) record.state = 'failed'
+      return {
+        ...result({ ...ids, job_state: 'failed', completed: false, error: value.error }),
+        isError: true,
+      }
+    }
+    if (value.state !== 'succeeded' || !Array.isArray(value.outputs)) return result(value)
+    const outputs = await deliver(value.outputs, outDir, tool, context)
+    if (record) record.state = 'delivered'
+    return result({
+      ...ids,
+      job_state: 'delivered',
+      completed: true,
+      outputs,
+      ...(value.usage ? { usage: value.usage } : {}),
+    })
+  }
+
+  function listJobs(args: Record<string, unknown>): CallToolResult {
+    const limit = Number(args.limit ?? 20)
+    return result({
+      jobs: jobs.list(Number.isFinite(limit) && limit > 0 ? limit : 20),
+      note: '只列出本进程提交的任务；任务记录不落盘，重启后用 task_id 调 get_job 仍可查询。',
+    })
+  }
+
+  async function callJobs(name: string, args: Record<string, unknown>): Promise<CallToolResult> {
+    const id = [args.job_id, args.task_id].find(
+      (value): value is string => typeof value === 'string' && value.trim() !== '',
+    )
+    if (!id) return errorResult(`${name} 需要 job_id 或 task_id`)
+    if (
+      typeof args.job_id === 'string' &&
+      typeof args.task_id === 'string' &&
+      args.job_id &&
+      args.task_id &&
+      args.job_id !== args.task_id
+    )
+      return errorResult('job_id 与 task_id 不属于同一任务')
+    const record = jobs.get(id) ?? jobs.remember(id, name, undefined)
+    const value = await pollUntil(adapter!, id, context, waitSeconds(args))
+    return jobResult(record.tool, id, value, outputDirectory(args) ?? record.outDir)
+  }
+
   async function callTool(name: string, args: Record<string, unknown>): Promise<CallToolResult> {
     const tool = set.byName.get(name)
     if (!tool) return errorResult(`未知工具 ${name}`)
     const route = tool.route
 
-    if (route.kind === 'local') {
-      return localResult(route.handler, args, set, models)
+    if (route.kind === 'local' && (route.handler !== 'jobs' || name === 'list_jobs')) {
+      return name === 'list_jobs' ? listJobs(args) : localResult(route.handler, args, set, models)
     }
 
     // 未配置 key：返回清晰错误而不是崩溃；log 走 stderr（由 context.log 决定是否输出）。
@@ -212,9 +276,15 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       return errorResult(`${reason}，工具 ${name} 无法调用。请在环境变量中配置后重试。`)
     }
 
+    if (route.kind === 'local') return callJobs(name, args)
+
+    // 工具 schema 里 `default: null` 表示「不指定」：null 不算传值，否则会被当成显式参数去校验
+    const given = Object.fromEntries(Object.entries(args).filter(([, value]) => value !== null))
+
     if (route.kind === 'native') {
+      const params = tool.mapArguments ? tool.mapArguments(given, { model: '' }) : given
       if (adapter.native) {
-        const value = await adapter.native(route.op, args, context)
+        const value = await adapter.native(route.op, params, context)
         return result(value)
       }
       // 适配器未实现 native()：退化成带 native 字段的 submit，仍按契约路由。
@@ -222,26 +292,28 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
         capability: fallbackCapability,
         model: '',
         input: {},
-        native: { op: route.op, params: args },
+        native: { op: route.op, params },
       } as unknown as AdapterRequest
       const value = await adapter.submit(request, context)
       return result(value)
     }
 
-    // 工具 schema 里 `default: null` 表示「不指定」：null 不算传值，否则会被当成显式参数去校验
-    const input: Record<string, unknown> = normalizeArguments(
-      route.capability,
-      Object.fromEntries(Object.entries(args).filter(([, value]) => value !== null)),
-    )
-    delete input.model
     const model = modelFor(args, route.capability, adapter, primaryChannel)
+    const outDir = outputDirectory(given)
+    const wait = waitSeconds(given)
+    const mapped = tool.mapArguments ? tool.mapArguments(given, { model }) : given
+    const input: Record<string, unknown> = normalizeArguments(route.capability, mapped)
+    // 这几个由 MCP 层处理，不交给适配器
+    for (const key of ['model', 'wait', 'out_dir', 'output_directory']) delete input[key]
     const request = {
       capability: route.capability,
       model,
       input,
     } as unknown as AdapterRequest
-    const value = await adapter.submit(request, context)
-    return result(value)
+    const submitted = await adapter.submit(request, context)
+    const id = submitted.state === 'pending' ? submitted.remoteId : undefined
+    if (id) jobs.remember(id, name, outDir)
+    return jobResult(name, id, await settle(adapter, submitted, context, wait), outDir)
   }
 
   return {

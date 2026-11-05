@@ -55,6 +55,12 @@ export interface ToolSpec {
   nature?: ToolNature
   /** 工具组；缺省按通用工具名约定，再缺省为 `core`。 */
   group?: ToolGroup
+  /**
+   * MCP 参数 → 适配器输入（submit）或 native 参数的平台专属换算。
+   * 收到的参数已去掉 null；`model` 是解析后的渠道内模型 ID（native 路由时为空串）。
+   * 通用换算（messages、素材、`wait`、`out_dir` 等）在之后由 `@modelbay/mcp` 处理。
+   */
+  mapArguments?(args: Record<string, unknown>, context: { model: string }): Record<string, unknown>
 }
 
 /** 一个平台的完整自描述。 */

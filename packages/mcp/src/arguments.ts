@@ -7,13 +7,30 @@
  * 和具体平台、模型有关的字段不在这里处理。
  */
 import { ProviderError } from '@modelbay/core'
+import type { AssetRef } from '@modelbay/core'
+import { mimeFromName } from './assets'
 
 type Args = Record<string, unknown>
+type Kind = 'image' | 'video' | 'audio'
 
 const has = (value: unknown) => value !== undefined && value !== null
 
 function setIfAbsent(input: Args, key: string, value: unknown): void {
   if (!has(input[key]) && has(value)) input[key] = value
+}
+
+/** 路径 / URL → AssetRef；种类由参数本身决定。 */
+function asset(value: unknown, kind: Kind, field: string): AssetRef {
+  if (typeof value !== 'string' || !value.trim())
+    throw new ProviderError('invalid_input', `${field} 须为本地路径或 URL`)
+  const mime = mimeFromName(value)
+  return { assetId: value, kind, ...(mime ? { mime } : {}) }
+}
+
+function assets(value: unknown, kind: Kind, field: string): AssetRef[] {
+  if (!has(value)) return []
+  const list = Array.isArray(value) ? value : [value]
+  return list.map((item) => asset(item, kind, field))
 }
 
 function chatMessages(args: Args): unknown[] | undefined {
@@ -32,7 +49,16 @@ function chatMessages(args: Args): unknown[] | undefined {
       throw new ProviderError('invalid_input', 'history 里的每条消息都需要 role 和 content')
     messages.push({ role: message.role, content: message.content })
   }
-  if (typeof prompt === 'string') messages.push({ role: 'user', content: prompt })
+  const images = assets(args.images, 'image', 'images')
+  if (images.length)
+    messages.push({
+      role: 'user',
+      content: [
+        ...(typeof prompt === 'string' && prompt ? [{ type: 'text', text: prompt }] : []),
+        ...images.map((image) => ({ type: 'image', image })),
+      ],
+    })
+  else if (typeof prompt === 'string') messages.push({ role: 'user', content: prompt })
   return messages
 }
 
@@ -42,6 +68,8 @@ export function normalizeArguments(capability: string, args: Args): Args {
   switch (capability) {
     case 'text.chat':
       if (!Array.isArray(input.messages)) {
+        if (has(input.images) && !has(input.prompt))
+          throw new ProviderError('invalid_input', 'images 需要同时提供 prompt')
         const messages = chatMessages(input)
         if (messages) input.messages = messages
       }
@@ -51,12 +79,29 @@ export function normalizeArguments(capability: string, args: Args): Args {
       setIfAbsent(input, 'voice', input.voice_id)
       setIfAbsent(input, 'instruction', input.instructions)
       break
-    case 'image.generate':
+    case 'image.generate': {
       setIfAbsent(input, 'negativePrompt', input.negative_prompt)
       setIfAbsent(input, 'count', input.n)
+      const references = assets(input.images, 'image', 'images')
+      if (references.length) setIfAbsent(input, 'references', references)
       break
-    case 'video.generate':
+    }
+    case 'video.generate': {
       setIfAbsent(input, 'aspectRatio', input.ratio ?? input.aspect_ratio)
+      if (has(input.first_frame))
+        setIfAbsent(input, 'firstFrame', asset(input.first_frame, 'image', 'first_frame'))
+      if (has(input.last_frame))
+        setIfAbsent(input, 'lastFrame', asset(input.last_frame, 'image', 'last_frame'))
+      const references = [
+        ...assets(input.reference_images, 'image', 'reference_images'),
+        ...assets(input.reference_videos, 'video', 'reference_videos'),
+        ...assets(input.reference_audios, 'audio', 'reference_audios'),
+      ]
+      if (references.length) setIfAbsent(input, 'references', references)
+      break
+    }
+    case 'audio.transcribe':
+      if (typeof input.audio === 'string') input.audio = asset(input.audio, 'audio', 'audio')
       break
   }
   return input

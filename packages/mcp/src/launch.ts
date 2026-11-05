@@ -6,6 +6,7 @@ import { createAdapterContext, readSecrets } from '@modelbay/core'
 import type { PlatformAdapter, PlatformDescriptor } from '@modelbay/core'
 import { PLATFORMS, findPlatform } from 'modelbay'
 import { createNodeAdapters } from 'modelbay/node'
+import { createMcpAssetSource } from './assets'
 import { generateTools, listTools } from './generate'
 import { createHandlers } from './routing'
 import { createServer } from './server'
@@ -87,6 +88,7 @@ export async function startServer(key: string, options: StartOptions = {}): Prom
   const secrets = readSecrets(platform.secrets, env)
   const context = createAdapterContext({
     secrets,
+    assets: createMcpAssetSource(),
     log: (message, data) => {
       process.stderr.write(`[${name}] ${message} ${JSON.stringify(data ?? {})}\n`)
     },

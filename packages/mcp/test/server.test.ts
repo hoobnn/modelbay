@@ -325,7 +325,7 @@ describe('createHandlers tools/call 路由', () => {
     const voices = await handlers.callTool('list_voices', {})
     expect((voices as CallToolResult).content[0]?.text).toContain('Voice One')
     const jobs = await handlers.callTool('list_jobs', {})
-    expect((jobs as CallToolResult).content[0]?.text).toContain('JobStore')
+    expect((jobs as CallToolResult).content[0]?.text).toContain('任务记录不落盘')
     const caps = await handlers.callTool('list_capabilities', {})
     expect((caps as CallToolResult).structuredContent).toBeDefined()
   })
