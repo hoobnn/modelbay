@@ -6,7 +6,9 @@
 import {
   ProviderError,
   fromBase64,
+  videoReferencePrompt,
   type AdapterContext,
+  type AssetRef,
   type CapabilityInput,
   type ProviderOutput,
   type SubmitResult,
@@ -15,6 +17,7 @@ import {
 } from '@modelbay/core'
 import { asJson, request, type ErrorClassifier, type Json, type TransportMessages } from './http'
 import { imageDataUrl } from './chat'
+import type { ReferenceVideoUploader } from './reference'
 
 /** `16:9` → 16/9, unrecognised values fall back to 1. */
 export function ratioOf(aspect: string | undefined): number {
@@ -229,6 +232,28 @@ export function parseCutoutResponse(data: Json): SubmitResult {
   return { state: 'succeeded', outputs }
 }
 
+/**
+ * 上传一份参考视频，返回下游可访问的限时地址。
+ *
+ * 视频参考不能塞进 data URL（请求体放不下），必须先传对象存储；
+ * 上传实现由宿主从 `@modelbay/ark/tos` 注入，适配器本身不碰任何 SDK。
+ */
+async function uploadReference(
+  ctx: AdapterContext,
+  ref: AssetRef,
+  uploadVideo: ReferenceVideoUploader | undefined,
+): Promise<string> {
+  if (!uploadVideo)
+    invalid(
+      '火山方舟参考视频需要上传到对象存储：请从 @modelbay/ark/tos 引入 uploadReferenceVideo，' +
+        '再用 createArkAdapter(models, { uploadVideo: uploadReferenceVideo }) 注入',
+    )
+  if (!ctx.assets) invalid('火山方舟参考视频需要宿主注入 assets 才能读取素材')
+  const asset = await ctx.assets.load(ref.assetId)
+  if (!asset.data.length) invalid('参考视频不能是空文件')
+  return uploadVideo(ctx, { data: asset.data, mime: asset.mime || ref.mime || 'video/mp4' })
+}
+
 /** Seedance video generation request body. */
 export async function videoBody(
   plane: 'api' | 'plan',
@@ -236,6 +261,8 @@ export async function videoBody(
   input: CapabilityInput<'video.generate'>,
   ctx: AdapterContext,
   defaultResolution: string,
+  /** 参考视频上传实现（Node 子路径注入）；缺视频参考时不需要。 */
+  uploadVideo?: ReferenceVideoUploader,
 ): Promise<Json> {
   if (!input.prompt.trim() && !input.firstFrame && !input.references?.length)
     invalid('视频需要提示词或图片参考')
@@ -266,7 +293,9 @@ export async function videoBody(
   if (input.seed !== undefined) body.seed = input.seed
   if (body.draft && plane === 'plan') invalid('Agent Plan 不支持 Seedance 草稿模式')
 
-  const content: Json[] = input.prompt.trim() ? [{ type: 'text', text: input.prompt }] : []
+  const content: Json[] = input.prompt.trim()
+    ? [{ type: 'text', text: videoReferencePrompt(input.prompt, 'ark') }]
+    : []
   for (const [ref, role] of [
     [input.firstFrame, 'first_frame'],
     [input.lastFrame, 'last_frame'],
@@ -278,12 +307,27 @@ export async function videoBody(
         role,
       })
   }
+  // 参考素材按类别分流：图片走 image_url，音频走 audio_url，视频先上传再走 video_url。
   for (const ref of input.references ?? []) {
-    content.push({
-      type: 'image_url',
-      image_url: { url: await imageDataUrl(ctx, ref, '火山方舟') },
-      role: 'reference_image',
-    })
+    if (ref.kind === 'video') {
+      content.push({
+        type: 'video_url',
+        video_url: { url: await uploadReference(ctx, ref, uploadVideo) },
+        role: 'reference_video',
+      })
+    } else if (ref.kind === 'audio') {
+      content.push({
+        type: 'audio_url',
+        audio_url: { url: await imageDataUrl(ctx, ref, '火山方舟') },
+        role: 'reference_audio',
+      })
+    } else {
+      content.push({
+        type: 'image_url',
+        image_url: { url: await imageDataUrl(ctx, ref, '火山方舟') },
+        role: 'reference_image',
+      })
+    }
   }
   body.content = content
   return body

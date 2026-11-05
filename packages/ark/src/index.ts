@@ -8,6 +8,10 @@
  * Both expose `models` / `channels`; the root entry stays runtime-agnostic.
  * Node-only pieces (TOS/S3 upload, signed plan directory, ASR codec) live in
  * `src/node/**` and are exported from the optional `@modelbay/ark/tos` subpath.
+ *
+ * The reference-video upload is an injection point: `createArkAdapter(models, {
+ * uploadVideo })` takes the uploader from the `@modelbay/ark/tos` subpath, so
+ * the root entry never pulls in the object-storage SDK.
  */
 import {
   ProviderError,
@@ -16,6 +20,7 @@ import {
   type AdapterContext,
   type AdapterRequest,
   type CapabilityInput,
+  type ModelDeclaration,
   type ModelLimits,
   type PlatformAdapter,
   type SubmitResult,
@@ -37,6 +42,10 @@ import {
 } from './media'
 import { synthesizePlanSpeech } from './speech'
 import { request } from './http'
+import type { ArkAdapterOptions } from './reference'
+
+export type { ArkAdapterOptions, ReferenceFile, ReferenceVideoUploader } from './reference'
+export { REFERENCE_STORAGE_KEYS } from './reference'
 
 const API_BASE = 'https://ark.cn-beijing.volces.com/api/v3'
 const PLAN_BASE = 'https://ark.cn-beijing.volces.com/api/plan/v3'
@@ -76,17 +85,17 @@ function requireKey(plane: Plane, ctx: AdapterContext): string {
 }
 
 /** Resolve `渠道:渠道内ID` / canonical id / alias to the platform wire id. */
-function modelId(ref: string, plane: Plane): string {
+function modelId(ref: string, plane: Plane, models: ModelDeclaration[]): string {
   const colon = ref.indexOf(':')
   const raw = colon >= 0 ? ref.slice(colon + 1) : ref
-  const found = resolveModel(all, ref)
+  const found = resolveModel(models, ref)
   const match = found?.declaration.channels.find((item) => item.channel === planeChannel(plane))
   return match?.id ?? raw
 }
 
 /** Default resolution comes only from the declaration; never hard-coded here. */
-function defaultResolution(ref: string): string {
-  const found = resolveModel(all, ref)
+function defaultResolution(ref: string, models: ModelDeclaration[]): string {
+  const found = resolveModel(models, ref)
   const limits: ModelLimits = found ? { ...found.declaration.limits, ...found.channel.limits } : {}
   if (!limits.defaultResolution)
     throw new ProviderError('invalid_input', '所选模型未声明默认分辨率')
@@ -108,12 +117,14 @@ async function submit(
   req: AdapterRequest,
   ctx: AdapterContext,
   plane: Plane,
+  models: ModelDeclaration[],
+  options: ArkAdapterOptions,
 ): Promise<SubmitResult> {
   const key = requireKey(plane, ctx)
   const base = planeBase(plane)
   const label = planeLabel(plane)
   const messages = transportMessages(plane)
-  const model = modelId(req.model, plane)
+  const model = modelId(req.model, plane, models)
 
   if (req.capability === 'text.chat') {
     return chatCompletion({
@@ -133,7 +144,7 @@ async function submit(
       model,
       req.input as CapabilityInput<'image.generate'>,
       ctx,
-      defaultResolution(req.model),
+      defaultResolution(req.model, models),
     )
     const data = await request({
       ctx,
@@ -169,7 +180,8 @@ async function submit(
       model,
       req.input as CapabilityInput<'video.generate'>,
       ctx,
-      defaultResolution(req.model),
+      defaultResolution(req.model, models),
+      options.uploadVideo,
     )
     return submitVideo(body, taskOptions(plane, ctx, key))
   }
@@ -185,7 +197,11 @@ async function submit(
   throw new ProviderError('invalid_input', `${label} 不支持此能力：${req.capability}`)
 }
 
-function makeAdapter(plane: Plane): PlatformAdapter {
+function makeAdapter(
+  plane: Plane,
+  models: ModelDeclaration[],
+  options: ArkAdapterOptions,
+): PlatformAdapter {
   return defineAdapter({
     id: plane === 'plan' ? 'volc/ark-plan' : 'volc/ark',
     title: planeLabel(plane),
@@ -194,7 +210,7 @@ function makeAdapter(plane: Plane): PlatformAdapter {
     nativeOperations: ['listModels'],
     docsUrl: DOCS,
     nodeOnly: ['tos', 'plan-directory', 'asr'],
-    submit: (req, ctx) => submit(req, ctx, plane),
+    submit: (req, ctx) => submit(req, ctx, plane, models, options),
     poll: (remoteId, ctx) => pollVideo(remoteId, taskOptions(plane, ctx, requireKey(plane, ctx))),
     cancel: (remoteId, ctx) =>
       cancelVideo(remoteId, taskOptions(plane, ctx, requireKey(plane, ctx))),
@@ -220,7 +236,31 @@ function makeAdapter(plane: Plane): PlatformAdapter {
   })
 }
 
+/**
+ * 按量方舟适配器工厂（渠道 `ark`）。
+ *
+ * 参考视频上传这类 Node 专属能力由宿主注入；没注入时视频参考会明确报错。
+ */
+export function createArkAdapter(
+  models: ModelDeclaration[],
+  options: ArkAdapterOptions = {},
+): PlatformAdapter {
+  return makeAdapter('api', models, options)
+}
+
+/**
+ * 套餐方舟适配器工厂（渠道 `ark-plan`）。
+ *
+ * 与按量渠道同一套注入点：请求路径与鉴权仍走套餐数据面。
+ */
+export function createArkPlanAdapter(
+  models: ModelDeclaration[],
+  options: ArkAdapterOptions = {},
+): PlatformAdapter {
+  return makeAdapter('plan', models, options)
+}
+
 /** Pay-as-you-go Ark adapter (channel `ark`). */
-export const arkAdapter: PlatformAdapter = makeAdapter('api')
+export const arkAdapter: PlatformAdapter = createArkAdapter(models)
 /** Agent Plan Ark adapter (channel `ark-plan`). */
-export const arkPlanAdapter: PlatformAdapter = makeAdapter('plan')
+export const arkPlanAdapter: PlatformAdapter = createArkPlanAdapter(models)

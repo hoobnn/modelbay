@@ -5,6 +5,7 @@
  */
 import { createHash, createHmac } from 'node:crypto'
 import { ProviderError, type AdapterContext } from '@modelbay/core'
+import { REFERENCE_STORAGE_KEYS, type ReferenceFile } from '../reference'
 
 export interface ReferenceStorage {
   referenceStorage: 'tos' | 'oss' | 'cos' | 's3'
@@ -13,6 +14,8 @@ export interface ReferenceStorage {
   referenceBucket: string
   referenceRegion: string
 }
+
+export type { ReferenceFile }
 
 const CLOUD_ENDPOINTS: Partial<
   Record<ReferenceStorage['referenceStorage'], (region: string) => string>
@@ -127,12 +130,6 @@ export function objectKey(data: Uint8Array, mime: string): string {
 export const PUT_EXPIRES = 900
 /** 覆盖离线任务的排队窗口，源桶保持私有；也是 SigV4 预签名的上限。 */
 export const GET_EXPIRES = 7 * 24 * 60 * 60
-
-/** 一份待上传的参考视频。 */
-export interface ReferenceFile {
-  data: Uint8Array
-  mime: string
-}
 
 /**
  * 上传参考视频，返回下游可访问的限时读取地址。
@@ -308,4 +305,39 @@ export function referenceUploader(ctx: AdapterContext, storage: ReferenceStorage
   return storage.referenceStorage === 'tos'
     ? tosUploader(ctx, bucket, region)
     : s3Uploader(ctx, storage, region)
+}
+
+/**
+ * 从宿主配置读取参考视频存储设置。
+ *
+ * 字段名与 plein 的 `ReferenceStorage` 一致；`AdapterContext` 没有独立的
+ * settings 槽，非密钥配置也走 `ctx.secret` 这一个通道。
+ */
+export function referenceStorageFrom(ctx: AdapterContext): ReferenceStorage {
+  const storage = ctx.secret(REFERENCE_STORAGE_KEYS.storage)?.trim()
+  if (storage !== 'tos' && storage !== 'oss' && storage !== 'cos' && storage !== 's3')
+    throw new ProviderError(
+      'invalid_input',
+      `火山视频参考需要配置参考存储类型（${REFERENCE_STORAGE_KEYS.storage}）：tos / oss / cos / s3`,
+    )
+  return {
+    referenceStorage: storage,
+    referenceEndpoint: ctx.secret(REFERENCE_STORAGE_KEYS.endpoint)?.trim() ?? '',
+    referencePathStyle: ctx.secret(REFERENCE_STORAGE_KEYS.pathStyle) === 'true',
+    referenceBucket: ctx.secret(REFERENCE_STORAGE_KEYS.bucket)?.trim() ?? '',
+    referenceRegion: ctx.secret(REFERENCE_STORAGE_KEYS.region)?.trim() ?? '',
+  }
+}
+
+/**
+ * 参考视频上传实现：注入给 `createArkAdapter(models, { uploadVideo })`。
+ *
+ * 存储配置与密钥都在调用时从 `ctx` 读，所以适配器不需要知道对象存储的细节；
+ * 上传失败会在提交视频生成之前报错。
+ */
+export async function uploadReferenceVideo(
+  ctx: AdapterContext,
+  file: ReferenceFile,
+): Promise<string> {
+  return referenceUploader(ctx, referenceStorageFrom(ctx))(file)
 }

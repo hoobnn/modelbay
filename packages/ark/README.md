@@ -87,6 +87,9 @@ require Node and must not be loaded from the root entry:
 - `tosUploader()` / `s3Uploader()` / `referenceUploader()` — reference-video
   upload: the official SDK signs locally, the host PUTs the bytes through
   `ctx.fetch`, and the uploader returns a time-limited read URL.
+- `referenceStorageFrom()` / `uploadReferenceVideo()` — the same upload behind
+  the adapter's injection point (`createArkAdapter(models, { uploadVideo })`),
+  reading the storage settings from the host configuration.
 - `planDirectoryHeaders()` / `listPlanModels()` — the AK/SK-signed Agent Plan
   model-directory request (`node:crypto`).
 - `asrFrame()` / `asrPacket()` — the gzip frame codec for plan ASR (`node:zlib`).
@@ -114,6 +117,30 @@ proxy stay with the host. The bucket, region and the `ARK_TOS_ACCESS_KEY` /
 generation is submitted, and neither the signed URL nor the keys reach the logs
 or the error cause. `native('listModels')` on the plan channel directs callers to
 `listPlanModels` in this subpath.
+
+**Injecting the uploader.** The root entry stays runtime-agnostic, so the
+adapter asks for the uploader instead of importing the SDK:
+
+```ts
+import { createArkAdapter, models } from '@modelbay/ark'
+import { uploadReferenceVideo } from '@modelbay/ark/tos'
+
+const adapter = createArkAdapter(models, { uploadVideo: uploadReferenceVideo })
+```
+
+`video.generate` splits the references by kind: images go to `image_url`, audio
+to `audio_url`, and videos are uploaded first and then sent as
+`video_url` with `role: 'reference_video'` (the API does not accept a video
+reference inline). Without an injected uploader a video reference fails with
+`invalid_input` and names the subpath and the injection above; a request with
+only image references needs no uploader.
+
+`uploadReferenceVideo(ctx, file)` reads the storage settings from the host
+configuration (`ARK_REFERENCE_STORAGE`, `ARK_REFERENCE_ENDPOINT`,
+`ARK_REFERENCE_PATH_STYLE`, `ARK_REFERENCE_BUCKET`, `ARK_REFERENCE_REGION`;
+the field names match plein's `ReferenceStorage`) and the key pair
+`ARK_TOS_ACCESS_KEY` / `ARK_TOS_SECRET_KEY`. `referenceStorageFrom(ctx)`
+exposes the same lookup for hosts that build the uploader themselves.
 
 ## Tests
 
