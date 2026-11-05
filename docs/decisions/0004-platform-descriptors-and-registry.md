@@ -15,10 +15,10 @@
 ## 决策
 
 1. **平台自描述。** 每个平台包导出一个 `PlatformDescriptor`（`@modelbay/core` 的 `definePlatform()`），包括平台键、标题、主渠道、密钥规格（必填组、可选项、别名）、`createAdapters(options)`，以及可选的 MCP 工具定义。
-2. **单一注册表。** `modelbay` 包的 `src/platforms.ts` 导出 `PLATFORMS`。汇总入口的默认适配器、环境变量读取、`doctor`，MCP 的命令，CLI，声明自检，上游文档导出，都只遍历它。
+2. **单一注册表。** `modelbay` 包的 `src/platforms.ts` 导出 `PLATFORMS`。汇总入口的默认适配器、环境变量读取、`doctor`，MCP 的命令，CLI，声明自检，上游文档对账，都只遍历它。
 3. **Node 扩展一个约定。** 平台的 Node 专属能力放 `@modelbay/<平台>/node`，统一导出 `nodeOptions`，由 `modelbay/node` 加载后传给 `createAdapters()`。
 4. **MCP 只有一个命令。** `modelbay-mcp <平台>`，工具定义放在平台包的 `src/mcp/tools.ts`，平台独有工具的路由、性质、分组也写在那里。
-5. **声明只有 TS 一份。** 不在仓库里存 JSON。上游文档监控需要 JSON 时，在 CI 里从注册表临时导出。
+5. **声明只有 TS 一份。** 不在仓库里存 JSON。上游文档对账直接从注册表读声明。
 
 ## 理由
 

@@ -1,15 +1,21 @@
-name: Official documentation audit
+name: Upstream docs audit
 
-# 上游文档监控（每天 10:23 Asia/Shanghai）：先从各平台包的 TS 声明导出 JSON，
-# 再抓取官方文档、比对 SHA-256 指纹，检测到变化就开 issue 交人工审核。
-# 定时任务绝不自动改声明、合并、打 tag 或发布；缺网络 / 抓取失败时脚本以非零码退出，
-# 本 job 显式失败，不静默通过。
+# 上游文档对账（每天 10:23 Asia/Shanghai），每个平台一个 job：
+# 1. 现抓官方文档（优先官方 Markdown，登记过的域名才用无头浏览器渲染）；
+# 2. 抽取模型清单和下线信息，与 TS 声明双向核对。仓库里不存文档内容，也不存上一次的结果；
+#    抓到的全文和报告只在 .upstream-docs/，作为本次运行的 artifact 保留；
+# 3. 下线公告点名的模型，生命周期补丁直接写进声明文件（--apply），有改动就更新
+#    upstream-docs/<平台> 分支上的草稿 PR；
+# 4. 声明这一侧有差距时，开或更新标题为「上游文档对账：<平台>」的 issue，报告就是正文；
+#    差距消失后自动关掉。
+#
+# 定时任务不合并、不打 tag、不发布；补丁必须人工对照原文核对。抓取失败时 job 显式失败。
 
 on:
   workflow_dispatch:
     inputs:
-      server:
-        description: Platform to check
+      platform:
+        description: Platform to audit
         type: choice
         default: all
         options: [all, ark, bailian, minimax, doubao-speech, openai]
@@ -17,21 +23,26 @@ on:
     - cron: "23 2 * * *"
 
 permissions:
-  contents: read
+  contents: write
   issues: write
+  pull-requests: write
 
 concurrency:
   group: upstream-docs
   cancel-in-progress: false
 
 jobs:
-  platform:
+  audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
-        server: ${{ fromJSON(inputs.server && inputs.server != 'all' && format('["{0}"]', inputs.server) || '["ark","bailian","minimax","doubao-speech","openai"]') }}
+        platform: ${{ fromJSON(inputs.platform && inputs.platform != 'all' && format('["{0}"]', inputs.platform) || '["ark","bailian","minimax","doubao-speech","openai"]') }}
+    env:
+      HUSKY: "0"
+      REPORT: .upstream-docs/${{ matrix.platform }}/report.md
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -40,62 +51,61 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: 从 TS 声明导出 JSON
-        run: pnpm export:declarations
-      - name: 离线校验声明来源映射
-        run: node scripts/upstream-docs.mjs --check-coverage --server "${{ matrix.server }}"
-      - name: 抓取官方文档并比对指纹
+      - name: 安装无头浏览器（只有登记过的域名会渲染）
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: 抓取、对账、写补丁
         id: audit
-        env:
-          SERVER: ${{ matrix.server }}
-        run: node scripts/upstream-docs.mjs --server "$SERVER" --output .upstream-docs
-      - name: 附加报告摘要
-        if: always()
-        run: |
-          if test -f .upstream-docs/report.md; then
-            cat .upstream-docs/report.md >> "$GITHUB_STEP_SUMMARY"
-          fi
-      - name: 保留各平台审计产物
+        run: pnpm upstream:audit --platform "${{ matrix.platform }}" --apply
+      - name: 格式化改动过的声明
+        run: pnpm exec vp fmt packages/*/src/models
+      - name: 抓到的全文和报告留作审阅附件
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: official-document-audit-${{ matrix.server }}-${{ github.run_id }}
-          path: .upstream-docs/
+          name: upstream-docs-${{ matrix.platform }}
+          path: .upstream-docs/${{ matrix.platform }}
           include-hidden-files: true
           retention-days: 14
           if-no-files-found: warn
-      - name: 变化时开 issue，交人工审核
-        if: steps.audit.outputs.changed == 'true'
-        uses: actions/github-script@v7
-        env:
-          SERVER: ${{ matrix.server }}
-          AFFECTED: ${{ steps.audit.outputs.affected }}
+      - name: 附加报告摘要
+        if: always()
+        run: if test -f "$REPORT"; then cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: 生命周期补丁开草稿 PR
+        uses: peter-evans/create-pull-request@v7
         with:
-          script: |
-            const fs = require('fs')
-            const { SERVER, AFFECTED } = process.env
-            const marker = `<!-- upstream-docs:${SERVER} -->`
-            const open = await github.paginate(github.rest.issues.listForRepo, {
-              ...context.repo, state: 'open', labels: 'upstream-docs'
-            })
-            if (open.some((issue) => issue.body?.includes(marker))) {
-              core.info('已有待审 issue，跳过新建')
-              return
-            }
-            let report = fs.existsSync('.upstream-docs/report.md')
-              ? fs.readFileSync('.upstream-docs/report.md', 'utf8') : ''
-            if (report.length > 60000) report = report.slice(0, 60000) + '\n\n…（已截断，完整内容见 artifact）'
-            await github.rest.issues.create({
-              ...context.repo,
-              title: `docs(${SERVER}): 官方文档指纹变化，待人工核对`,
-              labels: ['upstream-docs'],
-              body: [
-                marker,
-                `${SERVER} 的官方文档正文指纹发生变化，受影响声明 ${AFFECTED} 个。`,
-                '请人工核对官方原文后再改声明、补测试与说明；本 issue 由定时任务创建，' +
-                  '不自动改实现、不合并、不打 tag、不发布。',
-                `检测回执：https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-                '',
-                report,
-              ].join('\n'),
-            })
+          branch: upstream-docs/${{ matrix.platform }}
+          base: main
+          draft: true
+          labels: upstream-docs
+          add-paths: packages/*/src/models/**
+          commit-message: |
+            🐛 fix(${{ matrix.platform }}): 按官方下线公告更新生命周期
+
+            由上游文档对账定时任务生成，补丁附官方原文引用，合并前逐条核对。
+          title: "🐛 fix(${{ matrix.platform }}): 按官方下线公告更新生命周期"
+          body-path: ${{ env.REPORT }}
+          delete-branch: true
+      - name: 更新跟踪 issue
+        if: steps.audit.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: 上游文档对账：${{ matrix.platform }}
+          ATTENTION: ${{ steps.audit.outputs.attention }}
+        run: |
+          number=$(gh issue list --state open --label upstream-docs --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ "$ATTENTION" = "true" ]; then
+            if [ -n "$number" ]; then
+              gh issue edit "$number" --body-file "$REPORT"
+            else
+              gh label create upstream-docs --color BFD4F2 --force >/dev/null
+              gh issue create --title "$TITLE" --label upstream-docs --body-file "$REPORT"
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --comment "最新一次对账没有声明侧的差距，自动关闭。"
+          fi
+      - name: 抓取失败时让 job 失败
+        if: steps.audit.outputs.errors != '0'
+        run: |
+          echo "有 ${{ steps.audit.outputs.errors }} 个页面抓取失败，见报告的「抓取情况」。"
+          exit 1

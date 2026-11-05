@@ -30,7 +30,7 @@ packages/
   modelbay/        modelbay：汇总入口、平台注册表、modelbay/node
   mcp/             @modelbay/mcp：MCP server，命令 modelbay-mcp <平台>
   cli/             @modelbay/cli：命令 modelbay
-scripts/           仓库级检查：覆盖率、包发布、许可、core 运行时隔离、声明导出、上游文档监控
+scripts/           仓库级检查：覆盖率、包发布、许可、core 运行时隔离；upstream/ 是上游文档对账
 docs/
 vite.package.ts    各包共用的打包入口探测与测试别名
 ```
@@ -72,7 +72,7 @@ test/
 
 - 格式见 [0003](decisions/0003-capabilities-and-model-declarations.md)，写法见 [扩展指南](extending.md#新增或修改一个模型)。
 - 模型参数、上下限、默认值、生命周期只写在声明里。适配器、MCP、CLI 都不能写默认模型，由 core 的 `selectDefaultModel()` 只从 `active` 模型里选。
-- TS 声明是唯一来源，不再导出 JSON 进仓库。上游文档监控需要 JSON 时，由 `pnpm export:declarations` 临时导出到 `.upstream-docs/`。
+- TS 声明是唯一来源，不导出 JSON。上游文档对账直接从注册表读声明。
 
 ### 错误和日志
 
@@ -96,22 +96,22 @@ test/
 
 ## 命令
 
-| 命令                       | 做什么                                                                                              |
-| -------------------------- | --------------------------------------------------------------------------------------------------- |
-| `pnpm lint`                | `vp check` + markdownlint                                                                           |
-| `pnpm format`              | 自动修复上面两项                                                                                    |
-| `pnpm typecheck`           | 根目录（配置与脚本）和每个包的 `tsc`                                                                |
-| `pnpm test`                | `vp test`                                                                                           |
-| `pnpm build`               | 每个包 `vp pack`                                                                                    |
-| `pnpm export:declarations` | 把全部声明导出成 JSON 到 `.upstream-docs/declarations/`                                             |
-| `pnpm check:sources`       | 导出声明，再离线检查每个来源都是白名单里的官方 https 域名                                           |
-| `pnpm verify`              | dedupe、lint、typecheck、带覆盖率的测试、按包覆盖率、来源检查、build、包发布、许可、core 运行时隔离 |
+| 命令                  | 做什么                                                                                              |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `pnpm lint`           | `vp check` + markdownlint                                                                           |
+| `pnpm format`         | 自动修复上面两项                                                                                    |
+| `pnpm typecheck`      | 根目录（配置与脚本）和每个包的 `tsc`                                                                |
+| `pnpm test`           | `vp test`                                                                                           |
+| `pnpm build`          | 每个包 `vp pack`                                                                                    |
+| `pnpm check:sources`  | 离线检查每个声明的来源都是白名单里的官方 https 地址并带核对日期                                     |
+| `pnpm upstream:audit` | 现抓官方文档并与声明双向核对，报告写到 `.upstream-docs/`，见 [上游文档对账](upstream.md)            |
+| `pnpm verify`         | dedupe、lint、typecheck、带覆盖率的测试、按包覆盖率、来源检查、build、包发布、许可、core 运行时隔离 |
 
 PR 合并前 `pnpm verify` 必须通过，CI 跑的就是这一条。
 
-## 上游文档监控
+## 上游文档对账
 
-`.github/workflows/upstream-docs.yml` 每天跑一次：导出声明，抓取每个来源页，抽取正文里的稳定信号后算 SHA-256 指纹，与基线比对。有变化就开 issue，列出受影响的声明，由人核对官方原文后再改。定时任务不改声明、不合并、不发布。脚本是 `scripts/upstream-docs.mjs`，`--help` 看参数。
+`.github/workflows/upstream-docs.yml` 每天跑一次：现抓官方文档，抽取模型清单和下线信息，与声明双向核对。差距进「上游文档对账：<平台>」跟踪 issue，下线公告点名的模型出生命周期补丁、开草稿 PR。仓库里不存文档内容，也不存上一次的结果。定时任务不合并、不发布。做法和处理差距的要点见 [上游文档对账](upstream.md)。
 
 ## 和下游项目联调
 

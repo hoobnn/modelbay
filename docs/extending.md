@@ -6,7 +6,7 @@
 
 1. 在 `packages/<平台>/src/models/` 下新建 `<模型>.ts`，写成 `export default { ... } satisfies ModelDeclaration`。只写数据，不写函数、条件分支或计算出来的值。格式见 [0003](decisions/0003-capabilities-and-model-declarations.md)。
 2. 在同目录的 `index.ts` 里导入它，并放进 `all` 数组。数组顺序就是模型清单和 MCP 说明里的展示顺序。
-3. 填 `source`、`lifecycle.source`，以及各渠道的 `source`（有的话）：都要是官方文档的 https 链接，再加实际读原文的日期 `YYYY-MM-DD`。域名要在 `scripts/upstream-docs.mjs` 的 `ALLOWED_HOST_SUFFIXES` 白名单里，新平台的文档站要先加进去。
+3. 填 `source`、`lifecycle.source`，以及各渠道的 `source`（有的话）：都要是官方文档的 https 链接，再加实际读原文的日期 `YYYY-MM-DD`。域名要在 `scripts/upstream/sources.ts` 的 `OFFICIAL_HOST_SUFFIXES` 白名单里，新平台的文档站要先加进去。
 4. 不用写测试：`packages/modelbay/test/declarations.test.ts` 会自动检查所有声明，包括有没有登记进 `all`、是否纯数据、来源和日期、生命周期、默认冲突、别名冲突、`optionsSchema`。只有改了请求构造或路由时，才在平台包的 `test/` 里补夹具测试。
 
 模型下线、改名或换默认，都只改声明，不改代码。
@@ -29,7 +29,7 @@
    - `src/index.ts` 加命名空间再导出；
    - `package.json` 加依赖；
    - 有 Node 扩展的，在 `src/node.ts` 的 `NODE_LOADERS` 加一行。
-7. 在 `.github/workflows/upstream-docs.yml` 的平台列表里加上 `key`。
+7. 在 `scripts/upstream/sources.ts` 的 `SOURCES` 里登记模型列表页和下线公告页，并在 `.github/workflows/upstream-docs.yml` 的平台列表里加上 `key`，见 [上游文档对账](upstream.md#新增平台或页面)。
 8. `pnpm install`，然后 `pnpm verify`。打包入口、测试别名、TS 路径、覆盖率门槛（80%）、changesets 版本组都按目录约定自动生效，不用改。
 
 平台包之间不互相依赖，公共的 HTTP、对话、尺寸换算放进 `@modelbay/shared`。目前唯一的例外是方舟依赖豆包语音（套餐渠道复用豆包语音的合成协议）。

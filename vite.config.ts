@@ -54,7 +54,10 @@ export default defineConfig({
     ignorePatterns: ['pnpm-lock.yaml', '**/dist/**', '**/coverage/**'],
   },
   test: {
-    projects: ['packages/*'],
+    projects: [
+      'packages/*',
+      { extends: true, test: { name: 'scripts', include: ['scripts/**/*.test.ts'] } },
+    ],
     alias: packageAliases,
     coverage: {
       include: ['packages/*/src/**/*.ts'],

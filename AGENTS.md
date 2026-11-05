@@ -16,6 +16,7 @@
 | 工具链、目录、测试、命令、提交与发布 | [工程规范](docs/engineering.md)                                    |
 | 要做到什么、现在做到哪               | [目标与范围](docs/goals.md)                                        |
 | MCP 工具怎么从声明生成               | [MCP 工具生成](docs/mcp.md)                                        |
+| 上游文档对账、审对账 issue 和 PR     | [上游文档对账](docs/upstream.md)                                   |
 | 为什么这么分层                       | [0001](docs/decisions/0001-single-implementation-architecture.md)  |
 | 声明格式和生命周期                   | [0003](docs/decisions/0003-capabilities-and-model-declarations.md) |
 | 平台描述与注册表                     | [0004](docs/decisions/0004-platform-descriptors-and-registry.md)   |

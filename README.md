@@ -75,7 +75,9 @@ build, and package/license/core-runtime checks. Adding a model, platform,
 capability or MCP tool is described in [`docs/extending.md`](docs/extending.md);
 conventions are in [`docs/engineering.md`](docs/engineering.md).
 
-Releases are manual and maintainer-approved. Upstream documentation changes are
-audited daily by [`scripts/upstream-docs.mjs`](scripts/upstream-docs.mjs).
+Releases are manual and maintainer-approved. A daily job fetches each platform's
+official docs, reconciles model lists and deprecation notices against the
+declarations in both directions, tracks gaps in an issue, and opens a draft PR
+for lifecycle patches ([`docs/upstream.md`](docs/upstream.md), in Chinese).
 
 MIT © ikuyu

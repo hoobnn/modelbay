@@ -1,5 +1,5 @@
 // 格式：<emoji> type(scope): 中文 subject
-// 与 plein 保持一致，subject 使用中文，type/scope 用英文小写。
+// subject 使用中文，type/scope 用英文小写。
 
 const norm = (s) => s?.replace(/️/g, '').trim() ?? ''
 
