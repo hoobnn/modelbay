@@ -31,6 +31,16 @@ function isPlatformAdapter(value: unknown): value is PlatformAdapter {
   )
 }
 
+/**
+ * Node 子路径的静态导入表。
+ *
+ * 子路径里的实现要 Node 专属依赖（ws 等），根入口保持运行时无关；
+ * 这里用静态 import，打包器与测试的 alias 都能解析到。
+ */
+const NODE_NATIVE_LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
+  'doubao-speech:interpretation': () => import('@modelbay/doubao-speech/interpretation'),
+}
+
 /** 动态加载平台适配器；variable specifier 让未构建的包在整合前不产生类型/解析错误。 */
 export async function loadAdapter(platform: PlatformKey): Promise<PlatformAdapter | undefined> {
   const meta = PLATFORMS[platform]
@@ -38,7 +48,26 @@ export async function loadAdapter(platform: PlatformKey): Promise<PlatformAdapte
   try {
     const mod = (await import(/* @vite-ignore */ packageName)) as Record<string, unknown>
     const candidate = mod[meta.adapterExport] ?? mod.default
-    return isPlatformAdapter(candidate) ? candidate : undefined
+    if (!isPlatformAdapter(candidate)) return undefined
+    // Node 子路径里的 native 实现：加载后注入适配器（根入口保持运行时无关）。
+    if (meta.nodeNative) {
+      const spec = meta.nodeNative
+      const loader = NODE_NATIVE_LOADERS[`${platform}:${spec.subpath}`]
+      const factory = mod[spec.factory]
+      if (loader && typeof factory === 'function') {
+        const nodeModule = (await loader().catch(() => undefined)) as
+          | Record<string, unknown>
+          | undefined
+        const runner = nodeModule?.[spec.export]
+        if (typeof runner === 'function') {
+          return (factory as (models: unknown, options: unknown) => PlatformAdapter)(
+            candidate.models,
+            { [spec.option]: runner },
+          )
+        }
+      }
+    }
+    return candidate
   } catch (error) {
     process.stderr.write(
       `[${meta.command}] 平台适配器暂不可用：${error instanceof Error ? error.message : String(error)}\n`,

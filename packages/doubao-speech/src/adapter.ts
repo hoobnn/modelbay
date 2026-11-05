@@ -121,7 +121,23 @@ export function parseFlashAsr(raw: string, ctx: AdapterContext): ProviderOutput[
   ]
 }
 
-export function createDoubaoAdapter(models: ModelDeclaration[]): PlatformAdapter {
+/**
+ * 同传实现：由 Node 子路径 `@modelbay/doubao-speech/interpretation` 注入。
+ *
+ * 官方协议要连 WSS 并收发 protobuf，根入口保持运行时无关，所以这里只留一个注入点：
+ * 没有注入时 native 操作仍然返回请求计划，注入了就跑真实会话。
+ */
+export type InterpretationRunner = (ctx: AdapterContext, params: Json) => Promise<Json>
+
+export interface DoubaoAdapterOptions {
+  /** 同传实现（Node 子路径提供）。 */
+  interpretation?: InterpretationRunner
+}
+
+export function createDoubaoAdapter(
+  models: ModelDeclaration[],
+  options: DoubaoAdapterOptions = {},
+): PlatformAdapter {
   const adapter: PlatformAdapter = {
     id: 'doubao/speech',
     title: 'Doubao Speech',
@@ -179,6 +195,9 @@ export function createDoubaoAdapter(models: ModelDeclaration[]): PlatformAdapter
       params: Record<string, unknown>,
       ctx: AdapterContext,
     ): Promise<unknown> {
+      if (op === 'simultaneous-interpretation' && options.interpretation) {
+        return options.interpretation(ctx, params as Json)
+      }
       return runDoubaoNative(op, params, ctx)
     },
   }

@@ -16,6 +16,10 @@
     "./asr": {
       "types": "./dist/node/asr.d.mts",
       "default": "./dist/node/asr.mjs"
+    },
+    "./interpretation": {
+      "types": "./dist/node/interpretation.d.mts",
+      "default": "./dist/node/interpretation.mjs"
     }
   },
   "scripts": {

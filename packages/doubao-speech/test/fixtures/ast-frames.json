@@ -1,0 +1,16 @@
+{
+  "note": "服务端二进制帧：用 Python 版官方 protobuf（data.speech.ast.TranslateResponse）录制，Base64 编码。",
+  "frames": {
+    "session_started": "CgoKBnNlc3MtMRABEJYB",
+    "source_start": "EIoFIgbkvaDlpb0=",
+    "source_delta": "EIsFIgnvvIzkuJbnlYw=",
+    "source_end": "EIwFIgPjgIIw0A8=",
+    "translation_start": "EI0FIgVIZWxsbw==",
+    "translation_delta": "EI4FIgcsIHdvcmxk",
+    "translation_end": "EI8FIgEuMNAP",
+    "tts": "EOACGgQBAgME",
+    "usage": "ChEKBnNlc3MtMRAJKgUQ0A8YDBCaAQ==",
+    "session_finished": "CgoKBnNlc3MtMRAKEJgB",
+    "session_failed": "Ch0KBnNlc3MtMRACGMHKuhUiDOWPguaVsOaXoOaViBCZAQ=="
+  }
+}
