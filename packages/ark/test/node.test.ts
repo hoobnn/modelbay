@@ -12,7 +12,6 @@ import {
   presignS3,
   referenceStorageHost,
   s3Target,
-  tosUploader,
   transcribePlan,
 } from '../src/node/index'
 import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
@@ -243,12 +242,5 @@ describe('方舟套餐流式语音识别', () => {
         close: () => undefined,
       })),
     ).rejects.toMatchObject({ code: 'unknown' })
-  })
-})
-
-describe('Node 子路径的 TODO 能力', () => {
-  it('tosUploader 给出清晰错误', () => {
-    const { ctx } = fakeContext()
-    expect(() => tosUploader(ctx, 'bucket', 'cn-beijing')).toThrow(/TODO/)
   })
 })

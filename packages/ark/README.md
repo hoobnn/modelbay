@@ -84,6 +84,9 @@ require Node and must not be loaded from the root entry:
 
 - `s3Target()` / `referenceStorageHost()` / `presignS3()` / `objectKey()` — S3
   SigV4 presigning for reference-video uploads (`node:crypto`).
+- `tosUploader()` / `s3Uploader()` / `referenceUploader()` — reference-video
+  upload: the official SDK signs locally, the host PUTs the bytes through
+  `ctx.fetch`, and the uploader returns a time-limited read URL.
 - `planDirectoryHeaders()` / `listPlanModels()` — the AK/SK-signed Agent Plan
   model-directory request (`node:crypto`).
 - `asrFrame()` / `asrPacket()` — the gzip frame codec for plan ASR (`node:zlib`).
@@ -101,11 +104,16 @@ PCM audio and returns the transcript. The WebSocket comes from `ws` (MIT), an
 socket factory as the third argument. Hosts that already own a socket pool can
 therefore use this package without `ws` at all.
 
-**TODO (M3):** `tosUploader()` still needs `@volcengine/tos-sdk` (a Node-only
-dependency for the integrator to install) and currently throws a descriptive
-`ProviderError('unavailable')` stub. It is listed in `nodeOnly` and is not
-exposed to MCP by default. `native('listModels')` on the plan channel likewise
-directs callers to `listPlanModels` in this subpath.
+**Reference-video upload.** `referenceUploader(ctx, storage)` picks the backend:
+`tos` signs with `@volcengine/tos-sdk` (MIT, an **optional peer dependency** the
+integrator installs), every other storage (`oss` / `cos` / `s3`) is presigned with
+the SigV4 implementation above and needs no extra SDK. The upload itself always
+goes through the host's `ctx.fetch`, so permissions, cancellation and the network
+proxy stay with the host. The bucket, region and the `ARK_TOS_ACCESS_KEY` /
+`ARK_TOS_SECRET_KEY` pair are required; a failed upload is reported before the
+generation is submitted, and neither the signed URL nor the keys reach the logs
+or the error cause. `native('listModels')` on the plan channel directs callers to
+`listPlanModels` in this subpath.
 
 ## Tests
 

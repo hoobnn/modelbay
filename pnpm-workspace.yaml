@@ -11,6 +11,11 @@ catalog:
 overrides:
   vite@*: "catalog:"
 
+# tos-sdk 的传递依赖 tos-crc64-js 有 postinstall；它发布的包里已经带了编译好的
+# dist/crc.js，脚本在这里是空操作，所以直接拒绝执行。
+allowBuilds:
+  tos-crc64-js: false
+
 peerDependencyRules:
   allowAny:
     - vite

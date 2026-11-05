@@ -123,15 +123,189 @@ export function objectKey(data: Uint8Array, mime: string): string {
   return `modelbay/video-references/${hash}.${mime === 'video/quicktime' ? 'mov' : 'mp4'}`
 }
 
+/** 上传对象的有效期：PUT 覆盖排队窗口，GET 覆盖离线任务的排队窗口。 */
+export const PUT_EXPIRES = 900
+/** 覆盖离线任务的排队窗口，源桶保持私有；也是 SigV4 预签名的上限。 */
+export const GET_EXPIRES = 7 * 24 * 60 * 60
+
+/** 一份待上传的参考视频。 */
+export interface ReferenceFile {
+  data: Uint8Array
+  mime: string
+}
+
 /**
- * TODO(M3): the actual TOS uploader needs `@volcengine/tos-sdk` (a Node-only
- * dependency to be installed by the integrator) plus the host's `ctx.fetch`
- * proxy. Until then the subpath exposes the interface and a clear error so the
- * root adapter stays runtime-agnostic.
+ * 上传参考视频，返回下游可访问的限时读取地址。
+ *
+ * 上传失败一律在提交生成前报错；不把带签名的 URL / 密钥带进日志、任务回执或错误 cause。
  */
-export function tosUploader(_ctx: AdapterContext, _bucket: string, _region: string): never {
-  throw new ProviderError(
-    'unavailable',
-    'TODO: TOS 参考视频上传需要 @volcengine/tos-sdk，请在 Node 子路径接入后再用',
+export type ReferenceUpload = (file: ReferenceFile) => Promise<string>
+
+/**
+ * 用 `ctx.fetch` 把原件 PUT 上去。
+ *
+ * SDK 只在本地签名，所有网络请求仍走宿主的权限、取消与网络代理。
+ */
+async function put(
+  ctx: AdapterContext,
+  label: string,
+  url: string,
+  file: ReferenceFile,
+  headers: Record<string, string> = {},
+): Promise<void> {
+  try {
+    const response = await ctx.fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.mime, ...headers },
+      body: new Uint8Array(file.data),
+      signal: ctx.signal,
+    })
+    if (!response.ok)
+      throw new ProviderError(
+        response.status === 403 ? 'auth' : 'unavailable',
+        `${label} 参考视频上传失败（HTTP ${response.status}）；尚未提交视频生成`,
+      )
+  } catch (error) {
+    if (error instanceof ProviderError) throw error
+    throw new ProviderError(
+      ctx.signal.aborted ? 'cancelled' : 'unavailable',
+      `${label} 参考视频上传未完成；尚未提交视频生成`,
+    )
+  }
+}
+
+/** TOS 桶名与地域的格式校验。 */
+function assertTosTarget(bucket: string, region: string): void {
+  if (
+    !/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket) ||
+    !/^[a-z]{2}-[a-z]+(?:-[a-z0-9]+)*$/.test(region)
   )
+    throw new ProviderError('invalid_input', 'TOS 桶名称或地域格式不正确')
+}
+
+/**
+ * 载入 TOS SDK。
+ *
+ * `@volcengine/tos-sdk`（MIT）是 Node 专属依赖，由集成方安装；没装时给出明确的错误。
+ * 用动态 import 是为了让它保持外部依赖，不进打包产物。
+ */
+async function loadTosClient(): Promise<
+  new (options: {
+    bucket: string
+    region: string
+    endpoint: string
+    accessKeyId: string
+    accessKeySecret: string
+    secure: boolean
+  }) => {
+    getPreSignedUrl(options: { key: string; method: 'PUT' | 'GET'; expires: number }): string
+  }
+> {
+  let mod: typeof import('@volcengine/tos-sdk')
+  try {
+    mod = await import('@volcengine/tos-sdk')
+  } catch (cause) {
+    throw new ProviderError(
+      'unavailable',
+      'TOS 参考视频上传需要安装 @volcengine/tos-sdk（MIT，Node 专属依赖）',
+      { cause },
+    )
+  }
+  return mod.TosClient as never
+}
+
+/**
+ * 火山引擎 TOS 上传：官方 SDK 本地签名，宿主 PUT 原件，返回限时 GET 地址。
+ */
+export function tosUploader(ctx: AdapterContext, bucket: string, region: string): ReferenceUpload {
+  assertTosTarget(bucket, region)
+  const accessKeyId = ctx.secret('ARK_TOS_ACCESS_KEY')
+  const accessKeySecret = ctx.secret('ARK_TOS_SECRET_KEY')
+  if (!accessKeyId || !accessKeySecret)
+    throw new ProviderError(
+      'invalid_input',
+      '火山视频参考需要在模型平台设置中配置存储桶、地域和存储 Access Key / Secret Key',
+    )
+  return async (file: ReferenceFile) => {
+    const Client = await loadTosClient()
+    const client = new Client({
+      bucket,
+      region,
+      endpoint: `tos-${region}.volces.com`,
+      accessKeyId,
+      accessKeySecret,
+      secure: true,
+    })
+    const key = objectKey(file.data, file.mime)
+    let url: string
+    try {
+      url = client.getPreSignedUrl({ key, method: 'PUT', expires: PUT_EXPIRES })
+    } catch {
+      throw new ProviderError('invalid_input', 'TOS 参考视频签名失败；尚未提交视频生成')
+    }
+    await put(ctx, 'TOS', url, file)
+    return client.getPreSignedUrl({ key, method: 'GET', expires: GET_EXPIRES })
+  }
+}
+
+/**
+ * S3 兼容存储（阿里云 OSS / 腾讯云 COS / 自建 MinIO）上传。
+ *
+ * 用本文件里的 SigV4 预签名，不需要额外的 SDK。
+ */
+export function s3Uploader(
+  ctx: AdapterContext,
+  storage: ReferenceStorage,
+  region: string,
+): ReferenceUpload {
+  const target = s3Target(storage)
+  if (!target)
+    throw new ProviderError(
+      'invalid_input',
+      storage.referenceStorage === 's3'
+        ? 'S3 兼容存储地址须为不带路径的 https 地址，桶名须为小写字母、数字、点或连字符'
+        : '存储地域或桶名格式不正确：地域如 cn-hangzhou / ap-guangzhou，桶名为小写字母、数字、点或连字符',
+    )
+  const accessKeyId = ctx.secret('ARK_TOS_ACCESS_KEY')
+  const secretAccessKey = ctx.secret('ARK_TOS_SECRET_KEY')
+  if (!accessKeyId || !secretAccessKey)
+    throw new ProviderError(
+      'invalid_input',
+      '火山视频参考需要在模型平台设置中配置存储桶、地域和存储 Access Key / Secret Key',
+    )
+  return async (file: ReferenceFile) => {
+    const path = `${target.prefix}/${objectKey(file.data, file.mime)}`
+    const sign = (method: 'PUT' | 'GET', expires: number) =>
+      presignS3({
+        method,
+        host: target.host,
+        path,
+        region,
+        accessKeyId,
+        secretAccessKey,
+        expires,
+        now: new Date(),
+      })
+    // 阿里云 OSS 的 S3 兼容 V4 请求要求声明不签负载；其他 S3 兼容存储也接受
+    await put(ctx, 'S3 兼容存储', sign('PUT', PUT_EXPIRES), file, {
+      'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+    })
+    return sign('GET', GET_EXPIRES)
+  }
+}
+
+/**
+ * 按配置选上传后端：TOS 走官方 SDK，其余走 S3 兼容签名。
+ */
+export function referenceUploader(ctx: AdapterContext, storage: ReferenceStorage): ReferenceUpload {
+  const bucket = storage.referenceBucket.trim()
+  const region = storage.referenceRegion.trim()
+  if (!bucket || !region)
+    throw new ProviderError(
+      'invalid_input',
+      '火山视频参考需要在模型平台设置中配置存储桶、地域和存储 Access Key / Secret Key',
+    )
+  return storage.referenceStorage === 'tos'
+    ? tosUploader(ctx, bucket, region)
+    : s3Uploader(ctx, storage, region)
 }
