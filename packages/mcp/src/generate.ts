@@ -118,11 +118,12 @@ function buildTool(
 }
 
 function buildRoute(meta: ToolMeta, nativeOp: string | undefined, capability: string): ToolRoute {
-  if (meta.localHandler) {
-    return { kind: 'local', handler: meta.localHandler, nature: meta.nature }
-  }
+  // 工具定义写明的 native 优先于按工具名推断的本地处理器
   if (nativeOp) {
     return { kind: 'native', op: nativeOp, nature: meta.nature }
+  }
+  if (meta.localHandler) {
+    return { kind: 'local', handler: meta.localHandler, nature: meta.nature }
   }
   return { kind: 'submit', capability, nature: meta.nature }
 }
