@@ -92,13 +92,13 @@ jobs:
           TITLE: 上游文档对账：${{ matrix.platform }}
           ATTENTION: ${{ steps.audit.outputs.attention }}
         run: |
+          gh label create upstream-docs --color BFD4F2 --force >/dev/null
           number=$(gh issue list --state open --label upstream-docs --search "in:title \"$TITLE\"" \
             --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
           if [ "$ATTENTION" = "true" ]; then
             if [ -n "$number" ]; then
               gh issue edit "$number" --body-file "$REPORT"
             else
-              gh label create upstream-docs --color BFD4F2 --force >/dev/null
               gh issue create --title "$TITLE" --label upstream-docs --body-file "$REPORT"
             fi
           elif [ -n "$number" ]; then
