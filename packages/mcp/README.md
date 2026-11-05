@@ -21,6 +21,29 @@ One command per platform. The migration order (per `docs/goals.md` M4) is
 Keys are supplied by the host through environment variables; the SDK never stores them. When a key
 is missing, `tools/list` still works and `tools/call` returns a clear error instead of crashing.
 
+### Node-only capabilities
+
+Some capabilities need Node-only implementations (object-storage uploads, `sharp` mask
+processing). They live in the platform packages' optional subpaths and are loaded and injected
+automatically at launch:
+
+| Platform | Subpath                        | Injected option   | Capability                    |
+| -------- | ------------------------------ | ----------------- | ----------------------------- |
+| Ark      | `@modelbay/ark/tos`            | `uploadVideo`     | video reference upload        |
+| Bailian  | `@modelbay/bailian/image-edit` | `edit`, `process` | `image.edit`, `image.process` |
+| Doubao   | `@modelbay/doubao-speech/asr`  | `asr`             | streaming ASR                 |
+
+The optional peer dependencies (`@volcengine/tos-sdk`, `sharp`, `ws`) are imported lazily inside
+those subpaths, so a missing dependency never stops the server from starting — the call that needs
+it fails with an explicit "install X" error instead. When a subpath cannot be loaded at all, the
+adapter is created without that option and the affected capability reports which subpath to inject.
+
+Ark's reference-video upload additionally needs the storage configuration, read from the same
+environment: `ARK_REFERENCE_STORAGE` (`tos` / `oss` / `cos` / `s3`), `ARK_REFERENCE_BUCKET`,
+`ARK_REFERENCE_REGION`, and optionally `ARK_REFERENCE_ENDPOINT` and `ARK_REFERENCE_PATH_STYLE`,
+plus the key pair `ARK_TOS_ACCESS_KEY` / `ARK_TOS_SECRET_KEY`. These are optional: without them the
+server still starts and only the video-reference path is unavailable.
+
 ## Tool groups
 
 `MODELBAY_MCP_GROUPS` (comma separated) controls which groups are exposed by `tools/list`:

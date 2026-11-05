@@ -36,10 +36,15 @@ function isPlatformAdapter(value: unknown): value is PlatformAdapter {
  *
  * 子路径里的实现要 Node 专属依赖（ws 等），根入口保持运行时无关；
  * 这里用静态 import，打包器与测试的 alias 都能解析到。
+ *
+ * 导入失败（没装可选依赖、包还没构建）一律吞掉：MCP 照常启动，
+ * 调用到该能力时报出明确的缺依赖 / 未注入错误。
  */
 const NODE_NATIVE_LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
   'doubao-speech:interpretation': () => import('@modelbay/doubao-speech/interpretation'),
   'doubao-speech:asr': () => import('@modelbay/doubao-speech/asr'),
+  'ark:tos': () => import('@modelbay/ark/tos'),
+  'bailian:image-edit': () => import('@modelbay/bailian/image-edit'),
 }
 
 /** 动态加载平台适配器；variable specifier 让未构建的包在整合前不产生类型/解析错误。 */
@@ -117,13 +122,14 @@ export interface StartOptions {
 /**
  * 只按平台声明的规范名从环境里取 key，注入 createAdapterContext 的 secret(name)。
  * 规范名：ARK_API_KEY / MINIMAX_API_KEY / BAILIAN_API_KEY / DOUBAO_APP_ID + DOUBAO_ACCESS_TOKEN。
+ * 可选的配置项（如方舟的参考视频存储）也一起带上：缺了不影响启动，只影响对应能力。
  */
 export function collectSecrets(
   meta: PlatformMeta,
   env: Record<string, string | undefined>,
 ): Record<string, string> {
   const secrets: Record<string, string> = {}
-  for (const key of meta.keyEnvVars) {
+  for (const key of [...meta.keyEnvVars, ...(meta.optionalEnvVars ?? [])]) {
     const value = env[key]
     if (value) secrets[key] = value
   }

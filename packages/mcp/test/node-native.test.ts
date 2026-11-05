@@ -55,3 +55,82 @@ describe('Node 子路径的 native 实现注入', () => {
     ).rejects.toMatchObject({ code: 'auth' })
   })
 })
+
+describe('Node 子路径的适配器注入点', () => {
+  it('方舟的参考视频上传实现被注入', async () => {
+    const adapter = await loadAdapter('ark')
+    expect(adapter?.id).toBe('volc/ark')
+    // 注入了真实上传实现：缺存储配置时按真实实现报错，而不是「没有注入」
+    const ctx = {
+      secret: (name: string) => (name === 'ARK_API_KEY' ? 'key' : undefined),
+      log: () => undefined,
+      assets: {
+        load: async () => ({ data: new Uint8Array([1, 2, 3]), mime: 'video/mp4' }),
+      },
+    } as unknown as AdapterContext
+    const error = await adapter
+      ?.submit(
+        {
+          capability: 'video.generate',
+          model: 'ark:doubao-seedance-2-0-260128',
+          input: {
+            prompt: '运镜',
+            references: [{ assetId: 'a', kind: 'video' }],
+          },
+        },
+        ctx,
+      )
+      .catch((cause: unknown) => cause)
+    expect(error).toMatchObject({ code: 'invalid_input' })
+    expect((error as Error).message).toContain('ARK_REFERENCE_STORAGE')
+  })
+
+  it('百炼的局部重绘与精修实现被注入', async () => {
+    const adapter = await loadAdapter('bailian')
+    expect(adapter?.id).toBe('aliyun/bailian')
+    const ctx = {
+      secret: () => undefined,
+      log: () => undefined,
+    } as unknown as AdapterContext
+    const edit = await adapter
+      ?.submit(
+        {
+          capability: 'image.edit',
+          model: 'wanx2.1-imageedit',
+          input: {
+            prompt: '把杯子换成红色',
+            image: { assetId: 'a', kind: 'image' },
+            mask: { assetId: 'b', kind: 'image' },
+          },
+        },
+        ctx,
+      )
+      .catch((cause: unknown) => cause)
+    // 注入了真实实现：走到「缺素材库」而不是「没有注入」
+    expect(edit).toMatchObject({ code: 'invalid_input' })
+    expect((edit as Error).message).not.toContain('@modelbay/bailian/image-edit')
+
+    const process = await adapter
+      ?.submit(
+        {
+          capability: 'image.process',
+          model: 'wanx2.1-imageedit',
+          input: { image: { assetId: 'a', kind: 'image' }, operation: 'upscale', scale: 2 },
+        },
+        ctx,
+      )
+      .catch((cause: unknown) => cause)
+    expect(process).toMatchObject({ code: 'invalid_input' })
+    expect((process as Error).message).not.toContain('@modelbay/bailian/image-edit')
+  })
+
+  it('平台元数据声明了各家 Node 子路径', () => {
+    expect(PLATFORMS.ark.nodeNatives).toMatchObject([
+      { subpath: 'tos', export: 'uploadReferenceVideo', option: 'uploadVideo' },
+    ])
+    expect(PLATFORMS.bailian.nodeNatives).toMatchObject([
+      { subpath: 'image-edit', export: 'prepareImageEditRequest', option: 'edit' },
+      { subpath: 'image-edit', export: 'prepareImageProcessRequest', option: 'process' },
+    ])
+  })
+})

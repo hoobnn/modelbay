@@ -19,6 +19,13 @@ export interface PlatformMeta {
   inventoryFile: string
   /** createAdapterContext 需要的 key 环境变量名；缺任意一个即视为未配置。 */
   keyEnvVars: readonly string[]
+  /**
+   * 可选的配置环境变量名。
+   *
+   * 不是调用的前提（缺了照样能启动），但缺了对应的能力就用不了
+   * （例如方舟的参考视频存储配置）。
+   */
+  optionalEnvVars?: readonly string[]
   /** 适配器包导出的符号名（launch.ts 动态 import 后按名查找）。 */
   adapterExport: string
   /**
@@ -53,7 +60,25 @@ export const PLATFORMS: Record<PlatformKey, PlatformMeta> = {
     primaryChannel: 'ark',
     inventoryFile: 'mcp-volcengine-ark.json',
     keyEnvVars: ['ARK_API_KEY'],
+    // 参考视频上传的存储配置；字段名与 @modelbay/ark 的 REFERENCE_STORAGE_KEYS 一致。
+    optionalEnvVars: [
+      'ARK_REFERENCE_STORAGE',
+      'ARK_REFERENCE_ENDPOINT',
+      'ARK_REFERENCE_PATH_STYLE',
+      'ARK_REFERENCE_BUCKET',
+      'ARK_REFERENCE_REGION',
+      'ARK_TOS_ACCESS_KEY',
+      'ARK_TOS_SECRET_KEY',
+    ],
     adapterExport: 'arkAdapter',
+    nodeNatives: [
+      {
+        subpath: 'tos',
+        export: 'uploadReferenceVideo',
+        option: 'uploadVideo',
+        factory: 'createArkAdapter',
+      },
+    ],
   },
   minimax: {
     key: 'minimax',
@@ -76,6 +101,20 @@ export const PLATFORMS: Record<PlatformKey, PlatformMeta> = {
     inventoryFile: 'mcp-ali-bailian.json',
     keyEnvVars: ['BAILIAN_API_KEY'],
     adapterExport: 'bailianAdapter',
+    nodeNatives: [
+      {
+        subpath: 'image-edit',
+        export: 'prepareImageEditRequest',
+        option: 'edit',
+        factory: 'createBailianAdapter',
+      },
+      {
+        subpath: 'image-edit',
+        export: 'prepareImageProcessRequest',
+        option: 'process',
+        factory: 'createBailianAdapter',
+      },
+    ],
   },
   'doubao-speech': {
     key: 'doubao-speech',
