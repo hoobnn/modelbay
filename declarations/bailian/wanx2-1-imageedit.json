@@ -13,11 +13,18 @@
     "process": {
       "scale": {
         "min": 1,
-        "max": 4
+        "max": 4,
+        "default": 2
       },
       "expansion": {
         "min": 1,
-        "max": 2
+        "max": 2,
+        "default": {
+          "top": 1,
+          "bottom": 1,
+          "left": 1.5,
+          "right": 1.5
+        }
       }
     },
     "media": {

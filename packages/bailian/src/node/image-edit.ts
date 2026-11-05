@@ -185,6 +185,8 @@ export const prepareImageEditRequest: ImageEditPreparer = async (ctx, opts) => {
  *
  * AI 放大走 `super_resolution`，扩图走 `expand`；两者都是同一个
  * image-synthesis 端点，只是 `input.function` 与 `parameters` 不同。
+ * 放大倍数与扩图比例由适配器按声明解析好传进来（缺值用声明里的默认值），
+ * 这里不再自带默认值。
  * 宿主这样注入：`createBailianAdapter(models, { process: prepareImageProcessRequest })`。
  */
 export const prepareImageProcessRequest: ImageProcessPreparer = async (ctx, opts) => {
@@ -195,9 +197,11 @@ export const prepareImageProcessRequest: ImageProcessPreparer = async (ctx, opts
   const baseImageUrl = await uploadAsset(ctx, opts.image, opts.model)
   const parameters: Json = { n: 1, ...opts.extra }
   if (opts.operation === 'upscale') {
-    parameters.upscale_factor = opts.scale ?? 2
+    if (opts.scale === undefined) throw new ProviderError('invalid_input', '缺少 AI 放大倍数')
+    parameters.upscale_factor = opts.scale
   } else {
-    const expansion = opts.expansion ?? { top: 1, bottom: 1, left: 1.5, right: 1.5 }
+    const expansion = opts.expansion
+    if (!expansion) throw new ProviderError('invalid_input', '缺少扩图比例')
     parameters.top_scale = expansion.top
     parameters.bottom_scale = expansion.bottom
     parameters.left_scale = expansion.left

@@ -113,7 +113,10 @@ real request to `/api/v1/services/aigc/image2image/image-synthesis` with the asy
 OSS-resolve headers and returns the `task_id` for polling. The root entry still
 validates the request first — the prompt, the number of images (`limits.count.max`,
 rejected before any upload), the upscale factor and the outpaint ratios (all read from
-the model declaration). Without an injected implementation the capability fails with
+the model declaration). When the caller leaves the factor or the ratios out, the
+declaration's `limits.process.scale.default` / `limits.process.expansion.default` are
+used (those are product-level defaults kept from plein; the official docs give no
+defaults for them). Without an injected implementation the capability fails with
 `invalid_input` naming this subpath and the injection above.
 
 ## Errors and redaction

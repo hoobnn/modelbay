@@ -211,6 +211,39 @@ describe('百炼精修：注入后走通', () => {
     })
   })
 
+  it('缺值时用声明里的默认值：放大 2 倍、扩图各边 1/1/1.5/1.5', async () => {
+    const adapter = createBailianAdapter(bailianModels, { process: prepareImageProcessRequest })
+    const { ctx, fetch } = fakeCtx({ taskId: 'up/2' })
+    await adapter.submit(
+      {
+        capability: 'image.process',
+        model: MODEL,
+        input: { image: { assetId: 'img', kind: 'image' }, operation: 'upscale' },
+      },
+      ctx,
+    )
+    let submitted = call(fetch, fetch.mock.calls.length - 1)
+    expect(submitted.body.parameters).toMatchObject({ n: 1, upscale_factor: 2 })
+
+    const { ctx: outCtx, fetch: outFetch } = fakeCtx({ taskId: 'out/2' })
+    await adapter.submit(
+      {
+        capability: 'image.process',
+        model: MODEL,
+        input: { image: { assetId: 'img', kind: 'image' }, operation: 'outpaint' },
+      },
+      outCtx,
+    )
+    submitted = call(outFetch, outFetch.mock.calls.length - 1)
+    expect(submitted.body.parameters).toMatchObject({
+      n: 1,
+      top_scale: 1,
+      bottom_scale: 1,
+      left_scale: 1.5,
+      right_scale: 1.5,
+    })
+  })
+
   it('没注入时报 invalid_input，并写清子路径与注入方式', async () => {
     const adapter = createBailianAdapter(bailianModels)
     const { ctx, fetch } = fakeCtx()

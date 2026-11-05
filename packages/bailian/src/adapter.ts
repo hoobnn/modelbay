@@ -416,26 +416,31 @@ export function createBailianAdapter(
           if (input.prompt && input.prompt.length > maxPrompt)
             throw new ProviderError('invalid_input', `万相精修提示词不能超过 ${maxPrompt} 字`)
           const rules = limits.process
+          // 缺值时用声明里的默认值（产品层的默认值也写在声明里，代码不硬编码）。
+          let scale: number | undefined
+          let expansion: { top: number; bottom: number; left: number; right: number } | undefined
           if (input.operation === 'upscale') {
             const range = rules?.scale
             if (!range) throw new ProviderError('invalid_input', '所选模型不支持 AI 放大')
-            if (input.scale === undefined)
+            scale = input.scale ?? range.default
+            if (scale === undefined)
               throw new ProviderError(
                 'invalid_input',
                 `请指定 AI 放大倍数（${range.min}–${range.max}）`,
               )
-            if (!Number.isFinite(input.scale) || input.scale < range.min || input.scale > range.max)
+            if (!Number.isFinite(scale) || scale < range.min || scale > range.max)
               throw new ProviderError('invalid_input', `AI 放大倍数须为 ${range.min}–${range.max}`)
           } else {
             const range = rules?.expansion
             if (!range) throw new ProviderError('invalid_input', '所选模型不支持扩图')
-            if (!input.expansion)
+            expansion = input.expansion ?? range.default
+            if (!expansion)
               throw new ProviderError(
                 'invalid_input',
                 `请指定扩图比例（各边 ${range.min}–${range.max}）`,
               )
             for (const side of ['top', 'bottom', 'left', 'right'] as const) {
-              const value = input.expansion[side]
+              const value = expansion[side]
               if (!Number.isFinite(value) || value < range.min || value > range.max)
                 throw new ProviderError(
                   'invalid_input',
@@ -453,8 +458,8 @@ export function createBailianAdapter(
             image: input.image,
             operation: input.operation as 'upscale' | 'outpaint',
             ...(input.prompt !== undefined ? { prompt: input.prompt } : {}),
-            ...(input.scale !== undefined ? { scale: input.scale } : {}),
-            ...(input.expansion !== undefined ? { expansion: input.expansion } : {}),
+            ...(scale !== undefined ? { scale } : {}),
+            ...(expansion !== undefined ? { expansion } : {}),
           })
           return submitImageTask(ctx, body)
         }

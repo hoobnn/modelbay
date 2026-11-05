@@ -22,6 +22,22 @@ const COMPARE_FIELDS = [
   'agentOnly',
 ]
 
+/**
+ * 已知的主动差异：声明比基准多出来的内容，逐条写明原因。
+ *
+ * 这些差异是维护者拍板的，不是抽取漏项，所以原因里写清楚多出来的是什么。
+ */
+const KNOWN_DIFFS = [
+  {
+    platform: 'bailian',
+    id: 'wanx2.1-imageedit',
+    field: 'limits',
+    reason:
+      '精修的放大倍数与扩图比例补了产品层默认值（沿用 plein 的产品默认值，官方文档没给这两个参数的默认值，' +
+      '所以没有官方来源可附）；声明里多出来的是 `limits.process.scale.default` 与 `limits.process.expansion.default`，其余一致',
+  },
+]
+
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
 }
@@ -118,6 +134,9 @@ function buildDiff() {
         if (!d) continue
         hasDiff = true
         const isPrimary = source === primary
+        const known = KNOWN_DIFFS.find(
+          (item) => item.platform === decl.platform && item.id === decl.id && item.field === field,
+        )
         differences.push({
           platform: decl.platform,
           id: decl.id,
@@ -125,11 +144,13 @@ function buildDiff() {
           baseline: esc(source.model[field]),
           actual: esc(decl[field]),
           providerId: source.providerId,
-          reason: isPrimary
-            ? '与主来源不一致（需排查）'
-            : d.kind === 'order'
-              ? '方舟两渠道合并：features 集合相同、顺序写法不同，取按量侧顺序'
-              : '方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源',
+          reason: known
+            ? known.reason
+            : isPrimary
+              ? '与主来源不一致（需排查）'
+              : d.kind === 'order'
+                ? '方舟两渠道合并：features 集合相同、顺序写法不同，取按量侧顺序'
+                : '方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源',
         })
       }
     }

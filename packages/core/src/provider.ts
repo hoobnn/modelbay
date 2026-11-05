@@ -348,10 +348,17 @@ export interface ModelLimits {
   /**
    * 图片精修（image.process）的取值范围。scale 是放大倍数，expansion 是扩图各边的比例；
    * false 表示不支持这项操作（表单隐藏，适配器提交前也拒绝）。不声明时按节点自己的范围处理。
+   * default 是缺值时用的默认值（例如不传 scale 用几倍放大），也写在声明里，代码不硬编码。
    */
   process?: {
-    scale?: { min: number; max: number } | false
-    expansion?: { min: number; max: number } | false
+    scale?: { min: number; max: number; default?: number } | false
+    expansion?:
+      | {
+          min: number
+          max: number
+          default?: { top: number; bottom: number; left: number; right: number }
+        }
+      | false
   }
   /**
    * 自定义宽高（`image.generate` 的 width / height）的范围：像素含端点，multiple 是步长
