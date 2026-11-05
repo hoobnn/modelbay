@@ -14,7 +14,7 @@ import {
 import { videoReferences } from '@modelbay/shared'
 import { withFiles } from './files'
 import { requestJson } from './http'
-import { required, taskId } from './util'
+import { optionSource, pickKeys, required, taskId } from './util'
 
 export async function video(
   request: AdapterRequest<'video.generate'>,
@@ -96,6 +96,7 @@ export async function video(
     duration,
     resolution,
     ratio,
+    ...videoOptions(input),
   })
   if (data.task_id === undefined || data.task_id === null || data.task_id === '')
     throw new ProviderError('unknown', 'MiniMax 提交响应缺少 task_id；提交状态未知，请勿重新生成', {
@@ -103,4 +104,14 @@ export async function video(
       outcome: 'unknown',
     })
   return { state: 'pending', remoteId: taskId(data.task_id), pollAfterMs: 10_000 }
+}
+
+/** MCP generate_video 的 parameters 白名单：callback_url / aigc_watermark */
+function videoOptions(input: object) {
+  const picked = pickKeys(optionSource(input), ['callback_url', 'aigc_watermark'])
+  if (picked.callback_url !== undefined && typeof picked.callback_url !== 'string')
+    throw new ProviderError('invalid_input', 'MiniMax callback_url 须为字符串')
+  if (picked.aigc_watermark !== undefined && typeof picked.aigc_watermark !== 'boolean')
+    throw new ProviderError('invalid_input', 'MiniMax aigc_watermark 须为布尔值')
+  return picked
 }

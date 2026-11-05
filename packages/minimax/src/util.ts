@@ -38,3 +38,22 @@ export const sensitive = (value: unknown): boolean =>
   typeof value === 'object' && value !== null
     ? (value as { type?: number }).type !== 0
     : value === true
+
+/**
+ * MCP 工具参数的位置：MCP 把工具参数原样作为 `input`（`vol`、`pitch`、`parameters` 等），
+ * plein 宿主则放在 `input.extra`。这里合并三处（顶层 < parameters < extra），
+ * 调用方只按各自的白名单取值，白名单外的字段一律不透传。
+ */
+export function optionSource(input: object): Json {
+  const top = input as Json
+  const { extra, parameters, ...rest } = top
+  return { ...rest, ...asJson(parameters), ...asJson(extra) }
+}
+
+/** 取白名单键；值为 null / undefined 视为没给。 */
+export function pickKeys(source: Json, keys: readonly string[]): Json {
+  const out: Json = {}
+  for (const key of keys)
+    if (source[key] !== undefined && source[key] !== null) out[key] = source[key]
+  return out
+}

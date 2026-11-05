@@ -12,7 +12,7 @@ import { sizeByLongEdge, tierEdge } from '@modelbay/shared'
 import { asJson, arr, requestJson } from './http'
 import { imageData } from './chat'
 import { imageOptions, liveImageOptions } from './image-options'
-import { required } from './util'
+import { optionSource, pickKeys, required } from './util'
 
 export function modelInfo(spec: ModelDeclaration): ModelInfo {
   return {
@@ -29,7 +29,7 @@ export async function image(
   spec: ModelDeclaration,
   ctx: AdapterContext,
 ): Promise<SubmitResult> {
-  const input = request.input
+  const input = normalizeImageInput(request.input)
   required(input.prompt, 1500, '图片提示词')
   if ((input.references?.length ?? 0) > 1)
     throw new ProviderError('invalid_input', 'MiniMax 图片仅支持一张人物参考图')
@@ -116,5 +116,40 @@ export async function image(
     state: 'succeeded',
     outputs: urls.map((url) => ({ type: 'file', kind: 'image', mime: 'image/jpeg', url })),
     usage: { images: urls.length },
+  }
+}
+
+const IMAGE_KEYS = [
+  'prompt_optimizer',
+  'aigc_watermark',
+  'style_type',
+  'style_weight',
+  'aspectRatio',
+  'seed',
+] as const
+
+/**
+ * MCP text_to_image 的参数位置：顶层 aspect_ratio / n / prompt_optimizer，
+ * parameters 里的 style 对象、seed、aigc_watermark；plein 宿主放在 extra。
+ * 只取白名单键，其余字段不进入 extra。
+ */
+function normalizeImageInput(
+  input: AdapterRequest<'image.generate'>['input'],
+): AdapterRequest<'image.generate'>['input'] {
+  const source = optionSource(input)
+  const style = source.style
+  const flat = {
+    ...(style && typeof style === 'object' ? (style as Record<string, unknown>) : {}),
+    ...source,
+    aspectRatio: source.aspectRatio ?? source.aspect_ratio,
+  }
+  const picked = pickKeys(flat, IMAGE_KEYS)
+  const seed = typeof picked.seed === 'number' ? picked.seed : undefined
+  delete picked.seed
+  return {
+    ...input,
+    count: input.count ?? (typeof source.n === 'number' ? source.n : undefined),
+    seed: input.seed ?? seed,
+    extra: picked,
   }
 }
