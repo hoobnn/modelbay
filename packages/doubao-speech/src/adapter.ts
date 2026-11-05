@@ -129,9 +129,19 @@ export function parseFlashAsr(raw: string, ctx: AdapterContext): ProviderOutput[
  */
 export type InterpretationRunner = (ctx: AdapterContext, params: Json) => Promise<Json>
 
+/**
+ * 流式识别实现：由 Node 子路径 `@modelbay/doubao-speech/asr` 注入。
+ *
+ * 官方协议要连 WSS 并收发 gzip 二进制帧，根入口保持运行时无关，
+ * 所以这里只留一个注入点。
+ */
+export type AsrRunner = (ctx: AdapterContext, params: Json) => Promise<Json>
+
 export interface DoubaoAdapterOptions {
   /** 同传实现（Node 子路径提供）。 */
   interpretation?: InterpretationRunner
+  /** 流式识别实现（Node 子路径提供）。 */
+  asr?: AsrRunner
 }
 
 export function createDoubaoAdapter(
@@ -198,10 +208,19 @@ export function createDoubaoAdapter(
       if (op === 'simultaneous-interpretation' && options.interpretation) {
         return options.interpretation(ctx, params as Json)
       }
+      // 流式识别走 speech_raw_request 的 product=asr_stream 分支。
+      if (op === 'raw-request' && options.asr && isAsrStream(params)) {
+        return options.asr(ctx, params as Json)
+      }
       return runDoubaoNative(op, params, ctx)
     },
   }
   return defineAdapter(adapter)
+}
+
+/** `speech_raw_request` 里 product=asr_stream 表示走流式识别。 */
+function isAsrStream(params: Record<string, unknown>): boolean {
+  return params.product === 'asr_stream'
 }
 
 export { nativeOperationSchemas, buildSpeechRequest }

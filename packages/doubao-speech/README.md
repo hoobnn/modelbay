@@ -78,9 +78,16 @@ tests and for hosts without a socket.
 
 ## Node-only subpath
 
-`@modelbay/doubao-speech/asr` exports the `node:zlib`-based streaming ASR frame codec
-(`encodeAsrFrame` / `decodeAsrFrame`). It is excluded from the root entry. Wiring it to
-a real WebSocket session is a TODO (see `nodeAsrTodo`).
+`@modelbay/doubao-speech/asr` exports the streaming ASR client: the `node:zlib`-based
+frame codec (`encodeAsrFrame` / `decodeAsrFrame`) and `transcribeStream()`, which opens
+the WSS session, sends the full client request, streams the PCM in 200 ms chunks and
+collects the recognition results. `runAsrStream()` is the entry point the MCP injects
+for `speech_raw_request(product='asr_stream')`. It is excluded from the root entry.
+
+The endpoints follow the official streaming-ASR doc: `realtime` uses
+`wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` (send and receive
+concurrently) and `sentence` uses `.../api/v3/sauc/bigmodel_nostream` (one result at
+the end). The resource id is `volc.seedasr.sauc.duration`.
 
 `@modelbay/doubao-speech/interpretation` exports the simultaneous-interpretation
 client: the minimal protobuf codec for the official `data.speech.ast` messages
@@ -88,11 +95,13 @@ client: the minimal protobuf codec for the official `data.speech.ast` messages
 opens the WSS session, uploads the PCM in 80 ms chunks and collects the subtitles,
 the target audio and the billing usage.
 
-The root entry stays runtime-agnostic, so the MCP loads this subpath and injects
-`interpretAudio` into the adapter (`createDoubaoAdapter(models, { interpretation })`).
-Without an injected implementation the native operation still returns the request
-plan. The WebSocket comes from `ws` (MIT), an **optional peer dependency**; hosts can
-also pass their own socket factory as the third argument of `interpretAudio`.
+The root entry stays runtime-agnostic, so the MCP loads these subpaths and injects
+`interpretAudio` and `runAsrStream` into the adapter
+(`createDoubaoAdapter(models, { interpretation, asr })`). Without an injected
+implementation the simultaneous-interpretation native operation still returns the
+request plan. The WebSocket comes from `ws` (MIT), an **optional peer dependency**;
+hosts can also pass their own socket factory as the last argument of
+`interpretAudio` / `transcribeStream`.
 
 ## Errors and redaction
 

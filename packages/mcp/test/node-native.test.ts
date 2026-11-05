@@ -29,10 +29,29 @@ describe('Node 子路径的 native 实现注入', () => {
   })
 
   it('平台元数据声明了 Node 子路径', () => {
-    expect(PLATFORMS['doubao-speech'].nodeNative).toMatchObject({
-      subpath: 'interpretation',
-      export: 'interpretAudio',
-      option: 'interpretation',
-    })
+    expect(PLATFORMS['doubao-speech'].nodeNatives).toMatchObject([
+      {
+        subpath: 'interpretation',
+        export: 'interpretAudio',
+        option: 'interpretation',
+      },
+      {
+        subpath: 'asr',
+        export: 'runAsrStream',
+        option: 'asr',
+      },
+    ])
+  })
+
+  it('流式识别实现也从 Node 子路径注入', async () => {
+    const adapter = await loadAdapter('doubao-speech')
+    // 注入了真实实现：缺凭证时按真实实现报错，而不是返回「请求计划」
+    const ctx = {
+      secret: () => undefined,
+      log: () => undefined,
+    } as unknown as AdapterContext
+    await expect(
+      adapter?.native?.('raw-request', { product: 'asr_stream', audio: 'x.wav' }, ctx),
+    ).rejects.toMatchObject({ code: 'auth' })
   })
 })

@@ -376,4 +376,10 @@ describe('runDoubaoNative dispatch', () => {
       code: 'invalid_input',
     })
   })
+  it('product=asr_stream 在根入口明确要求 Node 子路径', async () => {
+    const { ctx } = fakeContext([])
+    await expect(
+      runDoubaoNative('raw-request', { product: 'asr_stream', audio: 'x.wav' }, ctx),
+    ).rejects.toMatchObject({ code: 'unavailable' })
+  })
 })

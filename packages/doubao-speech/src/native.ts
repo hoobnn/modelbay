@@ -130,12 +130,17 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
   },
   'raw-request': {
     type: 'object',
-    required: ['path'],
     properties: {
       path: { type: 'string' },
       body: { type: 'object' },
       resource: { type: 'string' },
       asr: { type: 'boolean' },
+      // product=asr_stream 走 Node 子路径的流式识别；其余 product 走 HTTP 兜底。
+      product: { type: 'string' },
+      audio: { type: 'string' },
+      mode: { type: 'string' },
+      request: { type: 'object' },
+      resource_id: { type: 'string' },
     },
   },
 }
@@ -470,6 +475,12 @@ export async function runDoubaoNative(
     case 'voice-query':
       return voiceQueryOp(ctx, p)
     case 'raw-request': {
+      // product=asr_stream 走 Node 子路径注入的流式识别实现（根入口不带 WebSocket）。
+      if (p.product === 'asr_stream')
+        throw new ProviderError(
+          'unavailable',
+          '流式识别需要 Node 子路径 @modelbay/doubao-speech/asr，请在 Node 环境下运行',
+        )
       const path = asString(p.path)
       if (!path.startsWith('/'))
         throw new ProviderError('invalid_input', 'raw-request path must start with /')

@@ -39,6 +39,7 @@ function isPlatformAdapter(value: unknown): value is PlatformAdapter {
  */
 const NODE_NATIVE_LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
   'doubao-speech:interpretation': () => import('@modelbay/doubao-speech/interpretation'),
+  'doubao-speech:asr': () => import('@modelbay/doubao-speech/asr'),
 }
 
 /** 动态加载平台适配器；variable specifier 让未构建的包在整合前不产生类型/解析错误。 */
@@ -50,22 +51,14 @@ export async function loadAdapter(platform: PlatformKey): Promise<PlatformAdapte
     const candidate = mod[meta.adapterExport] ?? mod.default
     if (!isPlatformAdapter(candidate)) return undefined
     // Node 子路径里的 native 实现：加载后注入适配器（根入口保持运行时无关）。
-    if (meta.nodeNative) {
-      const spec = meta.nodeNative
-      const loader = NODE_NATIVE_LOADERS[`${platform}:${spec.subpath}`]
-      const factory = mod[spec.factory]
-      if (loader && typeof factory === 'function') {
-        const nodeModule = (await loader().catch(() => undefined)) as
-          | Record<string, unknown>
-          | undefined
-        const runner = nodeModule?.[spec.export]
-        if (typeof runner === 'function') {
-          return (factory as (models: unknown, options: unknown) => PlatformAdapter)(
-            candidate.models,
-            { [spec.option]: runner },
-          )
-        }
-      }
+    const options = await loadNodeNatives(platform)
+    if (options) {
+      const factory = mod[options.factory]
+      if (typeof factory === 'function')
+        return (factory as (models: unknown, options: unknown) => PlatformAdapter)(
+          candidate.models,
+          options.options,
+        )
     }
     return candidate
   } catch (error) {
@@ -74,6 +67,34 @@ export async function loadAdapter(platform: PlatformKey): Promise<PlatformAdapte
     )
     return undefined
   }
+}
+
+/**
+ * 加载 Node 子路径里的 native 实现，组装成适配器工厂的选项。
+ *
+ * 同一个包可能有多个子路径（豆包语音的同传与流式识别），逐个加载后合并选项。
+ */
+async function loadNodeNatives(
+  platform: PlatformKey,
+): Promise<{ factory: string; options: Record<string, unknown> } | undefined> {
+  const specs = PLATFORMS[platform].nodeNatives
+  if (!specs?.length) return undefined
+  const options: Record<string, unknown> = {}
+  let factory: string | undefined
+  for (const spec of specs) {
+    const loader = NODE_NATIVE_LOADERS[`${platform}:${spec.subpath}`]
+    if (!loader) continue
+    const nodeModule = (await loader().catch(() => undefined)) as
+      | Record<string, unknown>
+      | undefined
+    const runner = nodeModule?.[spec.export]
+    if (typeof runner !== 'function') continue
+    options[spec.option] = runner
+    // 多个子路径属于同一个包时，工厂是同一个。
+    if (!factory) factory = spec.factory
+  }
+  if (!factory) return undefined
+  return { factory, options }
 }
 
 export function resolveGroups(env: Record<string, string | undefined>): ToolGroup[] {
