@@ -4,20 +4,27 @@
  */
 import {
   defineAdapter,
+  mediaRequirementProblems,
   ProviderError,
   selectDefaultModel,
   toBase64,
   type AdapterContext,
   type AdapterRequest,
+  type AssetRef,
   type CapabilityInput,
+  type LoadedFile,
   type ModelDeclaration,
   type NormalizedCapability,
   type PlatformAdapter,
   type ProviderOutput,
   type SubmitResult,
   type TranscriptSegment,
+  type VoiceCloneInput,
+  type VoiceCreationResult,
+  type VoiceDesignInput,
 } from '@modelbay/core'
-import { asJson, arr, events, failure, incomplete, postText, type Json } from './http'
+import { asJson, arr, events, failure, headers, incomplete, postRaw, type Json } from './http'
+import { cloneVoice, designVoice, voiceStatus } from './voice'
 import {
   buildSpeechRequest,
   decodeAudioStream,
@@ -56,18 +63,18 @@ export function buildAudioCreateBody(
   settings: SpeechSettings,
   kind: 'audio.music' | 'audio.sfx',
 ): Json {
-  const prompt = text(input.prompt, 'Audio prompt', 2971)
   if (
     input.duration !== undefined &&
     (!Number.isFinite(input.duration) || input.duration <= 0 || input.duration > 120)
   )
-    throw new ProviderError('invalid_input', 'Audio duration must be >0 and <=120 seconds')
+    throw new ProviderError('invalid_input', '音频时长须大于 0 且不超过 120 秒')
+  const prompt = text(input.prompt, '音频描述')
   const lead =
     kind === 'audio.music' ? '仅生成音乐，不要人声对白。' : '仅生成音效，不要音乐或人声对白。'
   const duration =
     input.duration === undefined ? '' : `目标时长 ${Number(input.duration.toFixed(1))} 秒。`
   return {
-    text_prompt: text(`${lead}${duration}${prompt}`, 'Full audio prompt'),
+    text_prompt: text(`${lead}${duration}${prompt}`, '完整音频描述'),
     audio_config: { format: settings.format, sample_rate: Number(settings.sampleRate) },
   }
 }
@@ -79,9 +86,7 @@ export function buildFlashAsrBody(
 ): Json {
   const format = ASR_FORMAT[loaded.mime.toLowerCase()]
   if (!format)
-    throw new ProviderError('invalid_input', `Unsupported ASR audio MIME: ${loaded.mime}`)
-  if (!loaded.data.length || loaded.data.length > 100 * 1024 * 1024)
-    throw new ProviderError('invalid_input', 'ASR audio must be non-empty and within 100 MB')
+    throw new ProviderError('invalid_input', '极速识别支持 MP3、WAV、Ogg Opus、FLAC、M4A 音频')
   return {
     audio: {
       data: toBase64(loaded.data),
@@ -100,7 +105,7 @@ export function parseFlashAsr(raw: string, ctx: AdapterContext): ProviderOutput[
   if (packet.code !== undefined && ![0, 20000000].includes(Number(packet.code)))
     throw failure(200, packet.code, packet.message, ctx)
   const result = asJson(packet.result)
-  if (typeof result.text !== 'string') throw incomplete('Doubao returned invalid recognition text')
+  if (typeof result.text !== 'string') throw incomplete('豆包语音返回无效识别文本')
   const segments: TranscriptSegment[] = arr(result.utterances)
     .map(asJson)
     .filter(
@@ -144,11 +149,30 @@ export interface DoubaoAdapterOptions {
   asr?: AsrRunner
 }
 
+/** 声音复刻 / 音色设计的调用入口，签名与 plein 的 VoiceCloneSpec / VoiceDesignSpec 等价。 */
+export interface DoubaoVoiceApi {
+  voiceClone: {
+    clone(input: VoiceCloneInput, ctx: AdapterContext): Promise<VoiceCreationResult>
+    status(voiceId: string, ctx: AdapterContext): Promise<VoiceCreationResult>
+  }
+  voiceDesign: {
+    design(input: VoiceDesignInput, ctx: AdapterContext): Promise<VoiceCreationResult>
+  }
+}
+
+export type DoubaoAdapter = PlatformAdapter & DoubaoVoiceApi
+
+async function readAsset(ctx: AdapterContext, ref: AssetRef): Promise<LoadedFile> {
+  if (ctx.files) return ctx.files.read(ref)
+  if (!ctx.assets) throw new ProviderError('invalid_input', '识别音频需要宿主提供 files 或 assets')
+  return ctx.assets.load(ref.assetId)
+}
+
 export function createDoubaoAdapter(
   models: ModelDeclaration[],
   options: DoubaoAdapterOptions = {},
-): PlatformAdapter {
-  const adapter: PlatformAdapter = {
+): DoubaoAdapter {
+  const adapter: PlatformAdapter & DoubaoVoiceApi = {
     id: 'doubao/speech',
     title: 'Doubao Speech',
     channels: ['doubao-speech'],
@@ -157,9 +181,18 @@ export function createDoubaoAdapter(
     nodeOnly: ['asr'],
     docsUrl:
       'https://docs.volcengine.com/docs/DoubaoVoice/unidirectional-streaming-text-to-speech-http',
+    voiceClone: { clone: cloneVoice, status: voiceStatus },
+    voiceDesign: { design: designVoice },
 
     async submit(request: AdapterRequest, ctx: AdapterContext): Promise<SubmitResult> {
       const { capability, model } = request
+      const declared = models.find(
+        (m) => m.id === model || m.canonicalId === model || m.channels.some((c) => c.id === model),
+      )
+      if (declared ? !declared.capabilities.includes(capability) : !request.remoteOnly)
+        throw new ProviderError('invalid_input', '豆包语音模型不支持该能力')
+      // 先本地核对凭证，缺失时不读素材也不联网
+      headers(ctx)
       switch (capability) {
         case 'audio.speech':
           return synthesizeSpeech(model, request.input as CapabilityInput<'audio.speech'>, ctx)
@@ -168,8 +201,10 @@ export function createDoubaoAdapter(
           const input = request.input as CapabilityInput<'audio.music'>
           const settings = resolveSpeechSettings(ctx)
           const body = buildAudioCreateBody(input, settings, capability)
-          const raw = await postText(ctx, AUDIO_CREATE_PATH, { model, ...body })
-          const data = decodeAudioStream(raw, 'audio', ctx, settings, false)
+          const response = await postRaw(ctx, AUDIO_CREATE_PATH, { model, ...body })
+          const data = response.decode((raw) =>
+            decodeAudioStream(raw, 'audio', ctx, settings, false),
+          )
           return {
             state: 'succeeded',
             outputs: [
@@ -185,18 +220,27 @@ export function createDoubaoAdapter(
         }
         case 'audio.transcribe': {
           const input = request.input as CapabilityInput<'audio.transcribe'>
-          if (!ctx.assets)
-            throw new ProviderError('invalid_input', 'An assets source is required for ASR audio')
-          const loaded = await ctx.assets.load(input.audio.assetId)
+          const loaded = await readAsset(ctx, input.audio)
+          // 格式与大小（含空文件）以模型声明为准
+          const problems = mediaRequirementProblems(
+            declared?.limits?.media?.audio,
+            { mime: loaded.mime, size: loaded.data.length },
+            { title: declared?.title ?? model, label: '识别音频', strict: true },
+          )
+          if (problems.length) throw new ProviderError('invalid_input', problems[0]!)
           const body = buildFlashAsrBody(input, loaded)
-          const raw = await postText(ctx, ASR_FLASH_PATH, body, {
+          const response = await postRaw(ctx, ASR_FLASH_PATH, body, {
             resource: 'volc.bigasr.auc_turbo',
             asr: true,
           })
-          return { state: 'succeeded', outputs: parseFlashAsr(raw, ctx) }
+          // 平台返回静音状态码时没有识别结果，按空文本成功
+          const outputs = response.decode((raw, silent) =>
+            silent ? [{ type: 'text' as const, text: '' }] : parseFlashAsr(raw, ctx),
+          )
+          return { state: 'succeeded', outputs }
         }
         default:
-          throw new ProviderError('invalid_input', `Doubao Speech does not support ${capability}`)
+          throw new ProviderError('invalid_input', '豆包语音不支持该能力')
       }
     },
 
@@ -215,7 +259,7 @@ export function createDoubaoAdapter(
       return runDoubaoNative(op, params, ctx)
     },
   }
-  return defineAdapter(adapter)
+  return defineAdapter(adapter) as DoubaoAdapter
 }
 
 /**

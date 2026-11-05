@@ -5,11 +5,10 @@
  * `@modelbay/ark`'s Agent Plan TTS (the only allowed cross-adapter dependency).
  * Runtime-agnostic root entry; Node-only ASR codec lives in `@modelbay/doubao-speech/asr`.
  */
-import type { PlatformAdapter } from '@modelbay/core'
-import { createDoubaoAdapter } from './adapter'
+import { createDoubaoAdapter, type DoubaoAdapter } from './adapter'
 import { all } from './models/index'
 
-export const doubaoAdapter: PlatformAdapter = createDoubaoAdapter(all)
+export const doubaoAdapter: DoubaoAdapter = createDoubaoAdapter(all)
 
 // Cross-adapter API consumed by @modelbay/ark.
 export { speechSettings, synthesizeSpeech, TTS_VOICES } from './speech'
@@ -22,6 +21,15 @@ export {
   buildFlashAsrBody,
   parseFlashAsr,
 } from './adapter'
+export type { DoubaoAdapter, DoubaoVoiceApi } from './adapter'
+export {
+  CLONE_FORMATS,
+  CLONE_SAMPLE,
+  cloneState,
+  cloneVoice,
+  designVoice,
+  voiceStatus,
+} from './voice'
 export { nativeOperationSchemas, DOUBAO_NATIVE_OPERATIONS } from './native'
 export {
   HOST,
@@ -34,6 +42,7 @@ export {
   headers,
   failure,
   incomplete,
+  postRaw,
   postText,
   postJson,
   events,
@@ -46,7 +55,7 @@ export {
   withRetry,
   transportError,
 } from './http'
-export type { Json, Method, PostOptions, TransportMessages } from './http'
+export type { Json, Method, PostOptions, PostResult, TransportMessages } from './http'
 export {
   resolveSpeechSettings,
   buildSpeechRequest,

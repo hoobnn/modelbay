@@ -298,6 +298,9 @@ importers:
       '@modelbay/core':
         specifier: workspace:*
         version: link:../core
+      '@modelbay/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^26.6.6

@@ -60,7 +60,7 @@ export function scrub(text: string, ctx: AdapterContext): string {
     Boolean(value),
   )
   known.sort((a, b) => b.length - a.length)
-  for (const secret of known) out = out.split(secret).join('<redacted>')
+  for (const secret of known) out = out.split(secret).join('[redacted]')
   return redact(out)
 }
 
@@ -158,7 +158,7 @@ export async function readText(
 export function headers(ctx: AdapterContext, resource?: string): Record<string, string> {
   const result: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Api-Request-Id': crypto.randomUUID(),
+    'X-Api-Request-Id': ctx.submission?.requestId ?? crypto.randomUUID(),
   }
   const key = firstSecret(ctx, API_KEY_NAMES)
   if (key) result['X-Api-Key'] = key
@@ -168,7 +168,7 @@ export function headers(ctx: AdapterContext, resource?: string): Record<string, 
     if (!app || !access)
       throw new ProviderError(
         'auth',
-        'Missing DOUBAO_API_KEY or DOUBAO_APP_ID + DOUBAO_ACCESS_TOKEN',
+        '请配置 VOLC_SPEECH_API_KEY（或 DOUBAO_API_KEY），或旧版 APP ID 与 Access Key（VOLC_SPEECH_APP_ID + VOLC_SPEECH_ACCESS_KEY，或 DOUBAO_APP_ID + DOUBAO_ACCESS_TOKEN）',
       )
     result['X-Api-App-Key'] = app
     result['X-Api-Access-Key'] = access
@@ -184,13 +184,14 @@ export function failure(
   message: unknown,
   ctx: AdapterContext,
 ): ProviderError {
-  const detail = scrub(typeof message === 'string' ? message : 'request failed', ctx).slice(0, 500)
+  const detail = scrub(typeof message === 'string' ? message : '请求失败', ctx).slice(0, 500)
   let normalized: ProviderErrorCode = 'unknown'
   if (/resource id is mismatched with speaker related resource/i.test(detail)) {
-    return new ProviderError('invalid_input', `Doubao ${code ?? status}: voice/resource mismatch`, {
-      retryable: false,
-      cause: { status, code, detail },
-    })
+    return new ProviderError(
+      'invalid_input',
+      `豆包语音 ${scrub(String(code ?? status), ctx)}: 音色与所选复刻资源不匹配。请核实音色支持的版本，再选择声音复刻 1.0 或 2.0；不要重复提交相同配置。`,
+      { retryable: false, cause: { status, code, detail } },
+    )
   }
   if (
     status === 401 ||
@@ -209,11 +210,15 @@ export function failure(
   else if (status === 408 || status === 504) normalized = 'timeout'
   else if (status >= 500 || String(code).startsWith('550')) normalized = 'unavailable'
   else if (status === 400 || String(code).startsWith('450')) normalized = 'invalid_input'
-  return new ProviderError(normalized, `Doubao ${scrub(String(code ?? status), ctx)}: ${detail}`, {
-    retryable: false,
-    cause: { status, code, detail },
-    ...(status === 408 || status >= 500 ? { outcome: 'unknown' as const } : {}),
-  })
+  return new ProviderError(
+    normalized,
+    `豆包语音 ${scrub(String(code ?? status), ctx)}: ${detail}`,
+    {
+      retryable: false,
+      cause: { status, code, detail },
+      ...(status === 408 || status >= 500 ? { outcome: 'unknown' as const } : {}),
+    },
+  )
 }
 
 /** A truncated chunked stream is an ambiguous submission outcome. */
@@ -228,6 +233,97 @@ export interface PostOptions {
   idempotencyKey?: string
 }
 
+export interface PostResult {
+  raw: string
+  /** 平台返回 20000003（静音）时为 true */
+  silent: boolean
+  /** 解码失败同样带上请求 ID 与平台日志 ID，方便核查 */
+  decode<T>(parse: (raw: string, silent: boolean) => T): T
+}
+
+/** POST a JSON body; every failure carries the client request ID and the platform log ID. */
+export async function postRaw(
+  ctx: AdapterContext,
+  path: string,
+  body: Json,
+  opts: PostOptions = {},
+): Promise<PostResult> {
+  const requestHeaders = { ...headers(ctx, opts.resource), ...opts.extraHeaders }
+  if (opts.asr) requestHeaders['X-Api-Sequence'] = '-1'
+  if (opts.idempotencyKey) requestHeaders['X-Api-Request-Id'] = opts.idempotencyKey
+  const requestId = requestHeaders['X-Api-Request-Id']!
+  let logId: string | undefined
+  const traced = (error: unknown) => {
+    if (!(error instanceof ProviderError)) return error
+    const ids = [`客户端请求 ID ${requestId}`, ...(logId ? [`平台日志 ID ${logId}`] : [])]
+    return new ProviderError(error.code, `${scrub(error.message, ctx)}（${ids.join('；')}）`, {
+      retryable: error.retryable,
+      cause: error,
+      ...(error.outcome ? { outcome: error.outcome } : {}),
+    })
+  }
+  ctx.log('豆包语音请求关联信息', { requestId, path })
+  // 只有提交接口，一律不可重试；分块响应读完前断开同样算提交结果未知
+  const messages = {
+    cancelled: '豆包语音请求已取消',
+    network: '豆包语音网络请求失败，提交结果未知',
+    timeout: '豆包语音请求超时，提交结果未知',
+  }
+  try {
+    let response: Response
+    try {
+      response = await send(
+        ctx,
+        `${HOST}${path}`,
+        { method: 'POST', headers: requestHeaders, body: JSON.stringify(body) },
+        messages,
+      )
+    } catch (cause) {
+      if (cause instanceof ProviderError) throw withRetry(cause, 'POST')
+      throw cause
+    }
+    const remoteLog = response.headers.get('X-Tt-Logid')
+    logId = remoteLog ? scrub(remoteLog, ctx).replace(/\s+/g, ' ').slice(0, 160) : undefined
+    ctx.submission?.response({ ...(logId ? { logId } : {}), httpStatus: response.status })
+    ctx.log('豆包语音响应关联信息', {
+      requestId,
+      ...(logId ? { logId } : {}),
+      status: response.status,
+    })
+    const raw = await readText(ctx, response, 'POST', messages)
+    const status = response.headers.get('X-Api-Status-Code')
+    if (!response.ok || (status && status !== '20000000' && !(opts.asr && status === '20000003'))) {
+      let detail: Json = {}
+      try {
+        const parsed = asJson(JSON.parse(raw))
+        detail = isJson(parsed.header) ? parsed.header : parsed
+      } catch {
+        // Response headers may still carry the error when the body is not JSON.
+      }
+      throw failure(
+        response.status,
+        detail.code ?? status,
+        detail.message ?? response.headers.get('X-Api-Message'),
+        ctx,
+      )
+    }
+    const silent = status === '20000003'
+    return {
+      raw,
+      silent,
+      decode<T>(parse: (raw: string, silent: boolean) => T): T {
+        try {
+          return parse(raw, silent)
+        } catch (error) {
+          throw traced(error)
+        }
+      },
+    }
+  } catch (error) {
+    throw traced(error)
+  }
+}
+
 /** POST a JSON body and return the raw (possibly chunked) response text. */
 export async function postText(
   ctx: AdapterContext,
@@ -235,44 +331,7 @@ export async function postText(
   body: Json,
   opts: PostOptions = {},
 ): Promise<string> {
-  const requestHeaders = { ...headers(ctx, opts.resource), ...opts.extraHeaders }
-  if (opts.asr) requestHeaders['X-Api-Sequence'] = '-1'
-  if (opts.idempotencyKey) requestHeaders['X-Api-Request-Id'] = opts.idempotencyKey
-  const messages = {
-    cancelled: 'Doubao request cancelled',
-    network: 'Doubao network failure, submission outcome unknown',
-    timeout: 'Doubao request timeout, submission outcome unknown',
-  }
-  let response: Response
-  try {
-    response = await send(
-      ctx,
-      `${HOST}${path}`,
-      { method: 'POST', headers: requestHeaders, body: JSON.stringify(body) },
-      messages,
-    )
-  } catch (cause) {
-    if (cause instanceof ProviderError) throw withRetry(cause, 'POST')
-    throw cause
-  }
-  const raw = await readText(ctx, response, 'POST', messages)
-  const status = response.headers.get('X-Api-Status-Code')
-  if (!response.ok || (status && status !== '20000000' && !(opts.asr && status === '20000003'))) {
-    let detail: Json = {}
-    try {
-      const parsed = asJson(JSON.parse(raw))
-      detail = isJson(parsed.header) ? parsed.header : parsed
-    } catch {
-      // Response headers may still carry the error when the body is not JSON.
-    }
-    throw failure(
-      response.status,
-      detail.code ?? status,
-      detail.message ?? response.headers.get('X-Api-Message'),
-      ctx,
-    )
-  }
-  return raw
+  return (await postRaw(ctx, path, body, opts)).raw
 }
 
 /** HTTP chunked responses may contain newline-delimited OR directly adjacent JSON objects. */
@@ -286,7 +345,7 @@ export function events(raw: string): Json[] {
     const c = raw[i]!
     if (start < 0) {
       if (/\s/.test(c)) continue
-      if (c !== '{') throw incomplete('Doubao returned an invalid audio stream')
+      if (c !== '{') throw incomplete('豆包语音返回无效音频流')
       start = i
     }
     if (quoted) {
@@ -301,13 +360,13 @@ export function events(raw: string): Json[] {
         try {
           result.push(asJson(JSON.parse(raw.slice(start, i + 1))))
         } catch {
-          throw incomplete('Doubao returned an invalid audio stream')
+          throw incomplete('豆包语音返回无效音频流')
         }
         start = -1
       }
     }
   }
-  if (start >= 0 || result.length === 0) throw incomplete('Doubao audio stream is incomplete')
+  if (start >= 0 || result.length === 0) throw incomplete('豆包语音音频流不完整')
   return result
 }
 
@@ -322,6 +381,6 @@ export async function postJson(
   try {
     return asJson(JSON.parse(raw))
   } catch {
-    throw incomplete('Doubao returned invalid JSON')
+    throw incomplete('豆包语音返回无效 JSON 对象')
   }
 }

@@ -7,6 +7,7 @@ import {
   defaultModel,
   parseFlashAsr,
 } from '../src/adapter'
+import { all } from '../src/models/index'
 import { resolveSpeechSettings } from '../src/speech'
 import { nativeOperationSchemas } from '../src/native'
 import { fakeContext, fixture, fixtureReply } from './helpers'
@@ -61,7 +62,7 @@ describe('default model (only active)', () => {
 })
 
 describe('submit (recorded fixtures)', () => {
-  const adapter = createDoubaoAdapter(models)
+  const adapter = createDoubaoAdapter(all)
   it('audio.speech', async () => {
     const f = fixture('tts-success')
     const { ctx, calls } = fakeContext([fixtureReply(f)])
@@ -176,17 +177,11 @@ describe('request builders / ASR parsing', () => {
     const body = buildAudioCreateBody({ prompt: 'x', duration: 12.5 }, settings, 'audio.music')
     expect(body.text_prompt as string).toContain('目标时长 12.5 秒')
   })
-  it('buildFlashAsrBody validates the format and empty audio', () => {
+  it('buildFlashAsrBody validates the format (size comes from the declaration)', () => {
     expect(() =>
       buildFlashAsrBody(
         { audio: { assetId: 'a', kind: 'audio' } },
         { data: new Uint8Array([1]), mime: 'application/zip' },
-      ),
-    ).toThrow(ProviderError)
-    expect(() =>
-      buildFlashAsrBody(
-        { audio: { assetId: 'a', kind: 'audio' } },
-        { data: new Uint8Array(), mime: 'audio/wav' },
       ),
     ).toThrow(ProviderError)
     const body = buildFlashAsrBody(

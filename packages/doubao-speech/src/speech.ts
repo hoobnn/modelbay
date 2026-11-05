@@ -12,7 +12,7 @@ import {
   type SubmitResult,
   type VoicePreset,
 } from '@modelbay/core'
-import { asJson, events, failure, incomplete, postText, type Json } from './http'
+import { asJson, events, failure, incomplete, postRaw, type Json } from './http'
 
 /** Default speech settings. Kept as a zod object so `.shape` / `.parse` stay available. */
 export const speechSettings = z.object({
@@ -24,19 +24,30 @@ export const speechSettings = z.object({
 export type SpeechSettings = z.output<typeof speechSettings>
 
 /**
- * Resolve settings from host-managed config (there is no `settings` field in
- * `AdapterContext`). Explicit overrides win; absent values fall back to the schema defaults.
+ * Resolve settings: the host's `ctx.settings` (same field names as plein) first, then the
+ * original MCP `VOLC_SPEECH_*` secret/env fallback, then the schema defaults.
+ * Explicit overrides win.
  */
 export function resolveSpeechSettings(
   ctx: AdapterContext,
   overrides: Partial<SpeechSettings> = {},
 ): SpeechSettings {
-  return speechSettings.parse({
-    voice: overrides.voice ?? ctx.secret('VOLC_SPEECH_VOICE'),
-    format: overrides.format ?? ctx.secret('VOLC_SPEECH_FORMAT'),
-    sampleRate: overrides.sampleRate ?? ctx.secret('VOLC_SPEECH_SAMPLE_RATE'),
+  const hosted = ctx.settings ?? {}
+  const pick = (name: string, secret: string) => {
+    const value = hosted[name]
+    if (typeof value === 'string' && value) return value
+    if (typeof value === 'number') return String(value)
+    return ctx.secret(secret)
+  }
+  const parsed = speechSettings.safeParse({
+    voice: overrides.voice ?? pick('voice', 'VOLC_SPEECH_VOICE'),
+    format: overrides.format ?? pick('format', 'VOLC_SPEECH_FORMAT'),
+    sampleRate: overrides.sampleRate ?? pick('sampleRate', 'VOLC_SPEECH_SAMPLE_RATE'),
     speed: overrides.speed,
   })
+  if (!parsed.success)
+    throw new ProviderError('invalid_input', `豆包语音设置无效：${parsed.error.issues[0]?.message}`)
+  return parsed.data
 }
 
 /** Voices suitable for short-drama characters in speech synthesis 2.0. */
@@ -81,7 +92,7 @@ export const TTS_VOICES: VoicePreset[] = [
 
 export function text(value: unknown, name: string, max = 3000): string {
   if (typeof value !== 'string' || !value.trim() || value.length > max)
-    throw new ProviderError('invalid_input', `${name} must be 1-${max} characters`)
+    throw new ProviderError('invalid_input', `${name} 必须是 1 至 ${max} 字的文本`)
   return value
 }
 
@@ -102,24 +113,21 @@ export function buildSpeechRequest(
   settings: SpeechSettings,
   plan = false,
 ): { path: string; resource: string; body: Json } {
-  const content = text(input.text, 'Speech text')
+  const content = text(input.text, '合成文本')
   const voice = input.voice ?? settings.voice
   if (plan && (voice.startsWith('S_') || customVoiceId(voice)))
-    throw new ProviderError('invalid_input', 'Agent Plan only supports preset 2.0 voices')
+    throw new ProviderError('invalid_input', 'Agent Plan 仅支持语音合成 2.0 预置音色')
   const cloned = voice.startsWith('S_') || customVoiceId(voice)
   if (model.startsWith('seed-icl-') && !cloned)
-    throw new ProviderError(
-      'invalid_input',
-      'Voice-clone models require a cloned/designed voice ID',
-    )
+    throw new ProviderError('invalid_input', '声音复刻模型需要已创建的复刻或设计音色 ID')
   const resource = cloned ? (model === 'seed-icl-1.0' ? 'seed-icl-1.0' : 'seed-icl-2.0') : model
   const speed = input.speed ?? settings.speed
   if (!Number.isFinite(speed) || speed < 0.5 || speed > 2)
-    throw new ProviderError('invalid_input', 'Speech rate must be 0.5-2')
+    throw new ProviderError('invalid_input', '语速须在 0.5 至 2 之间')
   const body: Json = {
     req_params: {
       text: content,
-      speaker: text(voice, 'Voice ID'),
+      speaker: text(voice, '音色 ID'),
       audio_params: {
         format: settings.format === 'wav' ? 'pcm' : settings.format,
         sample_rate: Number(settings.sampleRate),
@@ -156,10 +164,10 @@ export function decodeAudioStream(
       typeof data !== 'string' ||
       !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)
     )
-      throw incomplete('Doubao returned invalid Base64 audio')
+      throw incomplete('豆包语音返回无效 Base64 音频')
     chunks.push(fromBase64(data))
   }
-  if (requireEnd && !ended) throw incomplete('Doubao did not return the synthesis-complete marker')
+  if (requireEnd && !ended) throw incomplete('豆包语音未返回合成完成标记')
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
   const merged = new Uint8Array(length)
   let offset = 0
@@ -167,7 +175,7 @@ export function decodeAudioStream(
     merged.set(chunk, offset)
     offset += chunk.length
   }
-  if (!merged.length) throw incomplete('Doubao returned no inline audio')
+  if (!merged.length) throw incomplete('豆包语音未返回内嵌音频')
   return settings.format === 'wav' && requireEnd
     ? pcmWav(merged, Number(settings.sampleRate))
     : merged
@@ -175,7 +183,7 @@ export function decodeAudioStream(
 
 /** Wrap signed 16-bit little-endian mono PCM in a single RIFF/WAVE container. */
 export function pcmWav(pcm: Uint8Array, sampleRate: number): Uint8Array {
-  if (pcm.length % 2 !== 0) throw incomplete('Doubao PCM audio has an incomplete sample')
+  if (pcm.length % 2 !== 0) throw incomplete('豆包语音 PCM 音频缺少完整采样')
   const header = new Uint8Array(44)
   const view = new DataView(header.buffer)
   const writeAscii = (offset: number, value: string) => {
@@ -214,8 +222,8 @@ export async function synthesizeSpeech(
     input.speed === undefined ? {} : { speed: input.speed },
   )
   const { path, resource, body } = buildSpeechRequest(model, input, settings, plan)
-  const raw = await postText(ctx, path, body, { resource })
-  const data = decodeAudioStream(raw, 'data', ctx, settings, true)
+  const response = await postRaw(ctx, path, body, { resource })
+  const data = response.decode((raw) => decodeAudioStream(raw, 'data', ctx, settings, true))
   const output: ProviderOutput = {
     type: 'file',
     kind: 'audio',
@@ -232,7 +240,7 @@ export function parseResponseBody(raw: string, ctx: AdapterContext): Json {
   try {
     body = asJson(JSON.parse(raw))
   } catch {
-    throw incomplete('Doubao returned invalid JSON')
+    throw incomplete('豆包语音返回无效 JSON 对象')
   }
   const header = isJsonObject(body.header) ? body.header : body
   if (header.code !== undefined && ![0, 20000000].includes(Number(header.code)))
