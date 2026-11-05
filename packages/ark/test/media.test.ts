@@ -17,6 +17,8 @@ import {
   type TaskOptions,
 } from '../src/media'
 import type { TransportMessages } from '../src/http'
+import { allModels as all } from '../src/declarations'
+import type { ModelLimits } from '@modelbay/core'
 import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
 
 const messages: TransportMessages = {
@@ -59,35 +61,39 @@ describe('尺寸与模型名工具', () => {
   })
 })
 
+/** 声明里的上限：测试与运行时读同一份声明。 */
+function limitsOf(canonicalId: string): ModelLimits {
+  const found = all.find((item) => item.canonicalId === canonicalId)
+  if (!found) throw new Error(`缺少声明 ${canonicalId}`)
+  return found.limits ?? {}
+}
+
+const PRO = limitsOf('volc/doubao-seedream-5-0-pro-260628')
+const LITE = limitsOf('volc/doubao-seedream-5-0-260128')
+
 describe('imageBody：图片请求构造', () => {
   const base: CapabilityInput<'image.generate'> = { prompt: '一只猫' }
 
   it('默认档位换算成 WxH，并带上 response_format', async () => {
     const recorded = fixture<RecordedCall>('image-success')
-    const body = await imageBody(
-      'doubao-seedream-5-0-pro-260628',
-      'doubao-seedream-5-0-pro-260628',
-      base,
-      ctx(),
-      '2K',
-    )
+    const body = await imageBody('doubao-seedream-5-0-pro-260628', base, ctx(), PRO, '2K')
     expect(body).toEqual(recorded.request.body)
   })
 
   it('显式宽高与分辨率档位', async () => {
     const explicit = await imageBody(
       'doubao-seedream-5-0-pro-260628',
-      'doubao-seedream-5-0-pro-260628',
       { prompt: '猫', width: 1024, height: 768 },
       ctx(),
+      PRO,
       '2K',
     )
     expect(explicit.size).toBe('1024x768')
     const auto = await imageBody(
       'doubao-seedream-5-0-pro-260628',
-      'doubao-seedream-5-0-pro-260628',
       { prompt: '猫', extra: { aspectRatio: 'auto' } },
       ctx(),
+      PRO,
       '2K',
     )
     expect(auto.size).toBe('2K')
@@ -96,13 +102,13 @@ describe('imageBody：图片请求构造', () => {
   it('多图走 sequential_image_generation，参考图转 data URL', async () => {
     const body = await imageBody(
       'doubao-seedream-5-0-260128',
-      'doubao-seedream-5-0-260128',
       {
         prompt: '组图',
         count: 3,
         references: [{ assetId: 'a1', kind: 'image' }],
       },
       ctx(),
+      LITE,
       '2K',
     )
     expect(body.sequential_image_generation).toBe('auto')
@@ -111,23 +117,17 @@ describe('imageBody：图片请求构造', () => {
   })
 
   it('非法输入的校验', async () => {
-    await expect(imageBody('m', 'm', { prompt: '' }, ctx(), '2K')).rejects.toMatchObject({
+    await expect(imageBody('m', { prompt: '' }, ctx(), PRO, '2K')).rejects.toMatchObject({
       code: 'invalid_input',
     })
     await expect(
-      imageBody(
-        'doubao-seedream-5-0-pro-260628',
-        'doubao-seedream-5-0-pro-260628',
-        { prompt: '猫', count: 2 },
-        ctx(),
-        '2K',
-      ),
+      imageBody('doubao-seedream-5-0-pro-260628', { prompt: '猫', count: 2 }, ctx(), PRO, '2K'),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     await expect(
-      imageBody('m', 'm', { prompt: '猫', negativePrompt: '丑' }, ctx(), '2K'),
+      imageBody('m', { prompt: '猫', negativePrompt: '丑' }, ctx(), PRO, '2K'),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     await expect(
-      imageBody('m', 'm', { prompt: '猫', extra: { notAllowed: 1 } }, ctx(), '2K'),
+      imageBody('m', { prompt: '猫', extra: { notAllowed: 1 } }, ctx(), PRO, '2K'),
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 })

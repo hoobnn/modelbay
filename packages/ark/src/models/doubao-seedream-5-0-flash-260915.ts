@@ -6,6 +6,8 @@ export default {
   title: 'Seedream 5.0 Flash',
   capabilities: ['image.generate', 'image.process'],
   limits: {
+    // 一次几张、最多几张参考图、有哪些分辨率档位都取自官方「图像生成 API」页
+    // （2026-11-05 核对）：flash 最多 10 张参考图、分辨率档位 1K/1.5K/2K、只生成单图。
     imageOperations: ['cutout'],
     aspectRatios: ['auto', '21:9', '16:9', '3:2', '4:3', '1:1', '3:4', '2:3', '9:16'],
     resolutions: ['1K', '1.5K', '2K'],
@@ -61,7 +63,7 @@ export default {
     },
   },
   source: {
-    url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+    url: 'https://docs.volcengine.com/docs/ark/image-generation-api?lang=zh',
     checkedAt: '2026-11-05',
   },
 } satisfies ModelDeclaration

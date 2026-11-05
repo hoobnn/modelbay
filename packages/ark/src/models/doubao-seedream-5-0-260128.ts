@@ -8,6 +8,9 @@ export default {
   description:
     '已停止新购，计划于 2026-11-24 14:00（UTC+8）下线；现有接入请提前迁移，Pro / Flash 不支持组图',
   limits: {
+    // 一次几张、最多几张参考图、有哪些分辨率档位都取自官方「图像生成 API」页
+    // （2026-11-05 核对）：lite 最多 14 张参考图、分辨率档位 2K/3K/4K、
+    // 文生组图最多 15 张。
     aspectRatios: ['auto', '21:9', '16:9', '3:2', '4:3', '1:1', '3:4', '2:3', '9:16'],
     resolutions: ['2K', '3K', '4K'],
     defaultResolution: '2K',
@@ -44,7 +47,7 @@ export default {
     },
   },
   source: {
-    url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+    url: 'https://docs.volcengine.com/docs/ark/image-generation-api?lang=zh',
     checkedAt: '2026-11-05',
   },
 } satisfies ModelDeclaration

@@ -286,6 +286,9 @@ function buildDiff() {
     h(`| ${code(meta.platformUrl.ark)} | 是 | 方舟按量渠道的全部模型 |`)
     h(`| ${code(links.arkAgentPlan)} | 是 | 方舟套餐渠道的模型（套餐概览） |`)
     h(
+      `| ${code(links.arkImageGeneration)} | 是 | 方舟 Seedream 的上限（张数、参考图数量、分辨率档位） |`,
+    )
+    h(
       `| ${code(meta.platformUrl.bailian)} | 是 | 百炼文本模型与 qwen-image-3.0-pro、wan2.7-image-pro |`,
     )
     h(

@@ -56,6 +56,7 @@
 | --------------------------------------------------------------------------------------------- | -------------------- | ---------------------------------------------------------- |
 | `https://docs.volcengine.com/docs/ark/model-list?lang=zh`                                     | 是                   | 方舟按量渠道的全部模型                                     |
 | `https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview` | 是                   | 方舟套餐渠道的模型（套餐概览）                             |
+| `https://docs.volcengine.com/docs/ark/image-generation-api?lang=zh`                           | 是                   | 方舟 Seedream 的上限（张数、参考图数量、分辨率档位）       |
 | `https://help.aliyun.com/zh/model-studio/models`                                              | 是                   | 百炼文本模型与 qwen-image-3.0-pro、wan2.7-image-pro        |
 | `https://help.aliyun.com/zh/model-studio/image-model`                                         | 是                   | 百炼 qwen-image-3.0、qwen-image-3.0-pro、wanx2.1-imageedit |
 | `https://help.aliyun.com/zh/model-studio/video-generation`                                    | 是                   | 百炼 wan3.0-video、wan3.0-video-prime                      |

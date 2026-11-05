@@ -64,6 +64,7 @@
     "arkDeprecation": "https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh",
     "bailianTts": "https://help.aliyun.com/zh/model-studio/tts-model",
     "arkAgentPlan": "https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview",
+    "arkImageGeneration": "https://docs.volcengine.com/docs/ark/image-generation-api?lang=zh",
     "bailianImage": "https://help.aliyun.com/zh/model-studio/image-model",
     "bailianVideo": "https://help.aliyun.com/zh/model-studio/video-generation",
     "minimaxVideo": "https://platform.minimax.cn/docs/api-reference/video-generation-v2-create",

@@ -115,12 +115,11 @@ function resolveForPlane(
 /**
  * 一次引用解析的结果。
  *
- * `model` 是目标渠道的渠道内 ID（请求体里用）；`modelKey` 是声明里的规范型号
- * ID（两条渠道一致，判断型号家族用）；`limits` 是声明里的上限。
+ * `model` 是目标渠道的渠道内 ID（请求体里用）；`limits` 是声明里的上限
+ * （一次几张、最多几张参考图、有哪些分辨率档位都在这里）。
  */
 interface ResolvedModel {
   model: string
-  modelKey: string
   limits: ModelLimits
 }
 
@@ -133,10 +132,9 @@ function resolveModelForPlane(
   const colon = ref.indexOf(':')
   const raw = colon >= 0 ? ref.slice(colon + 1) : ref
   const found = resolveForPlane(ref, plane, models)
-  if (!found) return { model: raw, modelKey: raw, limits: {} }
+  if (!found) return { model: raw, limits: {} }
   return {
     model: found.channel.id,
-    modelKey: found.declaration.id,
     limits: { ...found.declaration.limits, ...found.channel.limits },
   }
 }
@@ -188,9 +186,9 @@ async function submit(
   if (req.capability === 'image.generate') {
     const body = await imageBody(
       model,
-      resolved.modelKey,
       req.input as CapabilityInput<'image.generate'>,
       ctx,
+      resolved.limits,
       defaultResolution(resolved.limits),
     )
     const data = await request({

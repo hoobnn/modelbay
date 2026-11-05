@@ -10,6 +10,7 @@ import {
   type AdapterContext,
   type AssetRef,
   type CapabilityInput,
+  type ModelLimits,
   type ProviderOutput,
   type SubmitResult,
   type PollResult,
@@ -54,26 +55,27 @@ function extraParams(extra: Json | undefined, allowed: string[]): Json {
 /**
  * Seedream image generation request body.
  *
- * `model` 是目标渠道的渠道内 ID（请求体里用这个）；`modelKey` 是声明里的规范
- * 型号 ID——两条渠道的渠道内 ID 不同（按量 `doubao-seedream-5-0-pro-260628`、
- * 套餐 `doubao-seedream-5.0-pro`），判断型号家族要用两条渠道一致的 `modelKey`。
+ * `model` 是目标渠道的渠道内 ID（请求体里用这个）；`limits` 是模型声明里的上限
+ * （一次几张、最多几张参考图、有哪些分辨率档位）。上限一律读声明，代码里不写
+ * 型号字面量、也不写数值上限：声明里没写某一项就不校验这一项，透传给上游。
  */
 export async function imageBody(
   model: string,
-  modelKey: string,
   input: CapabilityInput<'image.generate'>,
   ctx: AdapterContext,
+  limits: ModelLimits,
   defaultResolution: string,
 ): Promise<Json> {
   if (!input.prompt.trim()) invalid('图片提示词不能为空')
   if (input.negativePrompt) invalid('Seedream 不支持独立 negativePrompt，请合并到 prompt')
   const count = input.count ?? 1
-  const lite = modelKey === 'doubao-seedream-5-0-260128'
-  if (!Number.isInteger(count) || count < 1 || count > 15) invalid('图片数量必须为 1–15 的整数')
-  if (count > 1 && modelKey.startsWith('doubao-seedream-5-') && !lite)
-    invalid('Seedream Pro / Flash 仅支持单图；多图请选 Seedream Lite')
+  if (!Number.isInteger(count) || count < 1) invalid('图片数量必须是正整数')
+  const maxCount = limits.count?.max
+  if (maxCount !== undefined && count > maxCount) invalid(`所选模型一次最多生成 ${maxCount} 张`)
   const refs = input.references ?? []
-  if (refs.length > (lite ? 14 : 10)) invalid(`所选模型最多接受 ${lite ? 14 : 10} 张参考图`)
+  const maxRefs = limits.references?.max
+  if (maxRefs !== undefined && refs.length > maxRefs)
+    invalid(`所选模型最多接受 ${maxRefs} 张参考图`)
 
   const body: Json = {
     watermark: false,
@@ -92,10 +94,11 @@ export async function imageBody(
   delete body.aspectRatio
   if (body.size === undefined && input.width === undefined && input.height === undefined) {
     const resolution = input.resolution ?? defaultResolution
-    const tokens = lite ? ['2K', '3K', '4K'] : ['1K', '1.5K', '2K']
+    const tiers = limits.resolutions
+    // 声明里写了分辨率档位才校验这一项；没写就按声明的默认档位换算。
+    if (tiers && !tiers.includes(resolution)) invalid('所选模型不支持该分辨率')
     const edge = tierEdge(resolution)
-    if (!modelKey.startsWith('doubao-seedream-5-') || !tokens.includes(resolution) || !edge)
-      invalid('所选 Seedream 模型不支持该分辨率')
+    if (!edge) invalid('所选模型不支持该分辨率')
     const { width, height } = sizeByArea(String(aspectRatio ?? '1:1'), edge * edge)
     body.size = aspectRatio === 'auto' ? resolution : `${width}x${height}`
   }
