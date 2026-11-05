@@ -10,10 +10,10 @@ export default {
   agentOnly: true,
   channels: [{ channel: 'ark-plan', id: 'kimi-k2.7-code' }],
   aliases: { official: [], short: [] },
-  // 弃用状态沿用 plein 原目录的判断（deprecated: true，置后）；官方公告原文没读到，
+  // 弃用状态（sunsetting，仍可运行）沿用 plein 原目录的判断（deprecated: true，置后）；官方公告原文没读到，
   // checkedAt 取 plein 打该标记的提交日期，不是本仓库核对正文的日期（见 docs/declaration-diff.md）。
   lifecycle: {
-    status: 'retired',
+    status: 'sunsetting',
     source: {
       url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
       checkedAt: '2026-11-01',

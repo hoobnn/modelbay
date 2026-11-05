@@ -17,7 +17,7 @@
     "short": []
   },
   "lifecycle": {
-    "status": "retired",
+    "status": "sunsetting",
     "source": {
       "url": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
       "checkedAt": "2026-11-01"
