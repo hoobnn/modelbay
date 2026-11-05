@@ -5,6 +5,7 @@ import { ProviderError, toBase64 } from '@modelbay/core'
 import { selectDefaultModel } from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration, RemoteModel } from '@modelbay/core'
 import { minimaxModelList, redact } from '@modelbay/shared'
+import { taskId } from './util'
 import {
   apiKey,
   asJson,
@@ -25,6 +26,7 @@ export const UPLOAD_PATH = '/v1/files/upload'
 export const VOICE_CLONE_PATH = '/v1/voice_clone'
 export const VOICE_DESIGN_PATH = '/v1/voice_design'
 export const QUERY_PATH = '/v2/query/video_generation'
+export const VIDEO_PATH = '/v2/video_generation'
 
 export const MINIMAX_NATIVE_OPERATIONS = [
   'context-ir',
@@ -33,6 +35,7 @@ export const MINIMAX_NATIVE_OPERATIONS = [
   'voice-design',
   'upload-file',
   'list-video-tasks',
+  'delete-video-task',
   'raw-request',
   'listModels',
 ] as const
@@ -62,6 +65,7 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
     properties: {
       voice_id: { type: 'string' },
       audio: { type: 'string', description: 'AssetRef id or a public URL' },
+      file_id: { type: 'string', description: '已上传样本的 file_id，与 audio 二选一' },
       text: { type: 'string' },
       noise_reduction: { type: 'boolean' },
       volume_normalization: { type: 'boolean' },
@@ -92,7 +96,13 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
       page_size: { type: 'integer' },
       status: { type: 'string' },
       task_type: { type: 'string' },
+      model: { type: 'string' },
     },
+  },
+  'delete-video-task': {
+    type: 'object',
+    required: ['task_id'],
+    properties: { task_id: { type: 'string' } },
   },
   listModels: { type: 'object', properties: {} },
   'raw-request': {
@@ -228,7 +238,9 @@ export async function voiceClone(
     throw new ProviderError('invalid_input', 'Invalid MiniMax voice_id')
   const audio = params.audio
   let fileId: string
-  if (typeof audio === 'string' && /^https?:\/\//.test(audio)) {
+  if (asString(params.file_id)) {
+    fileId = asString(params.file_id)
+  } else if (typeof audio === 'string' && /^https?:\/\//.test(audio)) {
     fileId = audio
   } else {
     const assetId = typeof audio === 'object' && audio !== null ? asJson(audio).assetId : undefined
@@ -309,9 +321,22 @@ export async function listVideoTasks(ctx: AdapterContext, params: Json): Promise
       page_size: pageSize,
       'filter.status': asString(params.status) || undefined,
       'filter.task_type': asString(params.task_type) || undefined,
+      // 官方文档只有 filter.model，没有顶层 model（2026-11-06 核对：
+      // https://platform.minimax.cn/docs/api-reference/video-generation-v2-list）
+      'filter.model': asString(params.model) || undefined,
     },
   })
   return data
+}
+
+/**
+ * 取消 queued 任务或删除 succeeded / failed 任务记录；running / cancelled 由上游报错。
+ * DELETE /v2/video_generation/{task_id}，2026-11-06 核对：
+ * https://platform.minimax.cn/docs/api-reference/video-generation-v2-delete
+ */
+export async function deleteVideoTask(ctx: AdapterContext, params: Json): Promise<Json> {
+  const id = taskId(params.task_id)
+  return requestJson(ctx, `${VIDEO_PATH}/${id}`, undefined, { method: 'DELETE' })
 }
 
 /**
@@ -376,6 +401,8 @@ export async function runMinimaxNative(
       return uploadFile(ctx, p)
     case 'list-video-tasks':
       return listVideoTasks(ctx, p)
+    case 'delete-video-task':
+      return deleteVideoTask(ctx, p)
     case 'listModels':
       return listModels(ctx)
     case 'raw-request': {

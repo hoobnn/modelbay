@@ -42,25 +42,6 @@
           "default": null,
           "title": "Ratio"
         },
-        "wait": {
-          "default": 0,
-          "maximum": 90,
-          "minimum": 0,
-          "title": "Wait",
-          "type": "integer"
-        },
-        "output_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Output Directory"
-        },
         "parameters": {
           "anyOf": [
             {
@@ -140,22 +121,6 @@
           "default": "MiniMax-H3",
           "title": "Model",
           "type": "string"
-        },
-        "content": {
-          "anyOf": [
-            {
-              "items": {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Content"
         },
         "first_frame": {
           "anyOf": [
@@ -501,21 +466,6 @@
           "default": null,
           "title": "Status"
         },
-        "task_ids": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Task Ids"
-        },
         "model": {
           "anyOf": [
             {
@@ -620,84 +570,9 @@
           "default": false,
           "title": "Lyrics Optimizer",
           "type": "boolean"
-        },
-        "output_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Output Directory"
-        },
-        "parameters": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Parameters"
         }
       },
       "title": "music_generationArguments",
-      "type": "object"
-    },
-    "outputSchema": {
-      "type": "object",
-      "required": ["ok"],
-      "properties": {
-        "ok": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": true
-    },
-    "annotations": {
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": true
-    }
-  },
-  {
-    "name": "query_video_generation",
-    "description": "查询H3 V2任务（generation/h3_context_ir/regeneration），成功后下载或返回URL，不重新生成。\n保留官方MCP工具名，但不支持旧V1任务。平台查询窗口7天；未知task_id会建立本地记录，已有记录沿用原输出目录。\n",
-    "inputSchema": {
-      "properties": {
-        "task_id": {
-          "title": "Task Id",
-          "type": "string"
-        },
-        "output_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Output Directory"
-        },
-        "wait": {
-          "default": 0,
-          "maximum": 90,
-          "minimum": 0,
-          "title": "Wait",
-          "type": "integer"
-        }
-      },
-      "required": ["task_id"],
-      "title": "query_video_generationArguments",
       "type": "object"
     },
     "outputSchema": {
@@ -793,25 +668,6 @@
           ],
           "default": null,
           "title": "Content"
-        },
-        "wait": {
-          "default": 0,
-          "maximum": 90,
-          "minimum": 0,
-          "title": "Wait",
-          "type": "integer"
-        },
-        "output_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Output Directory"
         },
         "parameters": {
           "anyOf": [
@@ -929,19 +785,6 @@
           ],
           "default": null,
           "title": "Output Directory"
-        },
-        "parameters": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Parameters"
         }
       },
       "required": ["text"],
@@ -1131,31 +974,6 @@
           "default": "speech-2.8-hd",
           "title": "Model",
           "type": "string"
-        },
-        "output_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Output Directory"
-        },
-        "parameters": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Parameters"
         }
       },
       "required": ["voice_id"],
@@ -1193,44 +1011,10 @@
           "type": "string"
         },
         "voice_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Voice Id"
-        },
-        "output_directory": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Output Directory"
-        },
-        "parameters": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Parameters"
+          "type": "string"
         }
       },
-      "required": ["prompt", "preview_text"],
+      "required": ["prompt", "preview_text", "voice_id"],
       "title": "design_voiceArguments",
       "type": "object"
     },
