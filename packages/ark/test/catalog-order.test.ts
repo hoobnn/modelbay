@@ -38,8 +38,6 @@ describe('方舟目录顺序', () => {
   it('套餐渠道在每个能力内的顺序保持不变', () => {
     expect(idsIn('ark-plan', 'text.chat')).toEqual([
       'ark-code-latest',
-      'minimax-m3',
-      'kimi-k2.7-code',
       'doubao-seed-2.0-mini',
       'doubao-seed-2.1-lite',
       'doubao-seed-2.1-pro',
@@ -84,16 +82,6 @@ describe('方舟自定义对话模型的渠道差异', () => {
     )
     expect(api).toMatchObject({ title: '自定义对话模型（设置中填写）', features: ['structured'] })
     expect(api.agentOnly).toBeUndefined()
-  })
-})
-
-describe('套餐弃用模型', () => {
-  it('minimax-m3 与 kimi-k2.7-code 是 sunsetting，派生为 deprecated', () => {
-    for (const id of ['minimax-m3', 'kimi-k2.7-code']) {
-      const declaration = allModels.find((item) => item.id === id)!
-      expect(declaration.lifecycle.status).toBe('sunsetting')
-      expect(toModelInfo(declaration, declaration.channels[0]).deprecated).toBe(true)
-    }
   })
 })
 

@@ -8,8 +8,6 @@ import doubaoSeedance20Mini260615 from './doubao-seedance-2-0-mini-260615'
 import customImage from './custom-image'
 import customVideo from './custom-video'
 import arkCodeLatest from './ark-code-latest'
-import minimaxM3 from './minimax-m3'
-import kimiK27Code from './kimi-k2-7-code'
 import doubaoSeed20Mini from './doubao-seed-2-0-mini'
 import doubaoSeed21Lite from './doubao-seed-2-1-lite'
 import doubaoSeed21Pro from './doubao-seed-2-1-pro'
@@ -43,8 +41,6 @@ export {
   customImage,
   customVideo,
   arkCodeLatest,
-  minimaxM3,
-  kimiK27Code,
   doubaoSeed20Mini,
   doubaoSeed21Lite,
   doubaoSeed21Pro,
@@ -79,8 +75,6 @@ export const all: ModelDeclaration[] = [
   doubaoSeed21Lite260915,
   doubaoSeed21Turbo260628,
   arkCodeLatest,
-  minimaxM3,
-  kimiK27Code,
   doubaoSeed20Mini,
   doubaoSeed21Lite,
   doubaoSeed21Pro,
