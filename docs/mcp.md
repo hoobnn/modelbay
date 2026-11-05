@@ -19,13 +19,24 @@
 
 - `submit`：按归一化能力调 `adapter.submit()`，能力取工具定义的 `capability`，没写就按通用工具名约定推断。
 - `native`：工具定义写了 `native: '<op>'`，调 `adapter.native(op, params)`。只有一家平台有的能力走这条。
-- `local`：MCP 自己回答，不联网（`get_tool_help`、`list_capabilities`、`list_jobs`、`get_job`、`list_voices` 等）。处理器实现在 `@modelbay/mcp`，工具名约定在 `src/tool-meta.ts`。
+- `local`：MCP 自己回答，不联网（`get_tool_help`、`list_capabilities`、`list_jobs`、`list_voices` 等）。`get_job` / `recover_job` 例外，它们调 `adapter.poll()`。处理器实现在 `@modelbay/mcp`，工具名约定在 `src/tool-meta.ts`。
 
-`submit` 之前，`src/arguments.ts` 把工具目录里的 MCP 字段换算成能力的归一化输入：`prompt` / `system` / `history` 拼成 `messages`，`max_tokens` → `maxTokens`，`voice_id` → `voice`，`instructions` → `instruction`，`negative_prompt` → `negativePrompt`，`n` → `count`，`ratio` / `aspect_ratio` → `aspectRatio`。只在归一化字段缺失时补，原字段保留给适配器自己的 MCP 处理。和平台、模型有关的字段不在这里换算。
+`submit` 之前参数按这个顺序处理：
 
-结果里的字节（`Uint8Array`）不进 JSON 文本：图片、音频按 MCP 标准的 base64 `image` / `audio` 块返回，其他文件用内嵌 `resource` 块，文本里只留字节数和块序号。
+1. 去掉 `null`（schema 里 `default: null` 表示没填）。
+2. 工具定义里的 `mapArguments(args, { model })`：平台专属换算，比如把平铺字段放进适配器白名单里的 `extra`、把布尔开关换成接口要的形状。`native` 路由的参数也由它产出。
+3. `src/arguments.ts` 的通用换算：`prompt` / `system` / `history` / `images` 拼成 `messages`（`images` 成为图片片段），`max_tokens` → `maxTokens`，`voice_id` → `voice`，`instructions` → `instruction`，`negative_prompt` → `negativePrompt`，`n` → `count`，`images` → `references`（生图），`ratio` / `aspect_ratio` → `aspectRatio`，`first_frame` / `last_frame` → `firstFrame` / `lastFrame`，`reference_images` / `reference_videos` / `reference_audios` → `references`，识别的 `audio` → 素材引用。只在归一化字段缺失时补，原字段保留。
+4. `model`、`wait`、`out_dir` / `output_directory` 由 MCP 层处理，不交给适配器。
 
-`test/real-adapter.test.ts` 用真实适配器加注入的 fetch 断言 MCP 参数真的进了上游请求体；其余测试用假适配器，测不出字段名对不上。
+工具目录里写了的参数必须真的生效：要么经上面几步进了上游请求，要么从目录里删掉。
+
+### 素材、任务与结果
+
+- 素材：`src/assets.ts` 给适配器上下文注入 `assets`，按 `assetId` 读本地路径（相对 server 的工作目录，支持 `~`）、`file://`、`http(s)://` 和 `data:` URL。
+- 异步任务：提交返回 `job_id`（就是平台任务 ID，和 `task_id` 同值）。`wait` 秒内（最多 90）接着轮询 `adapter.poll()`；`get_job` / `recover_job` 按 `job_id` 或 `task_id` 查询，别处提交的任务也能查。任务记录只在进程内存里，`list_jobs` 只列本进程提交的任务。
+- 结果：给了 `out_dir` / `output_directory` 时，文件结果写到该目录（URL 先下载），条目带 `path`。没给时，字节（`Uint8Array`）不进 JSON 文本：图片、音频按 MCP 标准的 base64 `image` / `audio` 块返回，其他文件用内嵌 `resource` 块，文本里只留字节数和块序号；URL 原样给出。
+
+`test/real-adapter.test.ts` 和 `test/real-<平台>.test.ts` 用真实适配器加注入的 fetch 断言 MCP 参数真的进了上游请求体；其余测试用假适配器，测不出字段名对不上。
 
 `src/tool-meta.ts` 只放跨平台通用的工具名约定（同名工具在各平台语义一致）。平台独有的工具在自己的 `tools.ts` 里写 `native` / `nature` / `group`，优先于通用约定，所以新增平台独有工具不需要改 `@modelbay/mcp`。
 

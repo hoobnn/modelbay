@@ -58,5 +58,6 @@
    - 只读查询写 `nature: 'query'`，破坏性操作写 `nature: 'mutate'`；
    - 默认不该暴露的（管理、实时、需要本地文件）写 `group`。
 3. 跨平台通用的工具名（`chat`、`generate_image`、`get_job`……）不用写这些字段，`packages/mcp/src/tool-meta.ts` 会按名字推断。新的通用约定才改那个文件。
+4. `inputSchema` 里的每个参数都要真的生效。通用换算（见 [MCP 工具生成](mcp.md)）覆盖不到的，写 `mapArguments` 换成适配器读的字段或 native 参数；做不到就不要写进目录。在 `packages/mcp/test/real-<平台>.test.ts` 里用真实适配器加注入 fetch 断言请求体。
 
 完整规则见 [MCP 工具生成](mcp.md)。
