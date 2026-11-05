@@ -1,6 +1,6 @@
 # 0002：命名、许可与命名空间
 
-- 状态：提议
+- 状态：已接受
 - 日期：2026-11-04
 
 ## 背景
@@ -18,7 +18,7 @@
   | 汇总入口   | `modelbay`                                                                                               |
   | 核心运行时 | `@modelbay/core`                                                                                         |
   | 平台适配器 | `@modelbay/ark`、`@modelbay/bailian`、`@modelbay/minimax`、`@modelbay/doubao-speech`、`@modelbay/openai` |
-  | MCP        | `@modelbay/mcp`，命令名 `modelbay-<平台>-mcp`                                                            |
+  | MCP        | `@modelbay/mcp`，命令名 `modelbay-mcp <平台>`                                                            |
   | CLI        | `@modelbay/cli`，命令名 `modelbay`                                                                       |
   | 仓库       | `github.com/ikuyu-labs/modelbay`                                                                         |
   | 文档站     | `modelbay.ikuyu.com`                                                                                     |
@@ -28,9 +28,9 @@
 ## 理由
 
 - 常见英文词几乎都被占了，比如 relay、prism、nexus、patchbay、conduit。2026-11-04 查询时，`modelbay` 在 npm 包名、npm 组织、GitHub、PyPI 上都是空的，也没搜到同名产品。
-- 不用 `ai` 做名字：plein 依赖 Vercel 的 `ai` 包，`from 'ai'` 和 `from '@ikuyu/ai'` 放在一起容易混淆；`ai` 这个名字也过于宽泛，跟实际范围不符。
+- 不用 `ai` 做名字：Vercel 的 `ai` 包很常用，`from 'ai'` 和 `from '@ikuyu/ai'` 放在一起容易混淆；`ai` 这个名字也过于宽泛，跟实际范围不符。
 - 产品用自己的 npm scope，总品牌靠组织和署名体现，做法跟 Vercel 和 `@ai-sdk` 的关系一样。
-- 用 MIT 不用 AGPL：plein（AGPL）可以依赖 MIT 库；反过来，MCP 和外部项目要是依赖 AGPL 代码就麻烦了。从 plein 迁出的代码，提交作者只有 hoobnn、以 Claude 署名的 AI 辅助提交，以及 dependabot（2 个提交，只改了 `packages/providers/package.json` 里的依赖版本）。以上在 2026-11-04 用 `git shortlog` 和 `git log --stat` 核实，可以改成 MIT 许可。
+- 用 MIT 不用 AGPL：任何许可的项目都能依赖 MIT 库；反过来，外部项目要是依赖 AGPL 代码就麻烦了。
 
 ## 代价与约束
 
@@ -40,4 +40,4 @@
 
 ## 未决事项
 
-- GitHub 仓库 `ikuyu-labs/modelbay` 还没建。目前只有本地仓库，等这三份 ADR 接受后再决定是否公开。
+- GitHub 仓库 `ikuyu-labs/modelbay` 还没建。目前只有本地仓库，什么时候公开由维护者决定。

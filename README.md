@@ -3,30 +3,29 @@
 One SDK for AI model platforms: chat, image, video, speech and music across
 Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech and OpenAI.
 
-Status: **in development**. Work is organised into milestones M1–M5 (see
-[`docs/goals.md`](docs/goals.md)); the completion status of each milestone is
-reported by the integrator's final report. Design decisions live in
+Status: **pre-release**, not yet published to npm (see
+[`docs/goals.md`](docs/goals.md)). Design decisions live in
 [`docs/decisions/`](docs/decisions/).
 
-Modelbay replaces two duplicated platform integrations — `hoobnn-mcps` (Python)
-and `plein/packages/providers` (TypeScript) — with a single TypeScript
-implementation. Model parameters, limits, defaults and lifecycle states are
+One TypeScript implementation serves the SDK, the MCP servers and the CLI.
+Model parameters, limits, defaults and lifecycle states are
 declared as data; the MCP tool schemas and UI forms are derived from those
 declarations, so an upstream change only needs one edit.
 
 ## Packages
 
-| Package                   | Role                                                                     |
-| ------------------------- | ------------------------------------------------------------------------ |
-| `modelbay`                | Aggregation entry: re-exports core + all adapters, `createModelbay()`    |
-| `@modelbay/core`          | Runtime-agnostic types, validation, model declarations, async job runner |
-| `@modelbay/ark`           | Volcengine Ark adapter (pay-as-you-go + plan channels)                   |
-| `@modelbay/bailian`       | Alibaba Bailian adapter                                                  |
-| `@modelbay/minimax`       | MiniMax adapter                                                          |
-| `@modelbay/doubao-speech` | Doubao Speech adapter                                                    |
-| `@modelbay/openai`        | OpenAI (+ OpenAI-compatible channel) adapter                             |
-| `@modelbay/mcp`           | MCP tool generator; commands `modelbay-<platform>-mcp`                   |
-| `@modelbay/cli`           | CLI, command name `modelbay`                                             |
+| Package                   | Role                                                                      |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `modelbay`                | Aggregation entry: platform registry, `createModelbay()`, `modelbay/node` |
+| `@modelbay/core`          | Runtime-agnostic types, validation, model declarations, async job runner  |
+| `@modelbay/ark`           | Volcengine Ark adapter (pay-as-you-go + plan channels)                    |
+| `@modelbay/bailian`       | Alibaba Bailian adapter                                                   |
+| `@modelbay/minimax`       | MiniMax adapter                                                           |
+| `@modelbay/doubao-speech` | Doubao Speech adapter                                                     |
+| `@modelbay/openai`        | OpenAI (+ OpenAI-compatible channel) adapter                              |
+| `@modelbay/mcp`           | MCP server generated from declarations; command `modelbay-mcp <platform>` |
+| `@modelbay/cli`           | CLI, command name `modelbay`                                              |
+| `@modelbay/shared`        | Internal helpers shared by the platform packages                          |
 
 `packages/*` are ESM-only, MIT licensed, and share one version number
 (changesets fixed group).
@@ -70,11 +69,13 @@ modelbay generate --capability image.generate --prompt "a cat" --model ark:douba
 
 ## Development
 
-`pnpm verify` runs the full check: dedupe, lint, typecheck, tests with coverage,
-declaration checks, build, and package/license/core-runtime checks. Releases are
-manual and maintainer-approved; see [`docs/migration.md`](docs/migration.md)
-and [`.github/workflows/release.yml`](.github/workflows/release.yml). Upstream
-documentation changes are audited by
-[`scripts/upstream-docs.mjs`](scripts/upstream-docs.mjs) on a daily schedule.
+`pnpm verify` runs the full check: dedupe, lint, typecheck, tests with
+per-package coverage, an offline check of every declaration's official source,
+build, and package/license/core-runtime checks. Adding a model, platform,
+capability or MCP tool is described in [`docs/extending.md`](docs/extending.md);
+conventions are in [`docs/engineering.md`](docs/engineering.md).
+
+Releases are manual and maintainer-approved. Upstream documentation changes are
+audited daily by [`scripts/upstream-docs.mjs`](scripts/upstream-docs.mjs).
 
 MIT © ikuyu

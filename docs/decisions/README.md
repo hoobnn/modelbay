@@ -10,8 +10,9 @@
 
 ## 目录
 
-| 编号                                                | 标题                             | 状态 |
-| --------------------------------------------------- | -------------------------------- | ---- |
-| [0001](0001-single-implementation-architecture.md)  | 四家平台只保留一份实现，四层架构 | 提议 |
-| [0002](0002-naming-license-and-namespaces.md)       | 命名、许可与命名空间             | 提议 |
-| [0003](0003-capabilities-and-model-declarations.md) | 能力划分与模型声明格式           | 提议 |
+| 编号                                                | 标题                                    | 状态   |
+| --------------------------------------------------- | --------------------------------------- | ------ |
+| [0001](0001-single-implementation-architecture.md)  | 一份实现覆盖多家平台，四层架构          | 已接受 |
+| [0002](0002-naming-license-and-namespaces.md)       | 命名、许可与命名空间                    | 已接受 |
+| [0003](0003-capabilities-and-model-declarations.md) | 能力划分与模型声明格式                  | 已接受 |
+| [0004](0004-platform-descriptors-and-registry.md)   | 平台自描述与单一注册表；声明不导出 JSON | 已接受 |
