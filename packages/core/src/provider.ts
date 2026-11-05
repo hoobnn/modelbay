@@ -279,6 +279,32 @@ export interface MediaRequirements {
 }
 
 /**
+ * 语音合成模型专属的约束与默认值。
+ *
+ * 这些都是模型数据（哪些音色能复刻、能用哪些语种、指令能写多长），写在声明里，
+ * 适配器只按声明判断，不在代码里维护型号清单。
+ */
+export interface SpeechLimits {
+  /** 自然语言指令的字符上限（汉字按 2 计）；不声明表示不限 */
+  instructionMaxLength?: number
+  /** 支持音色复刻（voice clone） */
+  voiceClone?: boolean
+  /** 支持音色设计（voice design） */
+  voiceDesign?: boolean
+  /**
+   * 复刻时 `language_hints` 可用的语种（ISO 639-1 代码）。
+   * 不声明表示该模型不支持 `language_hints`。
+   */
+  cloneLanguages?: string[]
+  /** 复刻支持音频预处理参数（`enable_preprocess` / `max_prompt_audio_length`） */
+  clonePreprocess?: boolean
+  /** 支持 `language=other`（官方只对部分模型开放其余语种） */
+  otherLanguage?: boolean
+  /** 不指定音色时使用的系统音色 */
+  defaultVoice?: string
+}
+
+/**
  * 模型对通用参数的约束。节点表单按它收窄选项、换模型时校正取值、提交前检查；
  * 没声明的项按节点自己的范围处理。
  */
@@ -355,6 +381,8 @@ export interface ModelLimits {
   speed?: { min: number; max: number } | false
   /** false 表示不支持自然语言语气指令，表单隐藏，宿主不传 */
   instruction?: boolean
+  /** 语音合成（audio.speech）模型专属的约束与默认值 */
+  speech?: SpeechLimits
   /** false 表示不支持调温，表单隐藏，宿主不传 */
   temperature?: false
   /** false 表示视频不能选择是否生成音频，表单隐藏，宿主不传 */

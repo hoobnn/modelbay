@@ -2,107 +2,59 @@
  * Bailian voice enrollment (clone / design / list / query), ported from the Python MCP
  * `ali_bailian_mcp/products.py`. Clone, design and list share one HTTP endpoint and one
  * `voice-enrollment` model; there is no WebSocket.
+ *
+ * 哪些模型能复刻、哪些能设计、能传哪些语种、能不能开音频预处理，
+ * 都从 `src/models/` 的声明读，代码里不再维护型号清单。
  */
-import { ProviderError, toBase64, type AssetRef } from '@modelbay/core'
-import type { AdapterContext } from '@modelbay/core'
+import { ProviderError, toBase64, selectDefaultModel, type AssetRef } from '@modelbay/core'
+import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
 import { asJson, arr, requestJson, type Json } from './http'
 
 export const CUSTOMIZATION = '/api/v1/services/audio/tts/customization'
 export const ENROLLMENT = 'voice-enrollment'
-export const DEFAULT_VOICE_TARGET = 'qwen-audio-3.0-tts-flash'
 
-export const CLONE_TARGETS = [
-  'qwen-audio-3.1-tts-plus',
-  'qwen-audio-3.0-tts-plus',
-  'qwen-audio-3.1-tts-flash',
-  'qwen-audio-3.0-tts-flash',
-  'cosyvoice-v3.5-plus',
-  'cosyvoice-v3.5-flash',
-  'cosyvoice-v3-plus',
-  'cosyvoice-v3-flash',
-  'cosyvoice-v2',
-] as const
+/** 声音复刻/设计的目标模型信息，全部来自声明。 */
+export interface VoiceTargets {
+  /** 支持声音复刻的模型 ID */
+  clone: string[]
+  /** 支持声音设计的模型 ID */
+  design: string[]
+  /** 每个模型 `language_hints` 支持的语种；没有这一项表示该模型不支持 language_hints */
+  languages: Record<string, string[]>
+  /** 每个模型是否支持 `enable_preprocess` / `max_prompt_audio_length` */
+  preprocess: Record<string, boolean>
+  /** 复刻与设计的默认目标模型 */
+  defaultTarget: string
+}
 
-/** cosyvoice-v2 does not support voice design. */
-export const DESIGN_TARGETS: readonly string[] = CLONE_TARGETS.slice(0, -1)
-
-export const CLONE_LANGUAGES: Record<string, readonly string[]> = {
-  'qwen-audio-3.1-tts-plus': [
-    'zh',
-    'en',
-    'fr',
-    'de',
-    'ja',
-    'ko',
-    'ru',
-    'pt',
-    'th',
-    'id',
-    'vi',
-    'it',
-    'es',
-    'ms',
-    'fil',
-    'ar',
-  ],
-  'qwen-audio-3.1-tts-flash': [
-    'zh',
-    'en',
-    'fr',
-    'de',
-    'ja',
-    'ko',
-    'ru',
-    'pt',
-    'th',
-    'id',
-    'vi',
-    'it',
-    'es',
-    'ms',
-    'fil',
-    'ar',
-  ],
-  'qwen-audio-3.0-tts-plus': [
-    'zh',
-    'en',
-    'fr',
-    'de',
-    'ja',
-    'ko',
-    'ru',
-    'pt',
-    'th',
-    'id',
-    'vi',
-    'it',
-    'es',
-    'ms',
-    'fil',
-    'ar',
-  ],
-  'qwen-audio-3.0-tts-flash': [
-    'zh',
-    'en',
-    'fr',
-    'de',
-    'ja',
-    'ko',
-    'ru',
-    'pt',
-    'th',
-    'id',
-    'vi',
-    'it',
-    'es',
-    'ms',
-    'fil',
-    'ar',
-  ],
-  'cosyvoice-v3-plus': ['zh', 'en', 'fr', 'de', 'ja', 'ko', 'ru'],
-  'cosyvoice-v3.5-plus': ['zh', 'en', 'fr', 'de', 'ja', 'ko', 'ru', 'pt', 'th', 'id', 'vi'],
-  'cosyvoice-v3.5-flash': ['zh', 'en', 'fr', 'de', 'ja', 'ko', 'ru', 'pt', 'th', 'id', 'vi'],
-  'cosyvoice-v3-flash': ['zh', 'en', 'fr', 'de', 'ja', 'ko', 'ru', 'pt', 'th', 'id', 'vi'],
+/**
+ * 从声明里读出复刻/设计的目标模型清单。
+ *
+ * - 能不能复刻/设计：声明的 `limits.speech.voiceClone` / `voiceDesign`；
+ * - `language_hints` 的语种：`limits.speech.cloneLanguages`；
+ * - 音频预处理参数：`limits.speech.clonePreprocess`；
+ * - 默认目标模型：core 选出的默认 audio.speech 模型（要支持复刻）。
+ */
+export function voiceTargets(declarations: readonly ModelDeclaration[]): VoiceTargets {
+  const clone: string[] = []
+  const design: string[] = []
+  const languages: Record<string, string[]> = {}
+  const preprocess: Record<string, boolean> = {}
+  for (const declaration of declarations) {
+    const speech = declaration.limits?.speech
+    if (!speech) continue
+    const id = declaration.channels[0]?.id ?? declaration.id
+    if (speech.voiceClone) {
+      clone.push(id)
+      preprocess[id] = speech.clonePreprocess === true
+      if (speech.cloneLanguages) languages[id] = [...speech.cloneLanguages]
+    }
+    if (speech.voiceDesign) design.push(id)
+  }
+  const preferred = selectDefaultModel(declarations, 'audio.speech')
+  const defaultTarget =
+    preferred && clone.includes(preferred.channel.id) ? preferred.channel.id : (clone[0] ?? '')
+  return { clone, design, languages, preprocess, defaultTarget }
 }
 
 export const VOICE_KINDS = ['enrollment', 'cosyvoice', 'clone', 'design'] as const
@@ -126,14 +78,14 @@ export function checkPrefix(prefix: string): string | null {
   return /^[A-Za-z0-9]{1,10}$/.test(prefix) ? null : 'prefix must be 1-10 alphanumeric characters'
 }
 
-export function checkCloneTarget(target: string): string | null {
-  return (CLONE_TARGETS as readonly string[]).includes(target)
+export function checkCloneTarget(target: string, targets: VoiceTargets): string | null {
+  return targets.clone.includes(target)
     ? null
     : 'target_model must be an HTTP TTS model that supports voice cloning'
 }
 
-export function checkDesignTarget(target: string): string | null {
-  return DESIGN_TARGETS.includes(target)
+export function checkDesignTarget(target: string, targets: VoiceTargets): string | null {
+  return targets.design.includes(target)
     ? null
     : 'target_model must be an HTTP TTS model that supports voice design'
 }
@@ -198,24 +150,23 @@ export interface DesignOptions {
 }
 
 /** Build the enrollment `create_voice` request for voice cloning. */
-export function buildCloneRequest(opts: CloneOptions, audio: string): Json {
-  const target = opts.targetModel ?? DEFAULT_VOICE_TARGET
+export function buildCloneRequest(opts: CloneOptions, audio: string, targets: VoiceTargets): Json {
+  const target = opts.targetModel ?? targets.defaultTarget
   const prefix = opts.prefix ?? 'custom'
-  const targetProblem = checkCloneTarget(target)
+  const targetProblem = checkCloneTarget(target, targets)
   if (targetProblem) throw new ProviderError('invalid_input', targetProblem)
   const prefixProblem = checkPrefix(prefix)
   if (prefixProblem) throw new ProviderError('invalid_input', prefixProblem)
-  const advanced = CLONE_LANGUAGES[target] !== undefined
+  const allowed = targets.languages[target]
   if (opts.language !== undefined) {
-    const allowed = CLONE_LANGUAGES[target]
-    if (!advanced || !allowed?.includes(opts.language))
+    if (!allowed || !allowed.includes(opts.language))
       throw new ProviderError(
         'invalid_input',
         `${target} does not support language=${opts.language}`,
       )
   }
   if (opts.enablePreprocess !== undefined || opts.maxPromptAudioLength !== undefined) {
-    if (!advanced || target === 'cosyvoice-v3-plus')
+    if (!targets.preprocess[target])
       throw new ProviderError(
         'invalid_input',
         `${target} does not support preprocess/length options`,
@@ -240,12 +191,12 @@ export function buildCloneRequest(opts: CloneOptions, audio: string): Json {
 }
 
 /** Build the enrollment `create_voice` request for voice design (with preview audio). */
-export function buildDesignRequest(opts: DesignOptions): Json {
+export function buildDesignRequest(opts: DesignOptions, targets: VoiceTargets): Json {
   const prompt = (opts.voicePrompt ?? '').trim()
   const preview = (opts.previewText ?? '').trim()
   if (!prompt || prompt.length > 500 || preview.length < 15 || preview.length > 200)
     throw new ProviderError('invalid_input', 'voice_prompt 1-500 chars, preview_text 15-200 chars')
-  const targetProblem = checkDesignTarget(opts.targetModel)
+  const targetProblem = checkDesignTarget(opts.targetModel, targets)
   if (targetProblem) throw new ProviderError('invalid_input', targetProblem)
   const prefix = opts.prefix ?? 'custom'
   const prefixProblem = checkPrefix(prefix)
@@ -338,11 +289,17 @@ export function parseVoiceResult(data: Json): VoiceResult {
   }
 }
 
-export async function cloneVoice(ctx: AdapterContext, opts: CloneOptions): Promise<VoiceResult> {
+export async function cloneVoice(
+  ctx: AdapterContext,
+  opts: CloneOptions,
+  targets: VoiceTargets,
+): Promise<VoiceResult> {
   const audio = await cloneAudio(opts.audio, ctx)
-  const body = buildCloneRequest(opts, audio)
+  const body = buildCloneRequest(opts, audio, targets)
   const data = await requestJson(ctx, CUSTOMIZATION, body)
   const result = parseVoiceResult(data)
+  const target = opts.targetModel ?? targets.defaultTarget
+  if (!result.targetModel) result.targetModel = target
   if (!result.voiceId)
     throw new ProviderError(
       'unknown',
@@ -351,10 +308,15 @@ export async function cloneVoice(ctx: AdapterContext, opts: CloneOptions): Promi
   return result
 }
 
-export async function designVoice(ctx: AdapterContext, opts: DesignOptions): Promise<VoiceResult> {
-  const body = buildDesignRequest(opts)
+export async function designVoice(
+  ctx: AdapterContext,
+  opts: DesignOptions,
+  targets: VoiceTargets,
+): Promise<VoiceResult> {
+  const body = buildDesignRequest(opts, targets)
   const data = await requestJson(ctx, CUSTOMIZATION, body)
   const result = parseVoiceResult(data)
+  if (!result.targetModel) result.targetModel = opts.targetModel
   if (!result.voiceId)
     throw new ProviderError(
       'unknown',

@@ -6,24 +6,24 @@ import {
   buildGetVoiceRequest,
   buildListVoicesRequest,
   CLONE_AUDIO_LIMIT,
-  CLONE_LANGUAGES,
-  CLONE_TARGETS,
   cloneAudio,
   cloneVoice,
   CUSTOMIZATION,
-  DEFAULT_VOICE_TARGET,
-  DESIGN_TARGETS,
   designVoice,
   ENROLLMENT,
   getVoice,
   listVoices,
   parseVoiceResult,
+  voiceTargets,
   VOICE_KINDS,
   checkCloneTarget,
   checkDesignTarget,
   checkPrefix,
 } from '../src/voice'
+import { all } from '../src/models/index'
 import { fakeContext, fixture } from './helpers'
+
+const targets = voiceTargets(all)
 
 describe('validation helpers', () => {
   it('checkPrefix', () => {
@@ -31,15 +31,25 @@ describe('validation helpers', () => {
     expect(checkPrefix('a'.repeat(11))).toMatch(/1-10/)
     expect(checkPrefix('bad-prefix')).toMatch(/alphanumeric/)
   })
-  it('clone / design targets', () => {
-    expect(checkCloneTarget(DEFAULT_VOICE_TARGET)).toBeNull()
-    expect(checkCloneTarget('nope')).toMatch(/cloning/)
-    expect(DESIGN_TARGETS).not.toContain('cosyvoice-v2')
-    expect(CLONE_TARGETS).toContain('cosyvoice-v2')
-    expect(checkDesignTarget('cosyvoice-v2')).toMatch(/design/)
-    expect(checkDesignTarget('qwen-audio-3.1-tts-flash')).toBeNull()
+  it('clone / design targets 全部来自声明', () => {
+    expect(targets.defaultTarget).toBe('qwen-audio-3.1-tts-flash')
+    expect(checkCloneTarget(targets.defaultTarget, targets)).toBeNull()
+    expect(checkCloneTarget('nope', targets)).toMatch(/cloning/)
+    expect(targets.design).not.toContain('cosyvoice-v2')
+    expect(targets.clone).toContain('cosyvoice-v2')
+    expect(checkDesignTarget('cosyvoice-v2', targets)).toMatch(/design/)
+    expect(checkDesignTarget('qwen-audio-3.1-tts-flash', targets)).toBeNull()
     expect(VOICE_KINDS).toContain('cosyvoice')
-    expect(CLONE_LANGUAGES['qwen-audio-3.1-tts-flash']).toContain('zh')
+    expect(targets.languages['qwen-audio-3.1-tts-flash']).toContain('zh')
+  })
+  it('language_hints 与预处理参数的适用范围按官方文档区分', () => {
+    // cosyvoice-v2 不支持 language_hints，也不支持音频预处理参数。
+    expect(targets.languages['cosyvoice-v2']).toBeUndefined()
+    expect(targets.preprocess['cosyvoice-v2']).toBe(false)
+    // cosyvoice-v3-plus 支持 language_hints，但不支持音频预处理参数。
+    expect(targets.languages['cosyvoice-v3-plus']).toContain('zh')
+    expect(targets.preprocess['cosyvoice-v3-plus']).toBe(false)
+    expect(targets.preprocess['qwen-audio-3.1-tts-flash']).toBe(true)
   })
 })
 
@@ -91,42 +101,50 @@ describe('request builders', () => {
         language: 'zh',
       },
       'https://example.com/sample.wav',
+      targets,
     )
     expect(body).toEqual(f.request.body)
   })
   it('buildCloneRequest validates target/prefix/language/advanced options', () => {
     const base = { audio: 'https://x', targetModel: 'qwen-audio-3.1-tts-flash' }
-    expect(() => buildCloneRequest({ ...base, targetModel: 'nope' }, 'https://x')).toThrow(
+    expect(() => buildCloneRequest({ ...base, targetModel: 'nope' }, 'https://x', targets)).toThrow(
       ProviderError,
     )
-    expect(() => buildCloneRequest({ ...base, prefix: 'bad-prefix' }, 'https://x')).toThrow(
+    expect(() =>
+      buildCloneRequest({ ...base, prefix: 'bad-prefix' }, 'https://x', targets),
+    ).toThrow(ProviderError)
+    expect(() => buildCloneRequest({ ...base, language: 'xx' }, 'https://x', targets)).toThrow(
       ProviderError,
     )
-    expect(() => buildCloneRequest({ ...base, language: 'xx' }, 'https://x')).toThrow(ProviderError)
-    expect(() => buildCloneRequest({ ...base, maxPromptAudioLength: 40 }, 'https://x')).toThrow(
-      ProviderError,
-    )
+    expect(() =>
+      buildCloneRequest({ ...base, maxPromptAudioLength: 40 }, 'https://x', targets),
+    ).toThrow(ProviderError)
     expect(() =>
       buildCloneRequest(
         { audio: 'https://x', targetModel: 'cosyvoice-v2', language: 'zh' },
         'https://x',
+        targets,
       ),
     ).toThrow(ProviderError)
     const body = buildCloneRequest(
       { ...base, enablePreprocess: true, maxPromptAudioLength: 10 },
       'https://x',
+      targets,
     )
     expect((body.input as Record<string, unknown>).enable_preprocess).toBe(true)
     expect((body.input as Record<string, unknown>).max_prompt_audio_length).toBe(10)
   })
   it('buildDesignRequest matches the recorded enrollment body', () => {
     const f = fixture('voice-design')
-    const body = buildDesignRequest({
-      voicePrompt: '三十岁左右的男声，低沉温和',
-      previewText: '你好，欢迎收听今天的节目，我是主持人。',
-      targetModel: 'qwen-audio-3.1-tts-flash',
-      prefix: 'custom',
-    })
+    const body = buildDesignRequest(
+      {
+        voicePrompt: '三十岁左右的男声，低沉温和',
+        previewText: '你好，欢迎收听今天的节目，我是主持人。',
+        targetModel: 'qwen-audio-3.1-tts-flash',
+        prefix: 'custom',
+      },
+      targets,
+    )
     expect(body).toEqual(f.request.body)
   })
   it('buildDesignRequest validates prompt/preview/target/language/format', () => {
@@ -135,14 +153,20 @@ describe('request builders', () => {
       previewText: 'abcdefghijklmnop',
       targetModel: 'qwen-audio-3.1-tts-flash',
     }
-    expect(() => buildDesignRequest({ ...base, previewText: 'short' })).toThrow(ProviderError)
-    expect(() => buildDesignRequest({ ...base, voicePrompt: '' })).toThrow(ProviderError)
-    expect(() => buildDesignRequest({ ...base, targetModel: 'cosyvoice-v2' })).toThrow(
+    expect(() => buildDesignRequest({ ...base, previewText: 'short' }, targets)).toThrow(
       ProviderError,
     )
-    expect(() => buildDesignRequest({ ...base, language: 'ja' as 'zh' })).toThrow(ProviderError)
-    expect(() => buildDesignRequest({ ...base, sampleRate: 8000 as 24000 })).toThrow(ProviderError)
-    expect(() => buildDesignRequest({ ...base, responseFormat: 'flac' as 'wav' })).toThrow(
+    expect(() => buildDesignRequest({ ...base, voicePrompt: '' }, targets)).toThrow(ProviderError)
+    expect(() => buildDesignRequest({ ...base, targetModel: 'cosyvoice-v2' }, targets)).toThrow(
+      ProviderError,
+    )
+    expect(() => buildDesignRequest({ ...base, language: 'ja' as 'zh' }, targets)).toThrow(
+      ProviderError,
+    )
+    expect(() => buildDesignRequest({ ...base, sampleRate: 8000 as 24000 }, targets)).toThrow(
+      ProviderError,
+    )
+    expect(() => buildDesignRequest({ ...base, responseFormat: 'flac' as 'wav' }, targets)).toThrow(
       ProviderError,
     )
   })
@@ -171,12 +195,16 @@ describe('enrollment calls (recorded fixtures)', () => {
   it('cloneVoice posts to CUSTOMIZATION and parses the result', async () => {
     const f = fixture('voice-clone')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await cloneVoice(ctx, {
-      audio: 'https://example.com/sample.wav',
-      targetModel: 'qwen-audio-3.0-tts-flash',
-      prefix: 'custom',
-      language: 'zh',
-    })
+    const result = await cloneVoice(
+      ctx,
+      {
+        audio: 'https://example.com/sample.wav',
+        targetModel: 'qwen-audio-3.0-tts-flash',
+        prefix: 'custom',
+        language: 'zh',
+      },
+      targets,
+    )
     expect(CUSTOMIZATION).toBe('/api/v1/services/audio/tts/customization')
     expect(ENROLLMENT).toBe('voice-enrollment')
     expect(calls()[0]?.url).toBe(f.request.url)
@@ -185,28 +213,38 @@ describe('enrollment calls (recorded fixtures)', () => {
   })
   it('cloneVoice refuses a response without a voice id', async () => {
     const { ctx } = fakeContext([{ output: {} }])
-    await expect(cloneVoice(ctx, { audio: 'https://x' })).rejects.toMatchObject({ code: 'unknown' })
+    await expect(cloneVoice(ctx, { audio: 'https://x' }, targets)).rejects.toMatchObject({
+      code: 'unknown',
+    })
   })
   it('designVoice posts the design body', async () => {
     const f = fixture('voice-design')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await designVoice(ctx, {
-      voicePrompt: '三十岁左右的男声，低沉温和',
-      previewText: '你好，欢迎收听今天的节目，我是主持人。',
-      targetModel: 'qwen-audio-3.1-tts-flash',
-      prefix: 'custom',
-    })
+    const result = await designVoice(
+      ctx,
+      {
+        voicePrompt: '三十岁左右的男声，低沉温和',
+        previewText: '你好，欢迎收听今天的节目，我是主持人。',
+        targetModel: 'qwen-audio-3.1-tts-flash',
+        prefix: 'custom',
+      },
+      targets,
+    )
     expect(calls()[0]?.body).toEqual(f.request.body)
     expect(result.previewData).toBe('AAEC')
   })
   it('designVoice refuses a response without a voice id', async () => {
     const { ctx } = fakeContext([{ output: {} }])
     await expect(
-      designVoice(ctx, {
-        voicePrompt: '描述',
-        previewText: 'abcdefghijklmnop',
-        targetModel: 'qwen-audio-3.1-tts-flash',
-      }),
+      designVoice(
+        ctx,
+        {
+          voicePrompt: '描述',
+          previewText: 'abcdefghijklmnop',
+          targetModel: 'qwen-audio-3.1-tts-flash',
+        },
+        targets,
+      ),
     ).rejects.toMatchObject({ code: 'unknown' })
   })
   it('listVoices and getVoice parse their fixtures', async () => {
@@ -221,5 +259,33 @@ describe('enrollment calls (recorded fixtures)', () => {
     expect(q.calls()[0]?.body).toEqual(qf.request.body)
     expect(got.voiceId).toBe('v1')
     expect(got.status).toBe('OK')
+  })
+})
+
+// ── 以下用例移植自 hoobnn-mcps 的 tests/test_official_contracts.py ──────────
+
+describe('移植：clone_voice_uses_voice_enrollment_create_voice', () => {
+  it('复刻走 voice-enrollment 的 create_voice，默认目标是声明里的默认模型', async () => {
+    const { ctx, calls } = fakeContext([
+      { output: { voice_id: 'qwen-audio-3.1-tts-flash-me-1' }, usage: { count: 1 } },
+    ])
+    const result = await cloneVoice(
+      ctx,
+      { audio: 'https://example.test/a.wav', prefix: 'me', language: 'zh' },
+      targets,
+    )
+    expect(calls()[0]?.url).toContain(CUSTOMIZATION)
+    expect(calls()[0]?.body).toEqual({
+      model: ENROLLMENT,
+      input: {
+        action: 'create_voice',
+        target_model: 'qwen-audio-3.1-tts-flash',
+        prefix: 'me',
+        audio: 'https://example.test/a.wav',
+        language_hints: ['zh'],
+      },
+    })
+    expect(result.voiceId).toBe('qwen-audio-3.1-tts-flash-me-1')
+    expect(result.targetModel).toBe('qwen-audio-3.1-tts-flash')
   })
 })

@@ -3,9 +3,10 @@
  *
  * Native capabilities are platform-specific, so the adapter declares each op's JSON
  * Schema itself (see `nativeOperationSchemas`) instead of deriving it from a declaration.
+ * 与模型有关的取值（可用的 TTS 模型、复刻/设计的目标模型）从声明派生。
  */
 import { ProviderError } from '@modelbay/core'
-import type { AdapterContext } from '@modelbay/core'
+import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
 import { asJson, arr, requestJson, type Json } from './http'
 import { ASR_MODEL, buildAsrRequest, parseAsrResponse, resolveAudio } from './asr'
 import {
@@ -15,10 +16,17 @@ import {
   buildListVoicesRequest,
   cloneAudio,
   parseVoiceResult,
-  CLONE_TARGETS,
-  DESIGN_TARGETS,
+  voiceTargets,
 } from './voice'
-import { checkTts, parseTtsResponse, resolveTtsModel, ttsRequest, TTS_CHUNK } from './tts'
+import {
+  checkTts,
+  defaultVoiceFor,
+  parseTtsResponse,
+  resolveTtsModel,
+  ttsModels,
+  ttsRequest,
+  TTS_CHUNK,
+} from './tts'
 
 export const RERANK_PATH = '/api/v1/services/rerank/text-rerank/text-rerank'
 export const EMBED_TEXT_PATH = '/compatible-mode/v1/embeddings'
@@ -39,112 +47,123 @@ export const BAILIAN_NATIVE_OPERATIONS = [
   'raw-request',
 ] as const
 
-/** Parameter JSON Schemas, declared by the adapter (used by the MCP generator). */
-export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
-  rerank: {
-    type: 'object',
-    required: ['query', 'documents'],
-    properties: {
-      model: { type: 'string', default: 'qwen3-rerank' },
-      query: { type: 'string' },
-      documents: { type: 'array', items: { type: 'string' } },
-      top_n: { type: 'integer' },
-      return_documents: { type: 'boolean' },
+/**
+ * Parameter JSON Schemas, declared by the adapter (used by the MCP generator).
+ *
+ * 与模型有关的部分（可用的 TTS 模型 ID、复刻/设计的目标模型）从声明派生，
+ * 改声明就跟着变。
+ */
+export function nativeOperationSchemas(
+  models: readonly ModelDeclaration[],
+): Record<string, Record<string, unknown>> {
+  const tts = ttsModels(models)
+  const targets = voiceTargets(models)
+  return {
+    rerank: {
+      type: 'object',
+      required: ['query', 'documents'],
+      properties: {
+        model: { type: 'string', default: 'qwen3-rerank' },
+        query: { type: 'string' },
+        documents: { type: 'array', items: { type: 'string' } },
+        top_n: { type: 'integer' },
+        return_documents: { type: 'boolean' },
+      },
     },
-  },
-  'text-embed': {
-    type: 'object',
-    properties: {
-      model: { type: 'string', default: 'text-embedding-v4' },
-      texts: { type: 'array', items: { type: 'string' } },
-      contents: { type: 'array', items: { type: 'object' } },
-      dimensions: { type: 'integer' },
-      parameters: { type: 'object' },
+    'text-embed': {
+      type: 'object',
+      properties: {
+        model: { type: 'string', default: 'text-embedding-v4' },
+        texts: { type: 'array', items: { type: 'string' } },
+        contents: { type: 'array', items: { type: 'object' } },
+        dimensions: { type: 'integer' },
+        parameters: { type: 'object' },
+      },
     },
-  },
-  'qwen-audio-tts': {
-    type: 'object',
-    required: ['text', 'voice'],
-    properties: {
-      model: { type: 'string' },
-      text: { type: 'string', maxLength: TTS_CHUNK },
-      voice: { type: 'string' },
-      instructions: { type: 'string' },
-      language: { type: 'string' },
-      parameters: { type: 'object' },
+    'qwen-audio-tts': {
+      type: 'object',
+      required: ['text', 'voice'],
+      properties: {
+        model: { type: 'string', enum: tts.map((item) => item.id) },
+        text: { type: 'string', maxLength: TTS_CHUNK },
+        voice: { type: 'string' },
+        instructions: { type: 'string' },
+        language: { type: 'string' },
+        parameters: { type: 'object' },
+      },
     },
-  },
-  asr: {
-    type: 'object',
-    required: ['audio'],
-    properties: {
-      audio: { type: 'string', description: 'Public URL or data URI' },
-      model: { type: 'string', default: ASR_MODEL },
-      context: { type: 'string' },
-      language: { type: 'string' },
-      itn: { type: 'boolean' },
-      parameters: { type: 'object' },
+    asr: {
+      type: 'object',
+      required: ['audio'],
+      properties: {
+        audio: { type: 'string', description: 'Public URL or data URI' },
+        model: { type: 'string', default: ASR_MODEL },
+        context: { type: 'string' },
+        language: { type: 'string' },
+        itn: { type: 'boolean' },
+        parameters: { type: 'object' },
+      },
     },
-  },
-  'voice-clone': {
-    type: 'object',
-    required: ['audio'],
-    properties: {
-      audio: { type: 'string' },
-      target_model: { type: 'string', enum: CLONE_TARGETS },
-      prefix: { type: 'string' },
-      language: { type: 'string' },
-      enable_preprocess: { type: 'boolean' },
-      max_prompt_audio_length: { type: 'number' },
+    'voice-clone': {
+      type: 'object',
+      required: ['audio'],
+      properties: {
+        audio: { type: 'string' },
+        target_model: { type: 'string', enum: targets.clone },
+        prefix: { type: 'string' },
+        language: { type: 'string' },
+        enable_preprocess: { type: 'boolean' },
+        max_prompt_audio_length: { type: 'number' },
+      },
     },
-  },
-  'voice-design': {
-    type: 'object',
-    required: ['voice_prompt', 'preview_text'],
-    properties: {
-      voice_prompt: { type: 'string' },
-      preview_text: { type: 'string' },
-      target_model: { type: 'string', enum: DESIGN_TARGETS },
-      prefix: { type: 'string' },
-      language: { type: 'string', enum: ['zh', 'en'] },
-      sample_rate: { type: 'integer', enum: [16000, 24000, 48000] },
-      response_format: { type: 'string', enum: ['pcm', 'wav', 'mp3'] },
+    'voice-design': {
+      type: 'object',
+      required: ['voice_prompt', 'preview_text'],
+      properties: {
+        voice_prompt: { type: 'string' },
+        preview_text: { type: 'string' },
+        target_model: { type: 'string', enum: targets.design },
+        prefix: { type: 'string' },
+        language: { type: 'string', enum: ['zh', 'en'] },
+        sample_rate: { type: 'integer', enum: [16000, 24000, 48000] },
+        response_format: { type: 'string', enum: ['pcm', 'wav', 'mp3'] },
+      },
     },
-  },
-  'voice-list': {
-    type: 'object',
-    properties: {
-      kind: { type: 'string', enum: ['enrollment', 'cosyvoice', 'clone', 'design'] },
-      page_index: { type: 'integer' },
-      page_size: { type: 'integer' },
-      prefix: { type: 'string' },
+    'voice-list': {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['enrollment', 'cosyvoice', 'clone', 'design'] },
+        page_index: { type: 'integer' },
+        page_size: { type: 'integer' },
+        prefix: { type: 'string' },
+      },
     },
-  },
-  'voice-query': {
-    type: 'object',
-    required: ['voice_id'],
-    properties: { voice_id: { type: 'string' }, kind: { type: 'string' } },
-  },
-  'digital-human-lipsync': {
-    type: 'object',
-    required: ['image_url', 'audio_url'],
-    properties: {
-      image_url: { type: 'string' },
-      audio_url: { type: 'string' },
-      resolution: { type: 'string', enum: ['480P', '720P'] },
-      parameters: { type: 'object' },
+    'voice-query': {
+      type: 'object',
+      required: ['voice_id'],
+      properties: { voice_id: { type: 'string' }, kind: { type: 'string' } },
     },
-  },
-  'raw-request': {
-    type: 'object',
-    required: ['path'],
-    properties: {
-      path: { type: 'string' },
-      method: { type: 'string', enum: ['GET', 'POST', 'DELETE'] },
-      body: { type: 'object' },
-      async_task: { type: 'boolean' },
+    'digital-human-lipsync': {
+      type: 'object',
+      required: ['image_url', 'audio_url'],
+      properties: {
+        image_url: { type: 'string' },
+        audio_url: { type: 'string' },
+        resolution: { type: 'string', enum: ['480P', '720P'] },
+        parameters: { type: 'object' },
+      },
     },
-  },
+    'raw-request': {
+      type: 'object',
+      required: ['path'],
+      properties: {
+        path: { type: 'string' },
+        method: { type: 'string', enum: ['GET', 'POST', 'DELETE'] },
+        body: { type: 'object' },
+        async_task: { type: 'boolean' },
+      },
+    },
+  }
 }
 
 function asString(value: unknown, fallback = ''): string {
@@ -250,26 +269,36 @@ export async function runBailianNative(
   op: string,
   params: Record<string, unknown>,
   ctx: AdapterContext,
+  models: readonly ModelDeclaration[],
 ): Promise<unknown> {
   const p = asJson(params)
+  const tts = ttsModels(models)
+  const targets = voiceTargets(models)
   switch (op) {
     case 'rerank':
       return rerank(p, ctx)
     case 'text-embed':
       return textEmbed(p, ctx)
     case 'qwen-audio-tts': {
-      const model = resolveTtsModel(asString(p.model) || undefined, asString(p.voice) || undefined)
+      const model = resolveTtsModel(tts, {
+        model: asString(p.model) || undefined,
+        voice: asString(p.voice) || undefined,
+        language: asString(p.language) || undefined,
+        parameters: asRecord(p.parameters),
+      })
       const text = asString(p.text)
+      const voice =
+        asString(p.voice) || defaultVoiceFor(tts, model, Boolean(asString(p.model))) || undefined
       const opts = {
         text,
-        voice: asString(p.voice) || undefined,
+        voice,
         instructions: asString(p.instructions) || undefined,
         language: asString(p.language) || undefined,
         parameters: asRecord(p.parameters),
       }
-      const problem = checkTts(model, opts, 'url')
+      const problem = checkTts(model, opts, tts, 'url')
       if (problem) throw new ProviderError('invalid_input', problem)
-      const { path, body } = ttsRequest(model, opts, text)
+      const { path, body } = ttsRequest(model, opts, text, tts)
       return parseTtsResponse(await requestJson(ctx, path, body))
     }
     case 'asr': {
@@ -301,6 +330,7 @@ export async function runBailianNative(
             typeof p.max_prompt_audio_length === 'number' ? p.max_prompt_audio_length : undefined,
         },
         audio,
+        targets,
       )
       const result = parseVoiceResult(
         await requestJson(ctx, '/api/v1/services/audio/tts/customization', body),
@@ -313,19 +343,22 @@ export async function runBailianNative(
       return result
     }
     case 'voice-design': {
-      const body = buildDesignRequest({
-        voicePrompt: asString(p.voice_prompt),
-        previewText: asString(p.preview_text),
-        targetModel: asString(p.target_model),
-        prefix: asString(p.prefix) || undefined,
-        language: (asString(p.language) || undefined) as 'zh' | 'en' | undefined,
-        sampleRate: [16000, 24000, 48000].includes(p.sample_rate as number)
-          ? (p.sample_rate as 16000 | 24000 | 48000)
-          : undefined,
-        responseFormat: ['pcm', 'wav', 'mp3'].includes(asString(p.response_format))
-          ? (p.response_format as 'pcm' | 'wav' | 'mp3')
-          : undefined,
-      })
+      const body = buildDesignRequest(
+        {
+          voicePrompt: asString(p.voice_prompt),
+          previewText: asString(p.preview_text),
+          targetModel: asString(p.target_model),
+          prefix: asString(p.prefix) || undefined,
+          language: (asString(p.language) || undefined) as 'zh' | 'en' | undefined,
+          sampleRate: [16000, 24000, 48000].includes(p.sample_rate as number)
+            ? (p.sample_rate as 16000 | 24000 | 48000)
+            : undefined,
+          responseFormat: ['pcm', 'wav', 'mp3'].includes(asString(p.response_format))
+            ? (p.response_format as 'pcm' | 'wav' | 'mp3')
+            : undefined,
+        },
+        targets,
+      )
       const result = parseVoiceResult(
         await requestJson(ctx, '/api/v1/services/audio/tts/customization', body),
       )

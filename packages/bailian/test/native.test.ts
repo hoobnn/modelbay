@@ -10,14 +10,16 @@ import {
   textEmbed,
 } from '../src/native'
 import { fakeContext, fixture } from './helpers'
+import { all } from '../src/models/index'
+
+const models = all
 
 describe('native operation declarations', () => {
   it('declares a schema for every exposed operation', () => {
-    expect(Object.keys(nativeOperationSchemas).sort()).toEqual(
-      [...BAILIAN_NATIVE_OPERATIONS].sort(),
-    )
-    expect(nativeOperationSchemas.rerank?.required).toContain('query')
-    expect(nativeOperationSchemas['text-embed']?.type).toBe('object')
+    const schemas = nativeOperationSchemas(models)
+    expect(Object.keys(schemas).sort()).toEqual([...BAILIAN_NATIVE_OPERATIONS].sort())
+    expect(schemas.rerank?.required).toContain('query')
+    expect(schemas['text-embed']?.type).toBe('object')
   })
 })
 
@@ -127,6 +129,7 @@ describe('runBailianNative dispatch (the four ported Python capabilities)', () =
         language: 'zh',
       },
       ctx,
+      models,
     )
     expect(calls()[0]?.url).toBe(f.request.url)
     expect(calls()[0]?.body).toEqual(f.request.body)
@@ -139,6 +142,7 @@ describe('runBailianNative dispatch (the four ported Python capabilities)', () =
       'asr',
       { audio: 'https://example.com/a.wav', context: '会议录音', language: 'zh', itn: true },
       ctx,
+      models,
     )
     expect(calls()[0]?.body).toEqual(f.request.body)
     expect((result as { text: string }).text).toBe('今天讨论模型迁移。')
@@ -155,6 +159,7 @@ describe('runBailianNative dispatch (the four ported Python capabilities)', () =
         language: 'zh',
       },
       ctx,
+      models,
     )
     expect(calls()[0]?.body).toEqual(f.request.body)
     expect((result as { voiceId: string }).voiceId).toContain('custom')
@@ -171,27 +176,33 @@ describe('runBailianNative dispatch (the four ported Python capabilities)', () =
         prefix: 'custom',
       },
       ctx,
+      models,
     )
     expect(calls()[0]?.body).toEqual(f.request.body)
   })
   it('voice-list and voice-query', async () => {
     const lf = fixture('voice-list')
     const l = fakeContext([lf.response.body])
-    const listed = await runBailianNative('voice-list', { prefix: 'custom' }, l.ctx)
+    const listed = await runBailianNative('voice-list', { prefix: 'custom' }, l.ctx, models)
     expect((listed as { voices: unknown[] }).voices).toHaveLength(2)
     const qf = fixture('voice-query')
     const q = fakeContext([qf.response.body])
-    const got = await runBailianNative('voice-query', { voice_id: 'v1' }, q.ctx)
+    const got = await runBailianNative('voice-query', { voice_id: 'v1' }, q.ctx, models)
     expect((got as { voiceId: string }).voiceId).toBe('v1')
   })
   it('rerank, text-embed and digital-human-lipsync dispatch', async () => {
     const r = fakeContext([fixture('rerank').response.body])
     await expect(
-      runBailianNative('rerank', { query: 'apple', documents: ['苹果', '香蕉'], top_n: 2 }, r.ctx),
+      runBailianNative(
+        'rerank',
+        { query: 'apple', documents: ['苹果', '香蕉'], top_n: 2 },
+        r.ctx,
+        models,
+      ),
     ).resolves.toBeDefined()
     const e = fakeContext([fixture('text-embed').response.body])
     await expect(
-      runBailianNative('text-embed', { texts: ['你好'], dimensions: 1024 }, e.ctx),
+      runBailianNative('text-embed', { texts: ['你好'], dimensions: 1024 }, e.ctx, models),
     ).resolves.toBeDefined()
     const p = fakeContext([fixture('portrait').response.body])
     await expect(
@@ -199,6 +210,7 @@ describe('runBailianNative dispatch (the four ported Python capabilities)', () =
         'digital-human-lipsync',
         { image_url: 'https://x/f.png', audio_url: 'https://x/a.wav' },
         p.ctx,
+        models,
       ),
     ).resolves.toMatchObject({ taskId: 'portrait-1' })
   })
@@ -208,15 +220,18 @@ describe('runBailianNative dispatch (the four ported Python capabilities)', () =
       'raw-request',
       { path: '/compatible-mode/v1/models', method: 'GET' },
       ctx,
+      models,
     )
     expect(calls()[0]?.url).toBe('https://dashscope.aliyuncs.com/compatible-mode/v1/models')
     expect(calls()[0]?.method).toBe('GET')
-    await expect(runBailianNative('raw-request', { path: 'models' }, ctx)).rejects.toMatchObject({
+    await expect(
+      runBailianNative('raw-request', { path: 'models' }, ctx, models),
+    ).rejects.toMatchObject({
       code: 'invalid_input',
     })
   })
   it('rejects an unknown operation', async () => {
     const { ctx } = fakeContext([])
-    await expect(runBailianNative('nope', {}, ctx)).rejects.toBeInstanceOf(ProviderError)
+    await expect(runBailianNative('nope', {}, ctx, models)).rejects.toBeInstanceOf(ProviderError)
   })
 })

@@ -1,45 +1,111 @@
 /**
- * Qwen-Audio-TTS / CosyVoice HTTP SpeechSynthesizer, ported from the Python MCP
- * `ali_bailian_mcp/media.py`. All calls go through `ctx.fetch`; there is no WebSocket.
+ * Qwen-Audio-TTS / CosyVoice / Qwen3-TTS 语音合成，移植自 Python MCP
+ * `ali_bailian_mcp/media.py`。所有调用都走 `ctx.fetch`，没有 WebSocket。
+ *
+ * 模型数据一律从 `src/models/` 的声明读：
+ * - 用哪个接口（协议）由声明里的渠道 endpoint 决定；
+ * - 支持不支持自然语言指令、指令能写多长、能复刻/设计哪些语种，都写在声明的 limits 里；
+ * - 「谁是默认模型」「默认音色是什么」也在声明里，代码不维护型号清单。
  */
-import { ProviderError, redact, type ProviderUsage } from '@modelbay/core'
-import type { AdapterContext } from '@modelbay/core'
+import { ProviderError, redact, selectDefaultModel, type ProviderUsage } from '@modelbay/core'
+import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
 import { asJson, arr, requestJson, type Json } from './http'
 
 export const SYNTH_PATH = '/api/v1/services/audio/tts/SpeechSynthesizer'
 export const QWEN_TTS_PATH = '/api/v1/services/aigc/multimodal-generation/generation'
 
-export const TTS_MODELS: Record<string, string> = {
-  flash: 'qwen3-tts-flash',
-  audio: 'qwen-audio-3.0-tts-flash',
-  'audio-plus': 'qwen-audio-3.0-tts-plus',
-  cosyvoice: 'cosyvoice-v3.5-plus',
+/** 声明里的模型 ID → 该模型的协议。SpeechSynthesizer 走 input，多模态生成走 parameters。 */
+export type TtsProtocol = 'synthesizer' | 'multimodal'
+
+/** 一个 TTS 模型的声明视图：协议、别名、指令支持、默认音色。 */
+export interface TtsModel {
+  id: string
+  protocol: TtsProtocol
+  /** 声明里写的接口路径，请求时原样使用。 */
+  endpoint: string
+  /** 是否支持自然语言指令（instruction）。 */
+  instruction: boolean
+  /** 指令的字符上限（汉字按 2 计）；不声明表示不限。 */
+  instructionMaxLength?: number
+  /** 是否支持 `language=other`（官方只对部分模型开放）。 */
+  otherLanguage: boolean
+  /** 不指定音色时使用的系统音色。 */
+  defaultVoice?: string
+  /** 官方别名与简称，如 `audio-plus`。 */
+  aliases: string[]
+  /** 声明本身，供上层查生命周期与默认模型。 */
+  declaration: ModelDeclaration
 }
 
-export const QWEN_AUDIO_TTS = [
-  'qwen-audio-3.1-tts-plus',
-  'qwen-audio-3.0-tts-plus',
-  'qwen-audio-3.1-tts-flash',
-  'qwen-audio-3.0-tts-flash',
-] as const
+const TTS_ENDPOINTS: Record<string, TtsProtocol> = {
+  [SYNTH_PATH]: 'synthesizer',
+  [QWEN_TTS_PATH]: 'multimodal',
+}
 
-export const COSYVOICE_TTS = [
-  'cosyvoice-v3.5-plus',
-  'cosyvoice-v3.5-flash',
-  'cosyvoice-v3-plus',
-  'cosyvoice-v3-flash',
-  'cosyvoice-v2',
-] as const
+/**
+ * 读出全部 TTS 模型（能力为 audio.speech，且声明了本适配器支持的接口）。
+ *
+ * 判定依据是声明里的渠道 endpoint：适配器只说这两种协议，
+ * 没声明 endpoint 的旧模型（如已下线的 qwen3-tts-instruct-flash）不进这个清单。
+ */
+export function ttsModels(declarations: readonly ModelDeclaration[]): TtsModel[] {
+  return declarations
+    .filter((declaration) => declaration.capabilities.includes('audio.speech'))
+    .map((declaration) => {
+      const endpoint = declaration.channels.find(
+        (channel) => channel.channel === 'bailian',
+      )?.endpoint
+      const protocol = endpoint ? TTS_ENDPOINTS[endpoint] : undefined
+      if (!protocol || !endpoint) return null
+      const speech = declaration.limits?.speech
+      return {
+        id: declaration.channels[0]?.id ?? declaration.id,
+        protocol,
+        endpoint,
+        instruction: declaration.limits?.instruction !== false,
+        ...(speech?.instructionMaxLength !== undefined
+          ? { instructionMaxLength: speech.instructionMaxLength }
+          : {}),
+        otherLanguage: speech?.otherLanguage === true,
+        ...(speech?.defaultVoice ? { defaultVoice: speech.defaultVoice } : {}),
+        aliases: [...(declaration.aliases.official ?? []), ...(declaration.aliases.short ?? [])],
+        declaration,
+      }
+    })
+    .filter((model): model is TtsModel => model !== null)
+}
 
-export const SYNTH_MODELS: readonly string[] = [...QWEN_AUDIO_TTS, ...COSYVOICE_TTS]
+/** 走 SpeechSynthesizer 协议的模型 ID 集合。 */
+export function synthModelIds(models: readonly TtsModel[]): string[] {
+  return models.filter((model) => model.protocol === 'synthesizer').map((model) => model.id)
+}
 
-export const INSTRUCTION_MODELS: readonly string[] = [
-  ...QWEN_AUDIO_TTS,
-  'cosyvoice-v3.5-plus',
-  'cosyvoice-v3.5-flash',
-  'cosyvoice-v3-plus',
-  'cosyvoice-v3-flash',
-]
+/** 支持自然语言指令的模型 ID 集合。 */
+export function instructionModelIds(models: readonly TtsModel[]): string[] {
+  return models.filter((model) => model.instruction).map((model) => model.id)
+}
+
+/**
+ * 默认模型：由 core 按声明挑（带 `default: true` 的 active 模型优先），
+ * 适配器不写死型号。
+ */
+export function defaultTtsModel(models: readonly TtsModel[]): TtsModel | undefined {
+  const picked = selectDefaultModel(
+    models.map((model) => model.declaration),
+    'audio.speech',
+  )
+  if (!picked) return undefined
+  return models.find((model) => model.id === picked.channel.id)
+}
+
+/**
+ * 兼容旧调用的回落模型：走 multimodal 协议、且不是默认模型的那个。
+ * 旧调用（qwen3 音色、非语种代码的 language、带 parameters）继续用它。
+ */
+function compatModel(models: readonly TtsModel[]): TtsModel | undefined {
+  const fallback = defaultTtsModel(models)
+  return models.find((model) => model.protocol === 'multimodal' && model.id !== fallback?.id)
+}
 
 export const TTS_CHUNK = 250
 
@@ -74,13 +140,65 @@ export function instructionLength(text: string): number {
   return total
 }
 
-/** Explicit model wins; otherwise infer from a custom voice ID prefix, else use flash. */
-export function resolveTtsModel(model?: string, voice?: string): string {
-  if (model) return TTS_MODELS[model] ?? model
-  for (const name of [...SYNTH_MODELS].sort((a, b) => b.length - a.length)) {
-    if (voice && voice.startsWith(`${name}-`)) return name
+/** 语言提示的两种形态：语种代码（zh、en、ja）或官方的 `other`。 */
+function isLanguageHint(language: string): boolean {
+  return /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/.test(language) || language === 'other'
+}
+
+/** 一次合成请求里与选模型有关的参数。 */
+export interface TtsModelRequest {
+  /** 用户填的模型：可以是完整 ID，也可以是声明里的简称。 */
+  model?: string
+  /** 音色；自定义音色 ID 以 `{target_model}-` 开头，可反推模型。 */
+  voice?: string
+  language?: string
+  /** 平台特有的额外参数；非空说明是旧调用。 */
+  parameters?: Json
+}
+
+/**
+ * 解析要用的 TTS 模型（与 hoobnn-mcps 0.8.0 的规则一致）。
+ *
+ * 显式模型优先；未指定时按自定义音色 ID 前缀（`{target_model}-…`）推断；
+ * 音色、parameters 都没传且 language 为空或是语种代码时用声明里的默认模型；
+ * 其余情况（qwen3 音色、非代码形式 language、带 parameters）回落到兼容模型。
+ */
+export function resolveTtsModel(models: readonly TtsModel[], request: TtsModelRequest): string {
+  if (request.model) {
+    const alias = models.find((model) => model.aliases.includes(request.model as string))
+    return alias?.id ?? request.model
   }
-  return TTS_MODELS.flash!
+  const synthIds = synthModelIds(models).sort((a, b) => b.length - a.length)
+  for (const id of synthIds) {
+    if (request.voice?.startsWith(`${id}-`)) return id
+  }
+  const language = request.language
+  const languageHint = !language || isLanguageHint(language)
+  const hasParameters =
+    request.parameters !== undefined && Object.keys(request.parameters).length > 0
+  if (!request.voice && !hasParameters && languageHint) {
+    return defaultTtsModel(models)?.id ?? ''
+  }
+  return compatModel(models)?.id ?? ''
+}
+
+/**
+ * 不指定音色时用哪个系统音色。
+ *
+ * - 没显式指定模型、且落在默认模型上：用该模型声明的默认音色；
+ * - 走 multimodal 协议的模型：用它自己声明的默认音色；
+ * - 其余（显式指定了合成模型）不填音色，由调用方自己传。
+ */
+export function defaultVoiceFor(
+  models: readonly TtsModel[],
+  modelId: string,
+  explicitModel: boolean,
+): string | undefined {
+  const model = models.find((item) => item.id === modelId)
+  if (!model) return undefined
+  if (!explicitModel && model.id === defaultTtsModel(models)?.id) return model.defaultVoice
+  if (model.protocol !== 'synthesizer') return model.defaultVoice
+  return undefined
 }
 
 export interface TtsOptions {
@@ -98,9 +216,20 @@ export interface TtsRequest {
   body: Json
 }
 
-/** Build the `(path, body)` pair for one TTS chunk, routed by model family. */
-export function ttsRequest(model: string, opts: TtsOptions, text: string): TtsRequest {
-  if (SYNTH_MODELS.includes(model)) {
+/**
+ * 生成一段合成的 `(path, body)`。
+ *
+ * 接口路径取自声明的渠道 endpoint，请求体形状按该模型声明的协议生成。
+ */
+export function ttsRequest(
+  model: string,
+  opts: TtsOptions,
+  text: string,
+  models: readonly TtsModel[],
+): TtsRequest {
+  const known = models.find((item) => item.id === model)
+  const protocol = known?.protocol ?? 'multimodal'
+  if (protocol === 'synthesizer') {
     const input: Json = {
       text,
       voice: opts.voice ?? '',
@@ -110,37 +239,41 @@ export function ttsRequest(model: string, opts: TtsOptions, text: string): TtsRe
     if (opts.instructions) input.instruction = opts.instructions
     if (opts.language) input.language_hints = [opts.language]
     Object.assign(input, opts.parameters ?? {})
-    return { path: SYNTH_PATH, body: { model, input } }
+    return { path: known?.endpoint ?? SYNTH_PATH, body: { model, input } }
   }
   const input: Json = { text, voice: opts.voice ?? '' }
   if (opts.language) input.language_type = opts.language
   const body: Json = { model, input }
   if (opts.parameters) body.parameters = { ...opts.parameters }
-  return { path: QWEN_TTS_PATH, body }
+  return { path: known?.endpoint ?? QWEN_TTS_PATH, body }
 }
 
 /** Validate options before submitting; returns a human-readable problem or null. */
 export function checkTts(
   model: string,
   opts: TtsOptions,
+  models: readonly TtsModel[],
   mode: 'url' | 'local' = 'url',
 ): string | null {
-  if (SYNTH_MODELS.includes(model)) {
+  const known = models.find((item) => item.id === model)
+  if (!known) {
+    const supported = models.map((item) => item.id).join('、')
+    return `Unsupported TTS model: ${model}. Supported models: ${supported}`
+  }
+  if (known.protocol === 'synthesizer') {
     if (!opts.voice) return 'SpeechSynthesizer models require a system or custom voice ID'
     const extra = opts.parameters ?? {}
     const instruction = extra.instruction ?? opts.instructions
     if (instruction) {
       if (typeof instruction !== 'string') return 'instruction must be a string'
-      if (!INSTRUCTION_MODELS.includes(model)) return `${model} does not support instruction`
-      if (
-        (COSYVOICE_TTS as readonly string[]).includes(model) &&
-        instructionLength(instruction) > 100
-      )
-        return 'CosyVoice instruction must be at most 100 characters (CJK counts as 2)'
+      if (!known.instruction) return `${model} does not support instruction`
+      const limit = known.instructionMaxLength
+      if (limit !== undefined && instructionLength(instruction) > limit) {
+        return `${model} instruction must be at most ${limit} characters (CJK counts as 2)`
+      }
     }
     if (opts.language === 'other') {
-      if (model !== 'qwen-audio-3.1-tts-flash')
-        return 'language=other only applies to qwen-audio-3.1-tts-flash'
+      if (!known.otherLanguage) return `language=other only applies to ${model}`
     } else if (opts.language && !/^[a-z]{2,3}$/.test(opts.language))
       return 'language must be a code such as zh, en or ja'
     if (Object.keys(extra).some((key) => ['text', 'voice', 'model'].includes(key)))
@@ -149,9 +282,7 @@ export function checkTts(
       return 'local delivery concatenates WAV chunks; use url delivery for other formats'
     return null
   }
-  if (!model.startsWith('qwen3-tts-') || model.includes('realtime'))
-    return 'Only non-realtime qwen3-tts-flash and the Qwen-Audio-TTS/CosyVoice models are supported'
-  if (opts.instructions) return 'qwen3-tts-flash does not support instructions; use an audio model'
+  if (opts.instructions) return `${model} does not support instructions; use an audio model`
   return null
 }
 
@@ -183,16 +314,23 @@ export function parseTtsResponse(data: Json): TtsResult {
 export async function synthesizeQwenAudioTts(
   ctx: AdapterContext,
   opts: TtsOptions,
+  models: readonly TtsModel[],
 ): Promise<TtsResult> {
-  const model = resolveTtsModel(opts.model, opts.voice)
+  const model = resolveTtsModel(models, {
+    model: opts.model,
+    voice: opts.voice,
+    language: opts.language,
+    parameters: opts.parameters,
+  })
   const text = (opts.text ?? '').trim()
   if (!text) throw new ProviderError('invalid_input', 'TTS text is required')
   const chunks = splitText(text)
   if (chunks.length > 1)
     throw new ProviderError('invalid_input', 'URL delivery accepts one chunk (<= 250 characters)')
-  const problem = checkTts(model, { ...opts, text }, 'url')
+  const voice = opts.voice ?? defaultVoiceFor(models, model, Boolean(opts.model))
+  const problem = checkTts(model, { ...opts, text, voice }, models, 'url')
   if (problem) throw new ProviderError('invalid_input', problem)
-  const { path, body } = ttsRequest(model, { ...opts, text }, text)
+  const { path, body } = ttsRequest(model, { ...opts, text, voice }, text, models)
   const data = await requestJson(ctx, path, body)
   return parseTtsResponse(data)
 }

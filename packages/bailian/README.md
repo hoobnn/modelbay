@@ -44,6 +44,24 @@ functions and are also callable as native operations:
 `synthesizeQwenAudioTts` handles a single chunk (<= 250 characters); `splitText` is exported
 for hosts that need chunking. The SDK never auto-retries an ambiguous submission.
 
+Every speech model lives in `src/models/` as a declaration; the adapter reads it instead of
+keeping a model list in code:
+
+- the channel `endpoint` selects the protocol (`SpeechSynthesizer` vs `multimodal-generation`);
+- `limits.instruction` / `limits.speech.instructionMaxLength` decide whether an instruction
+  is accepted and how long it may be;
+- `limits.speech.voiceClone` / `voiceDesign` / `cloneLanguages` / `clonePreprocess` decide
+  which models can be cloned or designed, which `language_hints` they accept and whether the
+  audio-preprocessing parameters apply;
+- `default: true` marks the default speech model (`qwen-audio-3.1-tts-flash`), and
+  `limits.speech.defaultVoice` is the system voice used when the caller does not pass one.
+
+`resolveTtsModel` follows the 0.8.0 Python rules: an explicit model wins, then a custom
+voice ID prefix (`{target_model}-…`), then the declared default model when no voice and no
+extra parameters are given and `language` is empty or a language code; every other legacy
+call (a `qwen3` voice, a non-code `language`, extra `parameters`) falls back to
+`qwen3-tts-flash`.
+
 ## Native operations
 
 Declared in `BAILIAN_NATIVE_OPERATIONS`; each op's input JSON Schema is declared by the

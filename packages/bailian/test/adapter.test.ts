@@ -8,6 +8,7 @@ import {
   uploadAsset,
 } from '../src/adapter'
 import { nativeOperationSchemas } from '../src/native'
+import { all as bailianModels } from '../src/models/index'
 import { fakeContext, fixture } from './helpers'
 
 function declaration(id: string, status: 'active' | 'superseded' | 'retired'): ModelDeclaration {
@@ -39,7 +40,9 @@ describe('createBailianAdapter / defineAdapter', () => {
     expect(adapter.nativeOperations).toContain('text-embed')
     expect(adapter.nodeOnly).toEqual(['image-edit'])
     expect(adapter.docsUrl).toContain('aliyun')
-    expect(Object.keys(nativeOperationSchemas).length).toBe(adapter.nativeOperations?.length)
+    expect(Object.keys(nativeOperationSchemas(models)).length).toBe(
+      adapter.nativeOperations?.length,
+    )
   })
   it('rejects duplicate canonical ids (defineAdapter)', () => {
     expect(() =>
@@ -177,7 +180,7 @@ describe('submit: request construction and response parsing (fixtures)', () => {
   it('audio.speech via SpeechSynthesizer', async () => {
     const f = fixture('tts-synthesizer')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await createBailianAdapter(models).submit(
+    const result = await createBailianAdapter(bailianModels).submit(
       {
         capability: 'audio.speech',
         model: 'qwen-audio-3.1-tts-flash',

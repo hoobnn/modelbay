@@ -24,11 +24,11 @@ import { asJson, arr, requestJson, send, type Json } from './http'
 import {
   audioFile,
   choiceContents,
+  defaultVoiceFor,
   parseUsage,
   QWEN_TTS_PATH,
-  resolveTtsModel,
-  SYNTH_MODELS,
   synthesizeQwenAudioTts,
+  ttsModels,
 } from './tts'
 import { BAILIAN_NATIVE_OPERATIONS, nativeOperationSchemas, runBailianNative } from './native'
 
@@ -277,23 +277,28 @@ export function createBailianAdapter(
         }
         case 'audio.speech': {
           const input = request.input as CapabilityInput<'audio.speech'>
-          const resolved = resolveTtsModel(model, input.voice)
-          if (SYNTH_MODELS.includes(resolved)) {
-            const result = await synthesizeQwenAudioTts(ctx, {
-              text: input.text,
-              model,
-              voice: input.voice,
-              instructions: input.instruction,
-              parameters: asJson(input.extra),
-            })
+          const tts = ttsModels(models)
+          const known = tts.find((item) => item.id === model)
+          if (known?.protocol === 'synthesizer') {
+            const result = await synthesizeQwenAudioTts(
+              ctx,
+              {
+                text: input.text,
+                model,
+                voice: input.voice,
+                instructions: input.instruction,
+                parameters: asJson(input.extra),
+              },
+              tts,
+            )
             return { state: 'succeeded', outputs: [fileOutput('audio', result.url)] }
           }
-          const data = await requestJson(ctx, QWEN_TTS_PATH, {
+          const data = await requestJson(ctx, known?.endpoint ?? QWEN_TTS_PATH, {
             model,
             input: {
               ...input.extra,
               text: input.text,
-              voice: input.voice ?? 'Cherry',
+              voice: input.voice ?? defaultVoiceFor(tts, model, true) ?? '',
               language_type: 'Auto',
             },
           })
@@ -418,7 +423,7 @@ export function createBailianAdapter(
       params: Record<string, unknown>,
       ctx: AdapterContext,
     ): Promise<unknown> {
-      return runBailianNative(op, params, ctx)
+      return runBailianNative(op, params, ctx, models)
     },
   }
   return defineAdapter(adapter)

@@ -34,15 +34,15 @@ export type { Json, Method, RequestOptions, TransportMessages } from './http'
 export {
   SYNTH_PATH,
   QWEN_TTS_PATH,
-  TTS_MODELS,
-  QWEN_AUDIO_TTS,
-  COSYVOICE_TTS,
-  SYNTH_MODELS,
-  INSTRUCTION_MODELS,
   TTS_CHUNK,
   splitText,
   instructionLength,
+  ttsModels,
+  synthModelIds,
+  instructionModelIds,
+  defaultTtsModel,
   resolveTtsModel,
+  defaultVoiceFor,
   ttsRequest,
   checkTts,
   parseTtsResponse,
@@ -50,7 +50,14 @@ export {
   parseUsage,
   audioFile,
 } from './tts'
-export type { TtsOptions, TtsRequest, TtsResult } from './tts'
+export type {
+  TtsOptions,
+  TtsRequest,
+  TtsResult,
+  TtsModel,
+  TtsProtocol,
+  TtsModelRequest,
+} from './tts'
 export {
   ASR_MODEL,
   ASR_PATH,
@@ -64,10 +71,7 @@ export type { AsrOptions, AsrRequest, AsrResult } from './asr'
 export {
   CUSTOMIZATION,
   ENROLLMENT,
-  DEFAULT_VOICE_TARGET,
-  CLONE_TARGETS,
-  DESIGN_TARGETS,
-  CLONE_LANGUAGES,
+  voiceTargets,
   VOICE_KINDS,
   CLONE_AUDIO_LIMIT,
   checkPrefix,
@@ -90,6 +94,7 @@ export type {
   ListVoicesOptions,
   VoiceResult,
   ListVoicesResult,
+  VoiceTargets,
 } from './voice'
 export {
   RERANK_PATH,
