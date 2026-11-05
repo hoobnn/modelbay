@@ -91,6 +91,58 @@ describe('createAdapterContext', () => {
     ctx.log('hello', { a: 1 })
     expect(log).toHaveBeenCalledWith('hello', { a: 1 })
   })
+
+  it('注入 plein 宿主语义：settings / stream / files / 幂等键 / 回执 / socket', () => {
+    const stream = vi.fn()
+    const files = { read: vi.fn(async () => ({ data: new Uint8Array([1]), mime: 'image/png' })) }
+    const submission = { requestId: 'req-1', response: vi.fn() }
+    const socket = vi.fn()
+    const ctx = createAdapterContext({
+      settings: { region: 'cn' },
+      stream,
+      files,
+      idempotencyKey: 'idem-1',
+      submission,
+      socket,
+    })
+    expect(ctx.settings).toEqual({ region: 'cn' })
+    expect(ctx.stream).toBe(stream)
+    expect(ctx.files).toBe(files)
+    expect(ctx.idempotencyKey).toBe('idem-1')
+    expect(ctx.submission).toBe(submission)
+    expect(ctx.socket).toBe(socket)
+  })
+
+  it('未注入的 plein 可选字段保持缺省', () => {
+    const ctx = createAdapterContext()
+    expect(ctx.settings).toBeUndefined()
+    expect(ctx.stream).toBeUndefined()
+    expect(ctx.files).toBeUndefined()
+    expect(ctx.idempotencyKey).toBeUndefined()
+    expect(ctx.submission).toBeUndefined()
+    expect(ctx.socket).toBeUndefined()
+  })
+
+  it('AdapterRequest 接受 usage / remoteOnly 标记', async () => {
+    const seen: unknown[] = []
+    const adapter = makeAdapter({
+      submit: async (req) => {
+        seen.push({ usage: req.usage, remoteOnly: req.remoteOnly })
+        return { state: 'succeeded' as const, outputs: [] }
+      },
+    })
+    await adapter.submit(
+      {
+        capability: 'text.chat',
+        model: 'volc/x',
+        input: { messages: [{ role: 'user', content: 'hi' }] },
+        usage: 'agent',
+        remoteOnly: true,
+      },
+      createAdapterContext(),
+    )
+    expect(seen[0]).toEqual({ usage: 'agent', remoteOnly: true })
+  })
 })
 
 describe('adapterCapabilities', () => {

@@ -298,6 +298,20 @@ describe('toModelInfo', () => {
     const retired = patch({ lifecycle: { status: 'retired', source } })
     expect(toModelInfo(retired).deprecated).toBe(true)
   })
+
+  it('停止新购与宣布下线的模型保留 plein 的弃用标记，superseded 不算', () => {
+    const closed = patch({
+      lifecycle: { status: 'closed-to-new-accounts', since: '2026-08-20', source },
+    })
+    const sunsetting = patch({
+      lifecycle: { status: 'sunsetting', sunsetOn: '2026-11-24', source },
+    })
+    const superseded = patch({ lifecycle: { status: 'superseded', by: 'x-2', source } })
+    expect(toModelInfo(closed).deprecated).toBe(true)
+    expect(toModelInfo(sunsetting).deprecated).toBe(true)
+    expect(toModelInfo(superseded).deprecated).toBeUndefined()
+    expect(toModelInfo(base()).deprecated).toBeUndefined()
+  })
 })
 
 describe('ModelRegistry', () => {

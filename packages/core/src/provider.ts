@@ -545,6 +545,36 @@ export interface ProviderRequest<C extends Capability = Capability> {
   usage?: 'agent'
 }
 
+/** 一次文件读取的结果：字节、MIME 与探测到的媒体元数据（时长 / 宽高 / 编码）。 */
+export interface LoadedFile {
+  data: Uint8Array
+  mime: string
+  duration?: number
+  width?: number
+  height?: number
+  /** ffprobe 原文件编码名，例如 h264 / hevc；无法探测时缺省。 */
+  videoCodec?: string
+  /** 实际帧率（fps），分数帧率保留精度。 */
+  frameRate?: number
+  /** 全部音频流编码；空数组表示无音轨，缺省表示未知。 */
+  audioCodecs?: string[]
+}
+
+/** 宿主裁剪域名权限的二进制 WebSocket；信号中止时自动关闭。 */
+export interface ProviderSocket {
+  logId?: string
+  send(data: Uint8Array): void
+  receive(): Promise<Uint8Array>
+  close(): void
+}
+
+/** 宿主在发送前持久化的关联信息；requestId 不代表平台支持幂等。 */
+export interface SubmissionRecord {
+  requestId: string
+  /** 响应头到达时同步持久化；失败时不得继续读取或重新提交。 */
+  response(info: { logId?: string; httpStatus: number }): void
+}
+
 /**
  * Provider 拿到的运行环境，全部由宿主按插件清单的权限裁剪过：
  * fetch 只能访问声明过的域名，secret 只能读声明过的密钥。
@@ -553,33 +583,12 @@ export interface ProviderContext<S = Record<string, unknown>> {
   settings: S
   secret(name: string): string | undefined
   fetch: typeof fetch
-  /** 宿主裁剪域名权限的二进制 WebSocket；信号中止时自动关闭。 */
-  socket?(
-    url: string,
-    headers: Record<string, string>,
-  ): Promise<{
-    logId?: string
-    send(data: Uint8Array): void
-    receive(): Promise<Uint8Array>
-    close(): void
-  }>
+  socket?(url: string, headers: Record<string, string>): Promise<ProviderSocket>
   signal: AbortSignal
   log(message: string, data?: Record<string, unknown>): void
   files: {
     /** 读取资产内容（如把参考图转成 base64 传给平台） */
-    read(ref: AssetRef): Promise<{
-      data: Uint8Array
-      mime: string
-      duration?: number
-      width?: number
-      height?: number
-      /** ffprobe 原文件编码名，例如 h264 / hevc；无法探测时缺省。 */
-      videoCodec?: string
-      /** 实际帧率（fps），分数帧率保留精度。 */
-      frameRate?: number
-      /** 全部音频流编码；空数组表示无音轨，缺省表示未知。 */
-      audioCodecs?: string[]
-    }>
+    read(ref: AssetRef): Promise<LoadedFile>
   }
   /** 流式输出：text.chat 边生成边回调文本增量（宿主没要求时为空，平台照常一次返回） */
   stream?(delta: { text: string }): void
@@ -589,11 +598,7 @@ export interface ProviderContext<S = Record<string, unknown>> {
    */
   idempotencyKey?: string
   /** 宿主在发送前持久化的关联信息；requestId 不代表平台支持幂等。 */
-  submission?: {
-    requestId: string
-    /** 响应头到达时同步持久化；失败时不得继续读取或重新提交。 */
-    response(info: { logId?: string; httpStatus: number }): void
-  }
+  submission?: SubmissionRecord
 }
 
 /** 模型平台适配器 */

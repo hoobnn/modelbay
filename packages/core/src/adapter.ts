@@ -2,8 +2,17 @@
  * 平台适配器契约：适配层只写各家不同的部分（鉴权、路由、请求和响应映射、错误码映射），
  * 通用能力都从 core 注入。MCP 生成器和 modelbay 汇总入口只依赖这个接口。
  */
-import type { Capability, CapabilityInput, PollResult, SubmitResult } from './provider'
+import type {
+  Capability,
+  CapabilityInput,
+  LoadedFile,
+  PollResult,
+  ProviderSocket,
+  SubmissionRecord,
+  SubmitResult,
+} from './provider'
 import type { ModelDeclaration } from './declarations'
+import type { AssetRef } from './ports'
 import type { AssetSource, JobStore, ModelbayHooks } from './runtime'
 import type { NormalizedCapability } from './capabilities'
 
@@ -14,6 +23,13 @@ export interface AdapterRequest<C extends Capability = Capability> {
   input: CapabilityInput<C>
   /** 单平台独有的能力 */
   native?: { op: string; params: Record<string, unknown> }
+  /** 仅供内置 Agent 使用（如方舟套餐文本模型不对普通画布开放） */
+  usage?: 'agent'
+  /**
+   * 模型来自远端列表（remote-only）而非内置目录：宿主已核对密钥与设置上下文、
+   * 平台的覆盖范围声明以及模型类型与能力的匹配；平台侧可据此放开静态目录校验
+   */
+  remoteOnly?: boolean
 }
 
 export interface AdapterContext {
@@ -24,6 +40,24 @@ export interface AdapterContext {
   assets?: AssetSource
   jobs?: JobStore
   log(message: string, data?: Record<string, unknown>): void
+  /**
+   * 宿主的非敏感设置（地域、Base URL、业务空间等）：直接透传，
+   * 不发明 settings→secret 的字符串编码；缺省表示宿主没有这层配置。
+   */
+  settings?: Record<string, unknown>
+  /** text.chat 边生成边回调文本增量；宿主没要求时为空，平台照常一次返回 */
+  stream?(delta: { text: string }): void
+  /**
+   * plein 形状的文件读取：带媒体元数据（时长 / 宽高 / 编码），
+   * 与 assets 二选一；适配器优先用它，回退到 assets。
+   */
+  files?: { read(ref: AssetRef): Promise<LoadedFile> }
+  /** 这次调用的幂等键；平台支持客户端幂等键或按客户端标识查任务时传给平台 */
+  idempotencyKey?: string
+  /** 宿主在发送前持久化的关联信息；requestId 不代表平台支持幂等。 */
+  submission?: SubmissionRecord
+  /** 宿主裁剪域名权限的二进制 WebSocket；信号中止时自动关闭。 */
+  socket?(url: string, headers: Record<string, string>): Promise<ProviderSocket>
 }
 
 export interface PlatformAdapter {
@@ -65,6 +99,12 @@ export interface AdapterContextOptions {
   assets?: AssetSource
   jobs?: JobStore
   log?(message: string, data?: Record<string, unknown>): void
+  settings?: Record<string, unknown>
+  stream?(delta: { text: string }): void
+  files?: { read(ref: AssetRef): Promise<LoadedFile> }
+  idempotencyKey?: string
+  submission?: SubmissionRecord
+  socket?(url: string, headers: Record<string, string>): Promise<ProviderSocket>
 }
 
 export function createAdapterContext(options: AdapterContextOptions = {}): AdapterContext {
@@ -75,6 +115,12 @@ export function createAdapterContext(options: AdapterContextOptions = {}): Adapt
     ...(options.hooks ? { hooks: options.hooks } : {}),
     ...(options.assets ? { assets: options.assets } : {}),
     ...(options.jobs ? { jobs: options.jobs } : {}),
+    ...(options.settings ? { settings: options.settings } : {}),
+    ...(options.stream ? { stream: options.stream } : {}),
+    ...(options.files ? { files: options.files } : {}),
+    ...(options.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : {}),
+    ...(options.submission ? { submission: options.submission } : {}),
+    ...(options.socket ? { socket: options.socket } : {}),
     log: options.log ?? (() => {}),
   }
 }
