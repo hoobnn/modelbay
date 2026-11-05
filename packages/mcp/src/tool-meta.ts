@@ -74,7 +74,7 @@ const NATURE_OVERRIDES: Record<string, ToolNature> = {
   get_speech_usage_examples: 'local',
   list_models: 'local',
   list_jobs: 'local',
-  'models:list': 'local',
+  list_declared_models: 'local',
   // 查询（联网但只读、幂等）
   get_job: 'query',
   recover_job: 'query',
@@ -125,8 +125,12 @@ export const ALIASES: Record<string, string[]> = {
   voice_design: ['design_voice'],
 }
 
-/** 超出基线的新工具：从声明派生可用模型与生命周期，避免客户端硬编码模型清单。 */
-export const EXTRA_TOOL_NAMES = ['models:list'] as const
+/**
+ * 超出基线的新工具：从声明派生可用模型与生命周期，避免客户端硬编码模型清单。
+ * 名字要符合 MCP 客户端的工具名约束 `^[a-zA-Z0-9_-]{1,64}$`（Claude 会拒绝带冒号的名字），
+ * 所以不用 `models:list`；也不叫 `list_models`，那是百炼基线里的官方模型目录查询，语义不同。
+ */
+export const EXTRA_TOOL_NAMES = ['list_declared_models'] as const
 
 export interface ToolMeta {
   capability?: string

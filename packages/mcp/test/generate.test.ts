@@ -46,7 +46,7 @@ describe('工具元数据', () => {
   it('MiniMax 别名表与超出基线工具表', () => {
     expect(ALIASES.text_to_audio).toContain('text_to_speech')
     expect(ALIASES.voice_clone).toContain('clone_voice')
-    expect(EXTRA_TOOL_NAMES).toContain('models:list')
+    expect(EXTRA_TOOL_NAMES).toContain('list_declared_models')
   })
 
   it('isOptionalGroup 只对 core 为 false', () => {

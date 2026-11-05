@@ -83,9 +83,14 @@ describe.each(PLATFORM_KEYS)('M4 基线对照：%s', (platform) => {
     }
   })
 
-  it('超出基线的新工具 models:list 存在', () => {
-    expect(byName.has('models:list')).toBe(true)
-    expect(byName.get('models:list')?.annotations.readOnlyHint).toBe(true)
+  it('超出基线的新工具 list_declared_models 存在', () => {
+    expect(byName.has('list_declared_models')).toBe(true)
+    expect(byName.get('list_declared_models')?.annotations.readOnlyHint).toBe(true)
+  })
+
+  it('所有工具名都符合 MCP 客户端的约束 ^[a-zA-Z0-9_-]{1,64}$（Claude 拒绝带冒号的名字）', () => {
+    const invalid = all.filter((tool) => !/^[a-zA-Z0-9_-]{1,64}$/.test(tool.name))
+    expect(invalid.map((tool) => tool.name)).toEqual([])
   })
 })
 

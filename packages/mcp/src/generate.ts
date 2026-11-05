@@ -123,7 +123,7 @@ function buildExtraTool(name: string): GeneratedTool {
       '列出本平台声明的模型 ID、能力与生命周期提示（从 ModelDeclaration 派生），不联网、不计费。',
     inputSchema: {
       type: 'object',
-      title: 'models:listArguments',
+      title: 'listDeclaredModelsArguments',
       properties: {
         capability: { type: 'string', description: '按归一化能力筛选（可选）' },
       },

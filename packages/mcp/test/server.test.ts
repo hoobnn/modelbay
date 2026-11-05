@@ -321,7 +321,7 @@ describe('createHandlers tools/call 路由', () => {
     const handlers = handlersFor('minimax', fakeAdapter().adapter, {})
     const help = await handlers.callTool('get_tool_help', { tool: 'text_to_audio' })
     expect((help as CallToolResult).content[0]?.text).toBeTruthy()
-    const models = await handlers.callTool('models:list', {})
+    const models = await handlers.callTool('list_declared_models', {})
     expect((models as CallToolResult).structuredContent).toBeDefined()
     const voices = await handlers.callTool('list_voices', {})
     expect((voices as CallToolResult).content[0]?.text).toContain('Voice One')
