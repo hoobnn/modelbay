@@ -23,14 +23,22 @@
     "build": "vp pack"
   },
   "peerDependencies": {
+    "ws": "^8.18.0",
     "zod": "^4.6"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@modelbay/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@types/ws": "^8.18.2",
     "typescript": "^7.0.2",
+    "ws": "^8.22.1",
     "zod": "catalog:"
   }
 }

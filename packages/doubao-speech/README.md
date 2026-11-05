@@ -62,11 +62,19 @@ their own requests; there is no API-Key fallback).
 
 ## Realtime session
 
-`session.ts` defines `RealtimeSessionConfig`, `RealtimeSocketFactory` and
-`RealtimeSessionHandle` (open/send/receive/close) — deliberately **not** modelled as
-submit/poll. `openRealtimeSession()` returns an `InMemoryRealtimeSession` placeholder
-or wraps a host-injected socket. TODO: the real WSS transport needs a socket factory
-injected by the host (`AdapterContext` only provides `fetch`).
+`session.ts` implements the official JSON-over-WebSocket dialogue protocol — deliberately
+**not** modelled as submit/poll. `createRealtimeEvent()` builds the `session.create`
+event with the official defaults (input audio 16000 Hz `pcm` / `speech_opus`, output
+audio 24000 Hz `pcm` / `pcm_s16le` / `ogg_opus` plus a required voice) and validates
+the model number per mode (`legacy` = `1.2.6.1`, `seed` = `1.3.0.0`); video input goes
+through `extension.video` and is only allowed in `seed` mode.
+
+`openRealtimeSession()` sends that event, waits for the `session.created` ack before
+handing the session over, and then exposes the event stream through
+`receive()` / `parseRealtimeEvent()`. The WebSocket comes from `ws` (MIT), an
+**optional peer dependency**; hosts that already own a socket can pass their own
+factory as the third argument instead. `InMemoryRealtimeSession` stays available for
+tests and for hosts without a socket.
 
 ## Node-only subpath
 

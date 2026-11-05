@@ -106,7 +106,18 @@ export {
   REALTIME_DIALOGUE_PATH,
   REALTIME_SEED_PATH,
   REALTIME_BIDIRECTION_PATH,
+  REALTIME_HOST,
+  REALTIME_MODES,
+  createRealtimeEvent,
   InMemoryRealtimeSession,
   openRealtimeSession,
+  parseRealtimeEvent,
+  validateRealtimeVideo,
 } from './session'
-export type { RealtimeSessionConfig, RealtimeSocketFactory, RealtimeSessionHandle } from './session'
+export type {
+  RealtimeEventOptions,
+  RealtimeMode,
+  RealtimeSessionConfig,
+  RealtimeSocketFactory,
+  RealtimeSessionHandle,
+} from './session'
