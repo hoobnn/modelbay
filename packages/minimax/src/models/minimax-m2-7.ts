@@ -11,7 +11,8 @@ export default {
   aliases: { official: [], short: [] },
   lifecycle: {
     status: 'sunsetting',
-    since: '2026-11-18',
+    // 官方原文（2026-11-05）：停止向新用户开放调用：【2026年10月19日】；正式下线：【2026年11月18日】
+    sunsetOn: '2026-11-18',
     source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
   },
   source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
