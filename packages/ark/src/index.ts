@@ -201,8 +201,6 @@ async function submit(
     ? !declaration.capabilities.includes(req.capability)
     : req.remoteOnly === true && req.capability !== 'text.chat'
   if (unsupported) throw new ProviderError('invalid_input', `所选${LABEL}模型不支持此能力`)
-  if (req.capability === 'text.chat' && plane === 'plan' && req.usage !== 'agent')
-    throw new ProviderError('invalid_input', '套餐文本模型仅供内置 Agent 使用')
   const key = requireKey(plane, ctx)
   const base = planeBase(plane)
   const post = (path: string, body: unknown) =>

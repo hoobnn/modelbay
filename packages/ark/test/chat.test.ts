@@ -232,12 +232,8 @@ describe('套餐对话', () => {
     fakeContext(replies, { secret: { ARK_AGENT_PLAN_API_KEY: 'plan-secret' } })
   const PLAN_CHAT = 'ark-plan:doubao-seed-2.1-pro'
 
-  it('普通调用被拦截，内置 Agent 使用专属路径与 Key', async () => {
+  it('使用专属路径与 Key（usage=agent 的拦截由宿主桥接负责，适配器不拦）', async () => {
     const { ctx, fetch, body } = plan([say('hello')])
-    await expect(
-      arkPlanAdapter.submit(chat(PLAN_CHAT, { messages: user }), ctx),
-    ).rejects.toMatchObject({ code: 'invalid_input' })
-    expect(fetch).not.toHaveBeenCalled()
     const result = await arkPlanAdapter.submit(chat(PLAN_CHAT, { messages: user }, 'agent'), ctx)
     expect(result).toMatchObject({ outputs: [{ type: 'text', text: 'hello' }] })
     expect(fetch.mock.calls[0]![0]).toBe(

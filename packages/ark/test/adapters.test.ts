@@ -83,14 +83,6 @@ describe('arkPlanAdapter：套餐数据面', () => {
     expect(JSON.parse(String(init.body)).model).toBe('doubao-seed-2.1-pro')
   })
 
-  it('套餐文本调用没有 usage=agent 时在请求前被拦截', async () => {
-    const { ctx, fetch } = fakeContext([], { secret: { ARK_AGENT_PLAN_API_KEY: 'k' } })
-    await expect(
-      arkPlanAdapter.submit(request('text.chat', 'ark-plan:doubao-seed-2.1-pro'), ctx),
-    ).rejects.toMatchObject({ code: 'invalid_input' })
-    expect(fetch).not.toHaveBeenCalled()
-  })
-
   it('套餐 TTS 经 @modelbay/doubao-speech 真正复用', async () => {
     const stream = '{"code":0,"data":"AQID"}{"code":20000000,"data":""}'
     const { ctx, fetch } = fakeContext([new Response(stream, { status: 200 })], {
