@@ -4,7 +4,7 @@ import { generateTools, listTools, toolNames } from '../src/generate'
 import { fakeAdapter, readInventory, MCP_KEYS, type McpKey } from './fixtures'
 
 const EXPECTED_COUNTS: Record<McpKey, number> = {
-  ark: 9,
+  ark: 8,
   minimax: 18,
   bailian: 19,
   'doubao-speech': 24,
