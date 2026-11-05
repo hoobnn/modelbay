@@ -52,7 +52,10 @@ export function generateTools(
   // 兜底能力仅用于派生无明确能力映射的工具；不是模型参数/上下限/默认值/生命周期。
   const defaultCapability = capabilities[0] ?? 'text.chat'
   // 深拷贝，生成过程不改动平台包里的工具定义
-  const entries = structuredClone(platform.mcp.tools)
+  const entries = platform.mcp.tools.map(({ mapArguments, ...rest }) => ({
+    ...structuredClone(rest),
+    ...(mapArguments ? { mapArguments } : {}),
+  }))
 
   const all: GeneratedTool[] = []
   for (const entry of entries) {
