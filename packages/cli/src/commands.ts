@@ -3,7 +3,7 @@
  *
  * 这个模块不引入任何运行时依赖（没有 `modelbay`，没有 `node:*`）：
  * I/O 和数据源都由调用方注入，所以不用联网、不用加载 SDK 就能单测。
- * `src/deps.ts` 负责把 SDK 适配成这里需要的数据源，`src/cli.ts` 是 bin 入口。
+ * `src/deps.ts` 负责把 SDK 适配成这里需要的数据源，`src/bin/modelbay.ts` 是 bin 入口。
  */
 
 /** Output sinks; the CLI entry uses `process.stdout.write` / `process.stderr.write`. */

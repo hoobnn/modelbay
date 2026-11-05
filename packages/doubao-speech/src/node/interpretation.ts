@@ -1,5 +1,5 @@
 /**
- * Node-only 同声传译会话（`@modelbay/doubao-speech/interpretation`）。
+ * Node-only 同声传译会话（`@modelbay/doubao-speech/node`）。
  *
  * 官方协议：WSS + protobuf（`data.speech.ast.TranslateRequest` / `TranslateResponse`）。
  * 这里把完整链路接起来：读本地 PCM → 建连 → 开始会话 → 分片上传音频 →

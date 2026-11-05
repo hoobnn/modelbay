@@ -479,7 +479,7 @@ export async function runDoubaoNative(
       if (p.product === 'asr_stream' || p.product === 'asr_websocket')
         throw new ProviderError(
           'unavailable',
-          '流式识别需要 Node 子路径 @modelbay/doubao-speech/asr，请在 Node 环境下运行',
+          '流式识别需要 Node 子路径 @modelbay/doubao-speech/node，请在 Node 环境下运行',
         )
       const path = asString(p.path)
       if (!path.startsWith('/'))

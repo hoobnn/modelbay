@@ -4,8 +4,8 @@
  * It wires the real SDK into the injected `CliDeps` that `runMain()` needs.
  */
 import { createModelbay } from 'modelbay'
-import { createCliDeps } from './deps'
-import { runMain } from './main'
+import { createCliDeps } from '../deps'
+import { runMain } from '../main'
 
 const code = await runMain({
   argv: process.argv.slice(2),

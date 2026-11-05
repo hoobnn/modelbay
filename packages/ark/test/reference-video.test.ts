@@ -116,7 +116,7 @@ describe('方舟参考视频：没注入时报错', () => {
       )
       .catch((cause: unknown) => cause)
     expect(error).toMatchObject({ code: 'invalid_input' })
-    expect((error as Error).message).toContain('@modelbay/ark/tos')
+    expect((error as Error).message).toContain('@modelbay/ark/node')
     expect((error as Error).message).toContain('uploadVideo')
     // 报错发生在提交之前，不会留下半个请求。
     expect(fetch).not.toHaveBeenCalled()

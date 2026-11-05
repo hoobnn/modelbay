@@ -3,7 +3,7 @@
  *
  * Exports `speechSettings`, `synthesizeSpeech` and `TTS_VOICES` for
  * `@modelbay/ark`'s Agent Plan TTS (the only allowed cross-adapter dependency).
- * Runtime-agnostic root entry; Node-only ASR codec lives in `@modelbay/doubao-speech/asr`.
+ * Runtime-agnostic root entry; Node-only ASR codec lives in `@modelbay/doubao-speech/node`.
  */
 import { createDoubaoAdapter, type DoubaoAdapter } from './adapter'
 import { all } from './models/index'

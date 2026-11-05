@@ -49,7 +49,7 @@ export interface ArkAdapterOptions {
   /**
    * 参考视频上传实现。
    *
-   * Node 子路径 `@modelbay/ark/tos` 导出 `uploadReferenceVideo`；
+   * Node 子路径 `@modelbay/ark/node` 导出 `uploadReferenceVideo`；
    * 没注入时 `video.generate` 遇到视频参考会报 `invalid_input`。
    */
   uploadVideo?: ReferenceVideoUploader

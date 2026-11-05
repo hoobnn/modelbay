@@ -83,7 +83,7 @@ channels) and parses the reply into a `{ type: 'json' }` output.
 
 ## Node-only subpath
 
-`@modelbay/ark/tos` (mapped to `dist/node/index.mjs`) contains the parts that
+`@modelbay/ark/node` (mapped to `dist/node/index.mjs`) contains the parts that
 require Node and must not be loaded from the root entry:
 
 - `s3Target()` / `referenceStorageHost()` / `presignS3()` / `objectKey()` — S3
@@ -127,7 +127,7 @@ adapter asks for the uploader instead of importing the SDK:
 
 ```ts
 import { createArkAdapter, models } from '@modelbay/ark'
-import { uploadReferenceVideo } from '@modelbay/ark/tos'
+import { uploadReferenceVideo } from '@modelbay/ark/node'
 
 const adapter = createArkAdapter(models, { uploadVideo: uploadReferenceVideo })
 ```

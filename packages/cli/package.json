@@ -15,7 +15,7 @@
     }
   },
   "bin": {
-    "modelbay": "./dist/cli.mjs"
+    "modelbay": "./dist/bin/modelbay.mjs"
   },
   "scripts": {
     "typecheck": "tsc -p .",

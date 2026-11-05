@@ -54,7 +54,7 @@ modelbay generate --capability audio.speech --prompt "你好，世界"
   injection, which keeps it unit-testable without network access.
 - `src/deps.ts` adapts the SDK entry into the data sources the command layer
   needs; `src/main.ts` wires argv, output channels and exit codes together.
-- `src/cli.ts` is the bin entry and is the only module that touches
+- `src/bin/modelbay.ts` is the bin entry and is the only module that touches
   `process.stdout` / `process.stderr` / `process.argv`.
 - Results are printed as URLs or byte counts; the CLI never downloads or stores
   generated files, and never prints keys.

@@ -121,7 +121,7 @@ describe('百炼局部重绘：注入后走通', () => {
       )
       .catch((cause: unknown) => cause)
     expect(error).toMatchObject({ code: 'invalid_input' })
-    expect((error as Error).message).toContain('@modelbay/bailian/image-edit')
+    expect((error as Error).message).toContain('@modelbay/bailian/node')
     expect((error as Error).message).toContain('prepareImageEditRequest')
     expect(fetch).not.toHaveBeenCalled()
   })

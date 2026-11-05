@@ -7,11 +7,11 @@
  *
  * Both expose `models` / `channels`; the root entry stays runtime-agnostic.
  * Node-only pieces (TOS/S3 upload, signed plan directory, ASR codec) live in
- * `src/node/**` and are exported from the optional `@modelbay/ark/tos` subpath.
+ * `src/node/**` and are exported from the optional `@modelbay/ark/node` subpath.
  *
  * Those Node pieces are injection points: `createArkAdapter(models, { uploadVideo })`
  * and `createArkPlanAdapter(models, { uploadVideo, transcribePlan, listPlanModels })`
- * take them from the `@modelbay/ark/tos` subpath (`nodeArkOptions` bundles all three),
+ * take them from the `@modelbay/ark/node` subpath (`nodeArkOptions` bundles all three),
  * so the root entry never pulls in the object-storage SDK, `ws` or `node:crypto`.
  */
 import {
@@ -271,7 +271,7 @@ async function submit(
     if (!options.transcribePlan)
       throw new ProviderError(
         'unavailable',
-        'Agent Plan 流式语音识别需要 Node 子路径：用 createArkPlanAdapter(models, nodeArkOptions) 注入（@modelbay/ark/tos，需要 ws）',
+        'Agent Plan 流式语音识别需要 Node 子路径：用 createArkPlanAdapter(models, nodeArkOptions) 注入（@modelbay/ark/node，需要 ws）',
       )
     return options.transcribePlan(req.input as CapabilityInput<'audio.transcribe'>, ctx)
   }
@@ -347,7 +347,7 @@ function makeAdapter(
         if (!options.listPlanModels)
           throw new ProviderError(
             'unavailable',
-            '套餐模型目录请用 @modelbay/ark/tos 的 listPlanModels（经 createArkPlanAdapter 的 listPlanModels 选项注入）',
+            '套餐模型目录请用 @modelbay/ark/node 的 listPlanModels（经 createArkPlanAdapter 的 listPlanModels 选项注入）',
           )
         return planRemoteModels(await options.listPlanModels(ctx), models)
       }

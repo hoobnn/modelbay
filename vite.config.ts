@@ -1,17 +1,9 @@
-import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite-plus'
-
-// verify 里 test 排在 build 之前：测试阶段直接解析到各包源码，不依赖 dist。
-const packagesRoot = fileURLToPath(new URL('./packages/', import.meta.url))
-const packageAliases = [
-  { find: /^@modelbay\/core\/([\w-]+)$/, replacement: `${packagesRoot}core/src/$1.ts` },
-  { find: /^@modelbay\/([\w-]+)$/, replacement: `${packagesRoot}$1/src/index.ts` },
-  { find: /^modelbay$/, replacement: `${packagesRoot}modelbay/src/index.ts` },
-]
+import { packageAliases } from './vite.package'
 
 /**
  * 仓库级工具链配置（Vite+）：lint（Oxlint）、fmt（Oxfmt）、test（Vitest）都在这里；
- * 各包自己的打包配置在 packages/<name>/vite.config.ts 的 pack 段。
+ * 各包的打包与测试别名统一由 vite.package.ts 的 definePackageConfig() 生成。
  */
 export default defineConfig({
   resolve: { alias: packageAliases },

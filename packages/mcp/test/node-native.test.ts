@@ -119,7 +119,7 @@ describe('Node 子路径的适配器注入点', () => {
       .catch((cause: unknown) => cause)
     // 注入了真实实现：走到「缺素材库」而不是「没有注入」
     expect(edit).toMatchObject({ code: 'invalid_input' })
-    expect((edit as Error).message).not.toContain('@modelbay/bailian/image-edit')
+    expect((edit as Error).message).not.toContain('@modelbay/bailian/node')
 
     const process = await adapter
       ?.submit(
@@ -132,7 +132,7 @@ describe('Node 子路径的适配器注入点', () => {
       )
       .catch((cause: unknown) => cause)
     expect(process).toMatchObject({ code: 'invalid_input' })
-    expect((process as Error).message).not.toContain('@modelbay/bailian/image-edit')
+    expect((process as Error).message).not.toContain('@modelbay/bailian/node')
   })
 
   it('平台元数据声明了各家 Node 子路径', () => {

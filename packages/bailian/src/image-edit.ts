@@ -2,7 +2,7 @@
  * 局部重绘与精修的公共类型（运行时无关）。
  *
  * 这两项能力都要先用 sharp 预处理蒙版、再把图片传到百炼的临时 OSS，
- * 所以真正的实现在 Node 子路径 `@modelbay/bailian/image-edit` 里；
+ * 所以真正的实现在 Node 子路径 `@modelbay/bailian/node` 里；
  * 根入口只声明注入点、校验参数、发请求。
  */
 import type { AdapterContext, AssetRef, LoadedFile } from '@modelbay/core'

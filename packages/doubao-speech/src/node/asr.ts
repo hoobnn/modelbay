@@ -1,5 +1,5 @@
 /**
- * Node-only streaming ASR session (`@modelbay/doubao-speech/asr`).
+ * Node-only streaming ASR session (`@modelbay/doubao-speech/node`).
  *
  * The Doubao/Volcengine streaming ASR protocol gzips every JSON/audio frame
  * behind a 12-byte binary header. `node:zlib` and `Buffer` are Node-specific, so

@@ -1,5 +1,5 @@
 /**
- * Node-only Bailian image editing (`@modelbay/bailian/image-edit`).
+ * Node-only Bailian image editing (`@modelbay/bailian/node`).
  *
  * This subpath is intentionally excluded from the root entry: the mask preprocessing
  * needs `sharp` (Apache-2.0, Node-only) and the reference upload needs the OSS

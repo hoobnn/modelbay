@@ -1,7 +1,7 @@
 /**
  * Node-only Agent Plan model-directory request. The control-plane endpoint is
  * signed with AK/SK (HMAC-SHA256), not the Agent Plan API key. Exported from
- * `@modelbay/ark/tos` and never imported by the root entry.
+ * `@modelbay/ark/node` and never imported by the root entry.
  */
 import { createHash, createHmac } from 'node:crypto'
 import { ProviderError, type AdapterContext, type RemoteModel } from '@modelbay/core'

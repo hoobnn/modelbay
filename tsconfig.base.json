@@ -15,20 +15,9 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "paths": {
-      "@modelbay/core": ["./packages/core/src/index.ts"],
-      "@modelbay/core/*": ["./packages/core/src/*.ts"],
-      "@modelbay/ark": ["./packages/ark/src/index.ts"],
-      "@modelbay/bailian": ["./packages/bailian/src/index.ts"],
-      "@modelbay/minimax": ["./packages/minimax/src/index.ts"],
-      "@modelbay/doubao-speech": ["./packages/doubao-speech/src/index.ts"],
-      "@modelbay/doubao-speech/interpretation": [
-        "./packages/doubao-speech/src/node/interpretation.ts"
-      ],
-      "@modelbay/doubao-speech/asr": ["./packages/doubao-speech/src/node/asr.ts"],
-      "@modelbay/shared": ["./packages/shared/src/index.ts"],
-      "@modelbay/openai": ["./packages/openai/src/index.ts"],
-      "@modelbay/mcp": ["./packages/mcp/src/index.ts"],
-      "@modelbay/cli": ["./packages/cli/src/index.ts"],
+      "@modelbay/*/node": ["./packages/*/src/node/index.ts"],
+      "@modelbay/*": ["./packages/*/src/index.ts"],
+      "modelbay/node": ["./packages/modelbay/src/node.ts"],
       "modelbay": ["./packages/modelbay/src/index.ts"]
     }
   }

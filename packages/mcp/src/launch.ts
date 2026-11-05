@@ -41,10 +41,10 @@ function isPlatformAdapter(value: unknown): value is PlatformAdapter {
  * 调用到该能力时报出明确的缺依赖 / 未注入错误。
  */
 const NODE_NATIVE_LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
-  'doubao-speech:interpretation': () => import('@modelbay/doubao-speech/interpretation'),
-  'doubao-speech:asr': () => import('@modelbay/doubao-speech/asr'),
-  'ark:tos': () => import('@modelbay/ark/tos'),
-  'bailian:image-edit': () => import('@modelbay/bailian/image-edit'),
+  'doubao-speech:interpretation': () => import('@modelbay/doubao-speech/node'),
+  'doubao-speech:asr': () => import('@modelbay/doubao-speech/node'),
+  'ark:tos': () => import('@modelbay/ark/node'),
+  'bailian:image-edit': () => import('@modelbay/bailian/node'),
 }
 
 /** 动态加载平台适配器；variable specifier 让未构建的包在整合前不产生类型/解析错误。 */

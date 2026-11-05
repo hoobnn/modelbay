@@ -1,5 +1,5 @@
 /**
- * Node-only reference-video upload helpers, exported from `@modelbay/ark/tos`.
+ * Node-only reference-video upload helpers, exported from `@modelbay/ark/node`.
  * Root entry never imports this file: it uses `node:crypto` / `Buffer` and the
  * TOS SDK, which are not available in browsers or Deno.
  */

@@ -264,7 +264,7 @@ describe('submit: request construction and response parsing (fixtures)', () => {
       )
       .catch((cause: unknown) => cause)
     expect(edit).toMatchObject({ code: 'invalid_input' })
-    expect((edit as Error).message).toContain('@modelbay/bailian/image-edit')
+    expect((edit as Error).message).toContain('@modelbay/bailian/node')
     // 精修不需要 sharp：没注入预处理实现时用内置的上传 + 拼请求体
     const policy = fixture('upload-policy')
     const run = fakeContext([

@@ -2,7 +2,7 @@
  * CLI 的进程级装配：把 argv、输出通道和数据源接到命令层上。
  *
  * argv、IO 和 deps 都由调用方注入，所以这段逻辑（尤其是错误退出码）
- * 不用起子进程就能测。真正的 `process.*` 只出现在 bin 入口 `src/cli.ts`。
+ * 不用起子进程就能测。真正的 `process.*` 只出现在 bin 入口 `src/bin/modelbay.ts`。
  */
 import { runCli } from './commands'
 import type { CliDeps, CliIO } from './commands'

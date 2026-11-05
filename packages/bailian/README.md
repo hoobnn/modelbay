@@ -75,7 +75,7 @@ adapter in `nativeOperationSchemas` (for the MCP generator):
 
 ## Node-only subpath
 
-`@modelbay/bailian/image-edit` exports `buildImageEditRequest()` plus the Node-only
+`@modelbay/bailian/node` exports `buildImageEditRequest()` plus the Node-only
 mask handling and upload:
 
 - `prepareEditMask(base, mask)` normalizes the mask with `sharp`: apply the EXIF
@@ -100,7 +100,7 @@ import { createBailianAdapter, models } from '@modelbay/bailian'
 import {
   prepareImageEditRequest,
   prepareImageProcessRequest,
-} from '@modelbay/bailian/image-edit'
+} from '@modelbay/bailian/node'
 
 const adapter = createBailianAdapter(models, {
   edit: prepareImageEditRequest,

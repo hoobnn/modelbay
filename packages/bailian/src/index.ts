@@ -2,7 +2,7 @@
  * `@modelbay/bailian` — Alibaba Bailian / DashScope adapter.
  *
  * Runtime-agnostic: only `ctx.fetch` / `ctx.secret` are used. Node-only image editing
- * lives in the optional `@modelbay/bailian/image-edit` subpath.
+ * lives in the optional `@modelbay/bailian/node` subpath.
  */
 import type { PlatformAdapter } from '@modelbay/core'
 import { createBailianAdapter } from './adapter'

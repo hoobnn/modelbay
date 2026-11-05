@@ -29,9 +29,9 @@ automatically at launch:
 
 | Platform | Subpath                        | Injected option   | Capability                    |
 | -------- | ------------------------------ | ----------------- | ----------------------------- |
-| Ark      | `@modelbay/ark/tos`            | `uploadVideo`     | video reference upload        |
-| Bailian  | `@modelbay/bailian/image-edit` | `edit`, `process` | `image.edit`, `image.process` |
-| Doubao   | `@modelbay/doubao-speech/asr`  | `asr`             | streaming ASR                 |
+| Ark      | `@modelbay/ark/node`           | `uploadVideo`     | video reference upload        |
+| Bailian  | `@modelbay/bailian/node`       | `edit`, `process` | `image.edit`, `image.process` |
+| Doubao   | `@modelbay/doubao-speech/node` | `asr`             | streaming ASR                 |
 
 The optional peer dependencies (`@volcengine/tos-sdk`, `sharp`, `ws`) are imported lazily inside
 those subpaths, so a missing dependency never stops the server from starting — the call that needs

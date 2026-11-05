@@ -78,7 +78,7 @@ tests and for hosts without a socket.
 
 ## Node-only subpath
 
-`@modelbay/doubao-speech/asr` exports the streaming ASR client: the `node:zlib`-based
+`@modelbay/doubao-speech/node` exports the streaming ASR client: the `node:zlib`-based
 frame codec (`encodeAsrFrame` / `decodeAsrFrame`) and `transcribeStream()`, which opens
 the WSS session, sends the full client request, streams the PCM in 200 ms chunks and
 collects the recognition results. `runAsrStream()` is the entry point the MCP injects
@@ -93,7 +93,7 @@ stream). The resource id is `volc.seedasr.sauc.duration`. The three modes share 
 implementation — only the endpoint and the request parameters differ — and an explicit
 `mode` wins over the product default.
 
-`@modelbay/doubao-speech/interpretation` exports the simultaneous-interpretation
+`@modelbay/doubao-speech/node` exports the simultaneous-interpretation
 client: the minimal protobuf codec for the official `data.speech.ast` messages
 (`encodeTranslateRequest` / `decodeTranslateResponse`) and `interpretAudio()`, which
 opens the WSS session, uploads the PCM in 80 ms chunks and collects the subtitles,

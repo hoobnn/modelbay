@@ -484,7 +484,7 @@ async function generateVideo(
 export interface BailianAdapterOptions {
   docsUrl?: string
   /**
-   * 局部重绘的预处理与上传实现（Node 子路径 `@modelbay/bailian/image-edit` 提供）。
+   * 局部重绘的预处理与上传实现（Node 子路径 `@modelbay/bailian/node` 提供）。
    *
    * 没注入时 `image.edit` 报 `invalid_input`，不会发出缺蒙版或缺素材地址的请求。
    */
@@ -628,7 +628,7 @@ export function createBailianAdapter(
           if (!options.edit)
             throw new ProviderError(
               'invalid_input',
-              '局部重绘需要蒙版预处理与临时 OSS 上传：请从 @modelbay/bailian/image-edit 引入 prepareImageEditRequest，再用 createBailianAdapter(models, { edit: prepareImageEditRequest }) 注入',
+              '局部重绘需要蒙版预处理与临时 OSS 上传：请从 @modelbay/bailian/node 引入 prepareImageEditRequest，再用 createBailianAdapter(models, { edit: prepareImageEditRequest }) 注入',
             )
           const body = await options.edit(ctx, {
             model,
@@ -789,5 +789,5 @@ export function createBailianAdapter(
 /** Native operation parameter schemas, re-exported for the MCP generator. */
 export { nativeOperationSchemas }
 
-/** Capabilities that need the Node-only `@modelbay/bailian/image-edit` subpath. */
+/** Capabilities that need the Node-only `@modelbay/bailian/node` subpath. */
 export const NODE_ONLY_CAPABILITIES = ['image.edit', 'image.process'] as const

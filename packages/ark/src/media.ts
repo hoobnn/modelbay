@@ -319,7 +319,7 @@ async function assetReferences(
     if (ref.kind === 'video') {
       if (!uploadVideo)
         invalid(
-          '火山方舟参考视频需要上传到对象存储：请从 @modelbay/ark/tos 引入 uploadReferenceVideo，' +
+          '火山方舟参考视频需要上传到对象存储：请从 @modelbay/ark/node 引入 uploadReferenceVideo，' +
             '再用 createArkAdapter(models, { uploadVideo: uploadReferenceVideo }) 注入',
         )
       const file = await readFile(ctx, ref)

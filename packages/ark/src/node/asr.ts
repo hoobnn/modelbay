@@ -1,6 +1,6 @@
 /**
  * Node-only Agent Plan ASR: the Volcengine streaming speech-recognition protocol
- * over a WebSocket with custom headers, exported from `@modelbay/ark/tos`.
+ * over a WebSocket with custom headers, exported from `@modelbay/ark/node`.
  *
  * The root adapter never imports this file — it only points hosts at this subpath.
  * `node:zlib` provides the gzip compression the protocol requires; the WebSocket

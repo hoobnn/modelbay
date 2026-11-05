@@ -127,7 +127,7 @@ export function parseFlashAsr(raw: string, ctx: AdapterContext): ProviderOutput[
 }
 
 /**
- * 同传实现：由 Node 子路径 `@modelbay/doubao-speech/interpretation` 注入。
+ * 同传实现：由 Node 子路径 `@modelbay/doubao-speech/node` 注入。
  *
  * 官方协议要连 WSS 并收发 protobuf，根入口保持运行时无关，所以这里只留一个注入点：
  * 没有注入时 native 操作仍然返回请求计划，注入了就跑真实会话。
@@ -135,7 +135,7 @@ export function parseFlashAsr(raw: string, ctx: AdapterContext): ProviderOutput[
 export type InterpretationRunner = (ctx: AdapterContext, params: Json) => Promise<Json>
 
 /**
- * 流式识别实现：由 Node 子路径 `@modelbay/doubao-speech/asr` 注入。
+ * 流式识别实现：由 Node 子路径 `@modelbay/doubao-speech/node` 注入。
  *
  * 官方协议要连 WSS 并收发 gzip 二进制帧，根入口保持运行时无关，
  * 所以这里只留一个注入点。
