@@ -226,6 +226,9 @@ importers:
       '@modelbay/doubao-speech':
         specifier: workspace:*
         version: link:../doubao-speech
+      '@modelbay/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^26.6.6

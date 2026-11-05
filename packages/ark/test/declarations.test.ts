@@ -123,7 +123,7 @@ describe('方舟套餐 TTS 的跨包复用', () => {
 
   it('静态复用 doubao-speech 的 synthesizeSpeech 并走 plan 专属端点', async () => {
     const { ctx, fetch } = fakeContext([new Response(stream, { status: 200 })], {
-      secret: { VOLC_SPEECH_API_KEY: 'test-key' },
+      secret: { ARK_AGENT_PLAN_API_KEY: 'test-key' },
     })
     const result = await synthesizePlanSpeech({ text: '你好' }, ctx)
     expect(result.state).toBe('succeeded')
@@ -140,7 +140,7 @@ describe('方舟套餐 TTS 的跨包复用', () => {
   it('上游失败按对方的 ProviderError 原样传播', async () => {
     const { ctx } = fakeContext(
       [jsonResponse({ header: { code: 45000001, message: '音色无效' } }, 400)],
-      { secret: { VOLC_SPEECH_API_KEY: 'test-key' } },
+      { secret: { ARK_AGENT_PLAN_API_KEY: 'test-key' } },
     )
     await expect(synthesizePlanSpeech({ text: '你好' }, ctx)).rejects.toMatchObject({
       code: 'invalid_input',

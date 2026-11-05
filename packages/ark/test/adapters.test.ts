@@ -3,13 +3,27 @@ import type { AdapterRequest } from '@modelbay/core'
 import { arkAdapter, arkPlanAdapter, channels, models } from '../src/index'
 import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
 
+/** 对话的 SSE 应答。 */
+function sseSay(content: string): Response {
+  const frames = [
+    { choices: [{ index: 0, delta: { role: 'assistant', content } }] },
+    { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
+  ]
+  return new Response(
+    `${frames.map((f) => `data: ${JSON.stringify(f)}\n\n`).join('')}data: [DONE]\n\n`,
+    { status: 200, headers: { 'content-type': 'text/event-stream' } },
+  )
+}
+
 function request(
   capability: AdapterRequest['capability'],
   model = 'ark:test-model',
+  usage?: 'agent',
 ): AdapterRequest {
   return {
     capability,
     model,
+    ...(usage ? { usage } : {}),
     input: { messages: [{ role: 'user', content: '你好' }] },
   }
 }
@@ -32,7 +46,7 @@ describe('适配器导出', () => {
 describe('arkAdapter.submit：文本对话', () => {
   it('按 /api/v3/chat/completions 构造请求并解析响应', async () => {
     const recorded = fixture<RecordedCall>('chat-success')
-    const { ctx, fetch } = fakeContext([jsonResponse(recorded.response.body)], {
+    const { ctx, fetch } = fakeContext([sseSay('你好')], {
       secret: { ARK_API_KEY: 'sk-recorded-key' },
     })
     const result = await arkAdapter.submit(request('text.chat'), ctx)
@@ -60,29 +74,21 @@ describe('arkAdapter.submit：文本对话', () => {
 
 describe('arkPlanAdapter：套餐数据面', () => {
   it('套餐走 /api/plan/v3，模型名用套餐概览页上的写法', async () => {
-    const recorded = fixture<RecordedCall>('chat-tool-calls')
-    const { ctx, fetch } = fakeContext([jsonResponse(recorded.response.body)], {
+    const { ctx, fetch } = fakeContext([sseSay('hi')], {
       secret: { ARK_AGENT_PLAN_API_KEY: 'sk-recorded-key' },
     })
-    await arkPlanAdapter.submit(request('text.chat', 'ark-plan:doubao-seedream-5.0-pro'), ctx)
+    await arkPlanAdapter.submit(request('text.chat', 'ark-plan:doubao-seed-2.1-pro', 'agent'), ctx)
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions')
-    const body = JSON.parse(String(init.body))
-    // 套餐模型目录接口返回的是点号的 doubao-seedream-5.0-pro。
-    expect(body.model).toBe('doubao-seedream-5.0-pro')
+    expect(JSON.parse(String(init.body)).model).toBe('doubao-seed-2.1-pro')
   })
 
-  it('按量 ID 传进套餐渠道时也换成套餐页上的模型名', async () => {
-    const recorded = fixture<RecordedCall>('chat-tool-calls')
-    const { ctx, fetch } = fakeContext([jsonResponse(recorded.response.body)], {
-      secret: { ARK_AGENT_PLAN_API_KEY: 'sk-recorded-key' },
-    })
-    await arkPlanAdapter.submit(
-      request('text.chat', 'ark-plan:doubao-seedream-5-0-pro-260628'),
-      ctx,
-    )
-    const [, init] = fetch.mock.calls[0] as [string, RequestInit]
-    expect(JSON.parse(String(init.body)).model).toBe('doubao-seedream-5.0-pro')
+  it('套餐文本调用没有 usage=agent 时在请求前被拦截', async () => {
+    const { ctx, fetch } = fakeContext([], { secret: { ARK_AGENT_PLAN_API_KEY: 'k' } })
+    await expect(
+      arkPlanAdapter.submit(request('text.chat', 'ark-plan:doubao-seed-2.1-pro'), ctx),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(fetch).not.toHaveBeenCalled()
   })
 
   it('套餐 TTS 经 @modelbay/doubao-speech 真正复用', async () => {

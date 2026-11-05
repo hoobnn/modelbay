@@ -12,8 +12,15 @@
  * -  模型 `doubao-seed-asr-2.0` 对应 `X-Api-Resource-Id: volc.seedasr.sauc.duration`
  */
 import { gzipSync, gunzipSync } from 'node:zlib'
-import { ProviderError, type AdapterContext, type SubmitResult } from '@modelbay/core'
-import { asJson, type Json } from '../http'
+import {
+  ProviderError,
+  type AdapterContext,
+  type CapabilityInput,
+  type SubmitResult,
+  type TranscriptSegment,
+} from '@modelbay/core'
+import { asJson, redactSecrets, type Json } from '../http'
+import { readFile } from '../files'
 
 /** 方舟 Agent Plan 的流式语音识别接口（单流：流式输入、末尾统一返回）。 */
 export const PLAN_ASR_PATH = '/api/v3/plan/sauc/bigmodel_nostream'
@@ -242,6 +249,135 @@ export async function transcribePlan(
     usage: {
       seconds: Math.round((options.audio.length / 2 / (options.rate ?? 16000)) * 100) / 100,
     },
+  }
+}
+
+/** 套餐识别接受的音频格式（MIME → 协议里的 format）。 */
+const PLAN_AUDIO_FORMATS: Record<string, string> = {
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/ogg': 'ogg',
+}
+/** 套餐识别的音频上限与分片大小（字节）。 */
+const PLAN_AUDIO_MAX_BYTES = 100 * 1024 * 1024
+const PLAN_AUDIO_CHUNK = 32000
+
+/**
+ * 方舟套餐语音识别（`audio.transcribe`）：读 `input.audio` 资产，经宿主的 `ctx.socket`
+ * 建立 `bigmodel_nostream` 连接，先发完整请求等初始化确认，再按 32000 字节一片发音频
+ * （末片序号为负），收到终包后把分句毫秒转成秒。
+ *
+ * 断流、错误帧、不完整终包都不会当作成功；POST 语义下结果标 `outcome: 'unknown'`，不自动重试。
+ * 作为 `createArkPlanAdapter` 的 `transcribePlan` 选项注入（`nodeArkOptions` 已包含）。
+ */
+export async function transcribePlanAudio(
+  input: CapabilityInput<'audio.transcribe'>,
+  ctx: AdapterContext,
+): Promise<SubmitResult> {
+  if (!ctx.socket)
+    throw new ProviderError('unavailable', '当前宿主不支持 Agent Plan 流式语音识别，请升级宿主')
+  const key = ctx.secret('ARK_AGENT_PLAN_API_KEY')
+  if (!key) throw new ProviderError('auth', '请先配置 Agent Plan 专属 API Key')
+  const asset = await readFile(ctx, input.audio)
+  const format = PLAN_AUDIO_FORMATS[asset.mime]
+  if (!format || !asset.data.length || asset.data.length > PLAN_AUDIO_MAX_BYTES)
+    throw new ProviderError(
+      'invalid_input',
+      'Agent Plan 识别支持非空 WAV、MP3、Ogg Opus 音频，最大 100 MB',
+    )
+  const requestId = ctx.submission?.requestId ?? globalThis.crypto.randomUUID()
+  ctx.log('Agent Plan 语音识别请求', { requestId })
+  let socket: Awaited<ReturnType<NonNullable<AdapterContext['socket']>>> | undefined
+  try {
+    socket = await ctx.socket(`${PLAN_ASR_HOST}${PLAN_ASR_PATH}`, {
+      'X-Api-Key': key,
+      'X-Api-Resource-Id': PLAN_ASR_RESOURCE,
+      'X-Api-Connect-Id': requestId,
+      'X-Api-Request-Id': requestId,
+      'X-Api-Sequence': '-1',
+    })
+    const logId = socket.logId ? redactSecrets(socket.logId, [key]) : undefined
+    ctx.submission?.response({ httpStatus: 101, ...(logId ? { logId } : {}) })
+    if (logId) ctx.log('Agent Plan 语音识别平台日志', { requestId, logId })
+    socket.send(
+      asrFrame(
+        FULL_REQUEST,
+        1,
+        Buffer.from(
+          JSON.stringify({
+            user: { uid: 'modelbay' },
+            audio: {
+              format,
+              ...(format === 'ogg' ? { codec: 'opus' } : {}),
+              ...(input.language ? { language: input.language } : {}),
+            },
+            request: {
+              model_name: 'bigmodel',
+              enable_itn: true,
+              enable_punc: true,
+              show_utterances: true,
+            },
+          }),
+        ),
+      ),
+    )
+    // 等待初始化确认后发送音频；并行接收，避免较长录音的响应积压。
+    const initial = asrPacket(await socket.receive())
+    if (initial.final) throw new ProviderError('unknown', '语音识别在发送音频前结束')
+    const open = socket
+    const receiving = (async () => {
+      for (;;) {
+        const packet = asrPacket(await open.receive())
+        if (!packet.final) continue
+        const result = asJson(packet.data.result)
+        if (typeof result.text !== 'string')
+          throw new ProviderError('unknown', '语音识别结果缺少文本')
+        const segments: TranscriptSegment[] = (
+          Array.isArray(result.utterances) ? result.utterances : []
+        )
+          .map(asJson)
+          .filter(
+            (u) =>
+              typeof u.text === 'string' &&
+              typeof u.start_time === 'number' &&
+              typeof u.end_time === 'number' &&
+              u.end_time > u.start_time,
+          )
+          .map((u) => ({
+            text: u.text as string,
+            start: (u.start_time as number) / 1000,
+            end: (u.end_time as number) / 1000,
+          }))
+        return {
+          state: 'succeeded' as const,
+          outputs: [
+            { type: 'text' as const, text: result.text },
+            ...(segments.length ? [{ type: 'json' as const, value: { segments } }] : []),
+          ],
+        }
+      }
+    })()
+    // 发送过程失败时也消费接收端的拒绝；正常路径仍 await 并传播错误。
+    void receiving.catch(() => {})
+    let sequence = 2
+    for (let offset = 0; offset < asset.data.length; offset += PLAN_AUDIO_CHUNK) {
+      const chunk = asset.data.subarray(offset, offset + PLAN_AUDIO_CHUNK)
+      const last = offset + chunk.length === asset.data.length
+      socket.send(asrFrame(AUDIO_REQUEST, last ? -sequence : sequence, chunk))
+      sequence++
+    }
+    return await receiving
+  } catch (error) {
+    if (error instanceof ProviderError) throw error
+    throw new ProviderError(
+      ctx.signal.aborted ? 'cancelled' : 'unavailable',
+      redactSecrets('Agent Plan 语音识别失败，结果未知', [key]),
+      { outcome: 'unknown', retryable: false },
+    )
+  } finally {
+    socket?.close()
   }
 }
 

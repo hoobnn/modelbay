@@ -37,7 +37,8 @@
   },
   "dependencies": {
     "@modelbay/core": "workspace:*",
-    "@modelbay/doubao-speech": "workspace:*"
+    "@modelbay/doubao-speech": "workspace:*",
+    "@modelbay/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

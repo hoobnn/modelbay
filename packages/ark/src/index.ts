@@ -9,9 +9,10 @@
  * Node-only pieces (TOS/S3 upload, signed plan directory, ASR codec) live in
  * `src/node/**` and are exported from the optional `@modelbay/ark/tos` subpath.
  *
- * The reference-video upload is an injection point: `createArkAdapter(models, {
- * uploadVideo })` takes the uploader from the `@modelbay/ark/tos` subpath, so
- * the root entry never pulls in the object-storage SDK.
+ * Those Node pieces are injection points: `createArkAdapter(models, { uploadVideo })`
+ * and `createArkPlanAdapter(models, { uploadVideo, transcribePlan, listPlanModels })`
+ * take them from the `@modelbay/ark/tos` subpath (`nodeArkOptions` bundles all three),
+ * so the root entry never pulls in the object-storage SDK, `ws` or `node:crypto`.
  */
 import {
   ProviderError,
@@ -24,6 +25,7 @@ import {
   type ModelDeclaration,
   type ModelLimits,
   type PlatformAdapter,
+  type RemoteModel,
   type SubmitResult,
 } from '@modelbay/core'
 import { allModels as all } from './declarations'
@@ -44,15 +46,33 @@ import { synthesizePlanSpeech } from './speech'
 import { request } from './http'
 import type { ArkAdapterOptions } from './reference'
 
-export type { ArkAdapterOptions, ReferenceFile, ReferenceVideoUploader } from './reference'
+export type {
+  ArkAdapterOptions,
+  PlanDirectory,
+  PlanTranscriber,
+  ReferenceFile,
+  ReferenceVideoUploader,
+} from './reference'
 export { REFERENCE_STORAGE_KEYS } from './reference'
 
 const API_BASE = 'https://ark.cn-beijing.volces.com/api/v3'
 const PLAN_BASE = 'https://ark.cn-beijing.volces.com/api/plan/v3'
 const SECRET = { api: 'ARK_API_KEY', plan: 'ARK_AGENT_PLAN_API_KEY' } as const
 const DOCS = 'https://docs.volcengine.com/docs/ark/model-list?lang=zh'
+/** 错误文案里的平台名；两个数据面一致，与宿主展示的文案对齐。 */
+const LABEL = '火山方舟'
 
 type Plane = 'api' | 'plan'
+
+/**
+ * 自定义模型槽：声明里的占位模型 → 设置里的 Endpoint ID。
+ * 宿主没有 settings（MCP / CLI）时回退到同名 env / secret。
+ */
+const CUSTOM_SLOTS: Record<string, { setting: string; secret: string }> = {
+  'custom-chat': { setting: 'customChatModel', secret: 'ARK_CUSTOM_CHAT_MODEL' },
+  'custom-image': { setting: 'customImageModel', secret: 'ARK_CUSTOM_IMAGE_MODEL' },
+  'custom-video': { setting: 'customVideoModel', secret: 'ARK_CUSTOM_VIDEO_MODEL' },
+}
 
 /** Channels covered by this package. */
 export const channels: string[] = ['ark', 'ark-plan']
@@ -63,7 +83,7 @@ function planeBase(plane: Plane): string {
   return plane === 'plan' ? PLAN_BASE : API_BASE
 }
 
-function planeLabel(plane: Plane): string {
+function planeTitle(plane: Plane): string {
   return plane === 'plan' ? '火山方舟 Agent Plan' : '火山方舟'
 }
 
@@ -71,11 +91,9 @@ function planeChannel(plane: Plane): string {
   return plane === 'plan' ? 'ark-plan' : 'ark'
 }
 
-function transportMessages(plane: Plane) {
-  return {
-    cancelled: `${planeLabel(plane)}请求已取消`,
-    network: `${planeLabel(plane)}网络请求失败；生成提交结果可能未知，不会自动重新提交`,
-  }
+const TRANSPORT = {
+  cancelled: `${LABEL}请求已取消`,
+  network: `${LABEL}网络请求失败；生成提交结果可能未知，不会自动重新提交`,
 }
 
 function requireKey(plane: Plane, ctx: AdapterContext): string {
@@ -115,11 +133,12 @@ function resolveForPlane(
 /**
  * 一次引用解析的结果。
  *
- * `model` 是目标渠道的渠道内 ID（请求体里用）；`limits` 是声明里的上限
- * （一次几张、最多几张参考图、有哪些分辨率档位都在这里）。
+ * `model` 是请求体里用的模型名（渠道内 ID；自定义槽为设置里的 Endpoint ID）；
+ * `limits` 是声明里的上限（一次几张、最多几张参考图、有哪些分辨率档位都在这里）。
  */
 interface ResolvedModel {
   model: string
+  declaration?: ModelDeclaration
   limits: ModelLimits
 }
 
@@ -128,21 +147,32 @@ function resolveModelForPlane(
   ref: string,
   plane: Plane,
   models: ModelDeclaration[],
+  ctx: AdapterContext,
 ): ResolvedModel {
   const colon = ref.indexOf(':')
   const raw = colon >= 0 ? ref.slice(colon + 1) : ref
   const found = resolveForPlane(ref, plane, models)
   if (!found) return { model: raw, limits: {} }
+  const slot = CUSTOM_SLOTS[found.declaration.id]
+  let model = found.channel.id
+  if (slot) {
+    // 占位模型不能当模型名发出去：必须换成设置里的 Endpoint ID
+    const configured = ctx.settings ? ctx.settings[slot.setting] : ctx.secret(slot.secret)
+    model = typeof configured === 'string' ? configured.trim() : ''
+    if (!model)
+      throw new ProviderError('invalid_input', '请在火山方舟设置中填写自定义模型 / Endpoint ID')
+  }
   return {
-    model: found.channel.id,
+    model,
+    declaration: found.declaration,
     limits: { ...found.declaration.limits, ...found.channel.limits },
   }
 }
 
 /** Default resolution comes only from the declaration; never hard-coded here. */
-function defaultResolution(limits: ModelLimits): string {
+function defaultResolution(limits: ModelLimits, kind: '图片' | '视频'): string {
   if (!limits.defaultResolution)
-    throw new ProviderError('invalid_input', '所选模型未声明默认分辨率')
+    throw new ProviderError('invalid_input', `所选${kind}模型未声明默认分辨率`)
   return limits.defaultResolution
 }
 
@@ -152,8 +182,8 @@ function taskOptions(plane: Plane, ctx: AdapterContext, key: string): TaskOption
     plane,
     base: planeBase(plane),
     key,
-    label: planeLabel(plane),
-    messages: transportMessages(plane),
+    label: LABEL,
+    messages: TRANSPORT,
   }
 }
 
@@ -164,23 +194,39 @@ async function submit(
   models: ModelDeclaration[],
   options: ArkAdapterOptions,
 ): Promise<SubmitResult> {
+  const resolved = resolveModelForPlane(req.model, plane, models, ctx)
+  const { declaration, model } = resolved
+  // 声明里有这个模型就按声明的能力放行；声明外的 ID 只有对话允许走远端模型
+  const unsupported = declaration
+    ? !declaration.capabilities.includes(req.capability)
+    : req.remoteOnly === true && req.capability !== 'text.chat'
+  if (unsupported) throw new ProviderError('invalid_input', `所选${LABEL}模型不支持此能力`)
+  if (req.capability === 'text.chat' && plane === 'plan' && req.usage !== 'agent')
+    throw new ProviderError('invalid_input', '套餐文本模型仅供内置 Agent 使用')
   const key = requireKey(plane, ctx)
   const base = planeBase(plane)
-  const label = planeLabel(plane)
-  const messages = transportMessages(plane)
-  const resolved = resolveModelForPlane(req.model, plane, models)
-  const model = resolved.model
+  const post = (path: string, body: unknown) =>
+    request({
+      ctx,
+      url: `${base}${path}`,
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      label: LABEL,
+      messages: TRANSPORT,
+      secrets: [key],
+      retries: 0,
+    })
 
   if (req.capability === 'text.chat') {
     return chatCompletion({
       ctx,
-      url: `${base}/chat/completions`,
+      baseURL: base,
       model,
       apiKey: key,
-      label,
+      label: LABEL,
       input: req.input as CapabilityInput<'text.chat'>,
-      messages,
-      structured: 'json_schema',
+      plan: plane === 'plan',
     })
   }
   if (req.capability === 'image.generate') {
@@ -189,57 +235,80 @@ async function submit(
       req.input as CapabilityInput<'image.generate'>,
       ctx,
       resolved.limits,
-      defaultResolution(resolved.limits),
+      defaultResolution(resolved.limits, '图片'),
     )
-    const data = await request({
-      ctx,
-      url: `${base}/images/generations`,
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      label,
-      messages,
-      secrets: [key],
-      retries: 0,
+    return parseImageResponse(await post('/images/generations', body), {
+      key,
+      outputFormat: body.output_format,
     })
-    return parseImageResponse(data)
   }
   if (req.capability === 'image.process') {
-    const body = await cutoutBody(model, req.input as CapabilityInput<'image.process'>, ctx)
-    const data = await request({
+    const body = await cutoutBody(
+      model,
+      req.input as CapabilityInput<'image.process'>,
       ctx,
-      url: `${base}/images/generations`,
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      label,
-      messages,
-      secrets: [key],
-      retries: 0,
-    })
-    return parseCutoutResponse(data)
+      resolved.limits,
+      declaration?.title,
+    )
+    return parseCutoutResponse(await post('/images/generations', body))
   }
   if (req.capability === 'video.generate') {
-    const body = await videoBody(
+    const body = await videoBody({
       plane,
       model,
-      req.input as CapabilityInput<'video.generate'>,
+      input: req.input as CapabilityInput<'video.generate'>,
       ctx,
-      defaultResolution(resolved.limits),
-      options.uploadVideo,
-    )
+      defaultResolution: defaultResolution(resolved.limits, '视频'),
+      limits: resolved.limits,
+      ...(declaration?.optionsSchema ? { optionsSchema: declaration.optionsSchema } : {}),
+      ...(declaration?.title ? { title: declaration.title } : {}),
+      ...(options.uploadVideo ? { uploadVideo: options.uploadVideo } : {}),
+    })
     return submitVideo(body, taskOptions(plane, ctx, key))
   }
   if (req.capability === 'audio.speech' && plane === 'plan') {
     return synthesizePlanSpeech(req.input as CapabilityInput<'audio.speech'>, ctx)
   }
   if (req.capability === 'audio.transcribe' && plane === 'plan') {
-    throw new ProviderError(
-      'unavailable',
-      'Agent Plan 流式语音识别请使用 @modelbay/ark/tos 的 transcribePlan（Node 子路径，需要 ws）',
-    )
+    if (!options.transcribePlan)
+      throw new ProviderError(
+        'unavailable',
+        'Agent Plan 流式语音识别需要 Node 子路径：用 createArkPlanAdapter(models, nodeArkOptions) 注入（@modelbay/ark/tos，需要 ws）',
+      )
+    return options.transcribePlan(req.input as CapabilityInput<'audio.transcribe'>, ctx)
   }
-  throw new ProviderError('invalid_input', `${label} 不支持此能力：${req.capability}`)
+  throw new ProviderError('invalid_input', `${LABEL}不支持此能力：${req.capability}`)
+}
+
+/**
+ * 套餐模型目录 → 宿主可用的远端模型：
+ * 套餐 ID 换回声明里的按量 ID（画布节点换平台不用改模型参数），
+ * 嵌入 / 识别模型过滤掉，其余文本模型标成仅内置 Agent 可用。
+ */
+function planRemoteModels(entries: RemoteModel[], models: ModelDeclaration[]): RemoteModel[] {
+  const aliases = new Map<string, string>()
+  for (const declaration of models) {
+    const api = declaration.channels.find((entry) => entry.channel === 'ark')
+    const plan = declaration.channels.find((entry) => entry.channel === 'ark-plan')
+    if (api && plan && api.id !== plan.id) aliases.set(plan.id, api.id)
+  }
+  return entries
+    .map((entry) => {
+      const id = aliases.get(entry.id) ?? entry.id
+      const media = /seedream|seedance|tts|asr|embedding/.test(id)
+      return {
+        ...entry,
+        id,
+        ...(!media
+          ? {
+              kind: 'llm' as const,
+              agentOnly: true,
+              features: ['tools' as const, 'structured' as const],
+            }
+          : {}),
+      }
+    })
+    .filter((entry) => !/embedding|asr/.test(entry.id))
 }
 
 function makeAdapter(
@@ -249,7 +318,7 @@ function makeAdapter(
 ): PlatformAdapter {
   return defineAdapter({
     id: plane === 'plan' ? 'volc/ark-plan' : 'volc/ark',
-    title: planeLabel(plane),
+    title: planeTitle(plane),
     channels: [planeChannel(plane)],
     models,
     nativeOperations: ['listModels'],
@@ -261,22 +330,28 @@ function makeAdapter(
       cancelVideo(remoteId, taskOptions(plane, ctx, requireKey(plane, ctx))),
     native: async (op, _params, ctx) => {
       if (op !== 'listModels') throw new ProviderError('invalid_input', `未知的 native 操作：${op}`)
-      if (plane === 'plan')
-        throw new ProviderError(
-          'unavailable',
-          '套餐模型目录请用 @modelbay/ark/tos 的 listPlanModels',
-        )
+      if (plane === 'plan') {
+        if (!options.listPlanModels)
+          throw new ProviderError(
+            'unavailable',
+            '套餐模型目录请用 @modelbay/ark/tos 的 listPlanModels（经 createArkPlanAdapter 的 listPlanModels 选项注入）',
+          )
+        return planRemoteModels(await options.listPlanModels(ctx), models)
+      }
       const key = requireKey(plane, ctx)
       const data = await request({
         ctx,
         url: `${API_BASE}/models`,
         method: 'GET',
         headers: { Authorization: `Bearer ${key}` },
-        label: planeLabel(plane),
-        messages: transportMessages(plane),
+        label: LABEL,
+        messages: TRANSPORT,
         secrets: [key],
       })
-      return openAiModelList(data)
+      return openAiModelList(data).map((model) => ({
+        ...model,
+        features: ['structured' as const],
+      }))
     },
   })
 }
@@ -296,7 +371,8 @@ export function createArkAdapter(
 /**
  * 套餐方舟适配器工厂（渠道 `ark-plan`）。
  *
- * 与按量渠道同一套注入点：请求路径与鉴权仍走套餐数据面。
+ * 与按量渠道同一套注入点（`uploadVideo`），另有套餐专属的 `transcribePlan`
+ * （语音识别）与 `listPlanModels`（模型目录）；请求路径与鉴权仍走套餐数据面。
  */
 export function createArkPlanAdapter(
   models: ModelDeclaration[],

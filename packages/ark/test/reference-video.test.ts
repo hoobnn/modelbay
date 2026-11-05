@@ -66,7 +66,7 @@ describe('方舟参考视频：注入后走通', () => {
       'https://test-bucket.tos-cn-beijing.volces.com/refs/x.mp4?sig=1',
     )
     expect(urlOf(content[2], 'video_url')).not.toContain('data:')
-    expect(urlOf(content[3], 'audio_url')).toMatch(/^data:audio\/mpeg;base64,/)
+    expect(urlOf(content[3], 'audio_url')).toMatch(/^data:audio\/mp3;base64,/)
     // 上传拿到的是素材字节，不是 data URL。
     expect(uploaded).toHaveLength(1)
     expect(uploaded[0]?.mime).toBe('video/mp4')

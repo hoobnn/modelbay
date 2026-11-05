@@ -38,6 +38,16 @@ function ctx(assets = true) {
   }).ctx
 }
 
+/** videoBody 的简写：无声明上限、默认 720p。 */
+function vb(
+  plane: 'api' | 'plan',
+  model: string,
+  input: CapabilityInput<'video.generate'>,
+  limits: ModelLimits = {},
+) {
+  return videoBody({ plane, model, input, ctx: ctx(), defaultResolution: '720p', limits })
+}
+
 function taskOptions(replies: Parameters<typeof fakeContext>[0]): TaskOptions {
   const { ctx: context } = fakeContext(replies)
   return {
@@ -83,12 +93,12 @@ describe('imageBody：图片请求构造', () => {
   it('显式宽高与分辨率档位', async () => {
     const explicit = await imageBody(
       'doubao-seedream-5-0-pro-260628',
-      { prompt: '猫', width: 1024, height: 768 },
+      { prompt: '猫', width: 1280, height: 1024 },
       ctx(),
       PRO,
       '2K',
     )
-    expect(explicit.size).toBe('1024x768')
+    expect(explicit.size).toBe('1280x1024')
     const auto = await imageBody(
       'doubao-seedream-5-0-pro-260628',
       { prompt: '猫', extra: { aspectRatio: 'auto' } },
@@ -156,7 +166,7 @@ describe('parseImageResponse：图片响应解析', () => {
 
   it('非法产物 URL 被拒绝', () => {
     expect(() => parseImageResponse({ data: [{ url: 'http://evil.test/x.png' }] })).toThrow(
-      /无效产物 URL|缺少产物 URL/,
+      /无效产物 URL|缺少产物 URL|下载域名/,
     )
   })
 })
@@ -200,41 +210,28 @@ describe('cutoutBody / parseCutoutResponse：图层抠图', () => {
 describe('videoBody：视频请求构造', () => {
   it('与录制夹具一致', async () => {
     const recorded = fixture<RecordedCall>('video-submit')
-    const body = await videoBody(
-      'api',
-      'doubao-seedance-2-0-260128',
-      { prompt: '海浪拍岸', audio: true, resolution: '720p', aspectRatio: '16:9' },
-      ctx(),
-      '720p',
-    )
+    const body = await vb('api', 'doubao-seedance-2-0-260128', {
+      prompt: '海浪拍岸',
+      audio: true,
+      resolution: '720p',
+      aspectRatio: '16:9',
+    })
     expect(body).toEqual(recorded.request.body)
   })
 
   it('首尾帧与参考图互斥等校验', async () => {
     await expect(
-      videoBody(
-        'api',
-        'm',
-        { prompt: '', firstFrame: { assetId: 'a', kind: 'image' } },
-        ctx(),
-        '720p',
-      ),
+      vb('api', 'm', { prompt: '', firstFrame: { assetId: 'a', kind: 'image' } }),
     ).resolves.toMatchObject({ ratio: 'adaptive' })
     await expect(
-      videoBody(
-        'api',
-        'm',
-        { prompt: 'x', lastFrame: { assetId: 'a', kind: 'image' } },
-        ctx(),
-        '720p',
-      ),
+      vb('api', 'm', { prompt: 'x', lastFrame: { assetId: 'a', kind: 'image' } }),
     ).rejects.toMatchObject({ code: 'invalid_input' })
-    await expect(videoBody('api', 'm', { prompt: '' }, ctx(), '720p')).rejects.toMatchObject({
+    await expect(vb('api', 'm', { prompt: '' })).rejects.toMatchObject({
       code: 'invalid_input',
     })
-    await expect(
-      videoBody('plan', 'm', { prompt: 'x', extra: { draft: true } }, ctx(), '720p'),
-    ).rejects.toMatchObject({ code: 'invalid_input' })
+    await expect(vb('plan', 'm', { prompt: 'x', extra: { draft: true } })).rejects.toMatchObject({
+      code: 'invalid_input',
+    })
   })
 })
 

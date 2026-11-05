@@ -20,11 +20,12 @@ export function asJson(value: unknown): Json {
 }
 
 /**
- * Replace secrets in error text with `<redacted>`, longest first so a short key
+ * Replace secrets in error text with `[redacted]`, longest first so a short key
  * that is a substring of a longer one cannot survive. Also masks Bearer tokens.
  */
 export function redactSecrets(text: string, secrets: Array<string | undefined>): string {
-  const mask = '<redacted>'
+  // 与宿主的 redact 同一个占位符，错误文本在两侧一致
+  const mask = '[redacted]'
   const list = secrets
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => b.length - a.length)
@@ -208,6 +209,35 @@ export function httpError(opts: HttpErrorOptions): ProviderError {
   return withRetry(wrapped, method, status)
 }
 
+/**
+ * 把平台的 `{ code, message }` 错误对象归类成 `ProviderError`（脱敏）。
+ * 用于没有 HTTP 失败状态可看的位置：流内错误帧、图片逐项错误、失败的视频任务。
+ */
+export function errorInfo(
+  value: unknown,
+  status: number,
+  label: string,
+  secrets: Array<string | undefined>,
+): ProviderError {
+  const error = asJson(value)
+  const name = String(error.code ?? '')
+  const message = redactSecrets(
+    typeof error.message === 'string' ? error.message : `${label} 请求失败（HTTP ${status}）`,
+    secrets,
+  )
+  return new ProviderError(defaultClassify(status, `${name} ${message}`.toLowerCase()), message)
+}
+
+/** 请求体上限：平台超过 64 MiB 直接拒收，提前在本地给出可读的错误。 */
+export const MAX_BODY_BYTES = 64 * 1024 * 1024
+
+function bodyTooLarge(body: string): boolean {
+  // 字符数 × 3 不超过上限时不可能超；明显超过时不必再编码
+  if (body.length * 3 <= MAX_BODY_BYTES) return false
+  if (body.length > MAX_BODY_BYTES) return true
+  return new TextEncoder().encode(body).length > MAX_BODY_BYTES
+}
+
 function pause(ms: number, signal: AbortSignal): Promise<void> {
   if (ms <= 0) return Promise.resolve()
   return new Promise((resolve, reject) => {
@@ -247,6 +277,8 @@ export interface RequestOptions {
  */
 export async function request(opts: RequestOptions): Promise<Json> {
   const { ctx, url, method, headers, body, label, messages, secrets, classify } = opts
+  if (body !== undefined && bodyTooLarge(body))
+    throw new ProviderError('invalid_input', `${label}请求体超过 64 MB，请缩小参考素材`)
   const retries = opts.retries ?? (method === 'GET' ? 2 : 0)
   const retryDelayMs = opts.retryDelayMs ?? 0
   let attempt = 0

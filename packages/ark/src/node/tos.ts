@@ -13,6 +13,8 @@ export interface ReferenceStorage {
   referencePathStyle: boolean
   referenceBucket: string
   referenceRegion: string
+  /** 对象 key 前缀；缺省 `modelbay/video-references`（plein 宿主传 `plein/video-references`） */
+  referenceKeyPrefix?: string
 }
 
 export type { ReferenceFile }
@@ -120,10 +122,14 @@ export function presignS3(opts: {
   return `https://${opts.host}${path}?${query}&X-Amz-Signature=${signature}`
 }
 
+/** 对象 key 的默认前缀；宿主可经 `referenceKeyPrefix` 设置改掉（便于按前缀配生命周期清理）。 */
+export const DEFAULT_KEY_PREFIX = 'modelbay/video-references'
+
 /** Deterministic object key from the asset bytes. */
-export function objectKey(data: Uint8Array, mime: string): string {
+export function objectKey(data: Uint8Array, mime: string, prefix = DEFAULT_KEY_PREFIX): string {
   const hash = createHash('sha256').update(data).digest('hex')
-  return `modelbay/video-references/${hash}.${mime === 'video/quicktime' ? 'mov' : 'mp4'}`
+  const dir = prefix.replace(/^\/+|\/+$/g, '') || DEFAULT_KEY_PREFIX
+  return `${dir}/${hash}.${mime === 'video/quicktime' ? 'mov' : 'mp4'}`
 }
 
 /** 上传对象的有效期：PUT 覆盖排队窗口，GET 覆盖离线任务的排队窗口。 */
@@ -214,7 +220,12 @@ async function loadTosClient(): Promise<
 /**
  * 火山引擎 TOS 上传：官方 SDK 本地签名，宿主 PUT 原件，返回限时 GET 地址。
  */
-export function tosUploader(ctx: AdapterContext, bucket: string, region: string): ReferenceUpload {
+export function tosUploader(
+  ctx: AdapterContext,
+  bucket: string,
+  region: string,
+  prefix?: string,
+): ReferenceUpload {
   assertTosTarget(bucket, region)
   const accessKeyId = ctx.secret('ARK_TOS_ACCESS_KEY')
   const accessKeySecret = ctx.secret('ARK_TOS_SECRET_KEY')
@@ -233,7 +244,7 @@ export function tosUploader(ctx: AdapterContext, bucket: string, region: string)
       accessKeySecret,
       secure: true,
     })
-    const key = objectKey(file.data, file.mime)
+    const key = objectKey(file.data, file.mime, prefix)
     let url: string
     try {
       url = client.getPreSignedUrl({ key, method: 'PUT', expires: PUT_EXPIRES })
@@ -271,7 +282,7 @@ export function s3Uploader(
       '火山视频参考需要在模型平台设置中配置存储桶、地域和存储 Access Key / Secret Key',
     )
   return async (file: ReferenceFile) => {
-    const path = `${target.prefix}/${objectKey(file.data, file.mime)}`
+    const path = `${target.prefix}/${objectKey(file.data, file.mime, storage.referenceKeyPrefix)}`
     const sign = (method: 'PUT' | 'GET', expires: number) =>
       presignS3({
         method,
@@ -303,29 +314,47 @@ export function referenceUploader(ctx: AdapterContext, storage: ReferenceStorage
       '火山视频参考需要在模型平台设置中配置存储桶、地域和存储 Access Key / Secret Key',
     )
   return storage.referenceStorage === 'tos'
-    ? tosUploader(ctx, bucket, region)
+    ? tosUploader(ctx, bucket, region, storage.referenceKeyPrefix)
     : s3Uploader(ctx, storage, region)
 }
 
 /**
  * 从宿主配置读取参考视频存储设置。
  *
- * 字段名与 plein 的 `ReferenceStorage` 一致；`AdapterContext` 没有独立的
- * settings 槽，非密钥配置也走 `ctx.secret` 这一个通道。
+ * 宿主给了 `ctx.settings`（plein 的设置对象，字段同名）就直接读，缺省值与 plein 一致
+ * （`tos`、`cn-beijing`）；没有 settings（MCP / CLI）时回退到 `ARK_REFERENCE_*` env / secret。
  */
 export function referenceStorageFrom(ctx: AdapterContext): ReferenceStorage {
+  if (ctx.settings) {
+    const text = (value: unknown, fallback = '') =>
+      typeof value === 'string' ? value.trim() : fallback
+    const storage = text(ctx.settings.referenceStorage, 'tos') || 'tos'
+    if (storage !== 'tos' && storage !== 'oss' && storage !== 'cos' && storage !== 's3')
+      throw new ProviderError('invalid_input', '火山视频参考存储类型须为 tos / oss / cos / s3')
+    const prefix = text(ctx.settings.referenceKeyPrefix)
+    return {
+      referenceStorage: storage,
+      referenceEndpoint: text(ctx.settings.referenceEndpoint),
+      referencePathStyle: ctx.settings.referencePathStyle === true,
+      referenceBucket: text(ctx.settings.referenceBucket),
+      referenceRegion: text(ctx.settings.referenceRegion, 'cn-beijing') || 'cn-beijing',
+      ...(prefix ? { referenceKeyPrefix: prefix } : {}),
+    }
+  }
   const storage = ctx.secret(REFERENCE_STORAGE_KEYS.storage)?.trim()
   if (storage !== 'tos' && storage !== 'oss' && storage !== 'cos' && storage !== 's3')
     throw new ProviderError(
       'invalid_input',
       `火山视频参考需要配置参考存储类型（${REFERENCE_STORAGE_KEYS.storage}）：tos / oss / cos / s3`,
     )
+  const prefix = ctx.secret(REFERENCE_STORAGE_KEYS.keyPrefix)?.trim()
   return {
     referenceStorage: storage,
     referenceEndpoint: ctx.secret(REFERENCE_STORAGE_KEYS.endpoint)?.trim() ?? '',
     referencePathStyle: ctx.secret(REFERENCE_STORAGE_KEYS.pathStyle) === 'true',
     referenceBucket: ctx.secret(REFERENCE_STORAGE_KEYS.bucket)?.trim() ?? '',
     referenceRegion: ctx.secret(REFERENCE_STORAGE_KEYS.region)?.trim() ?? '',
+    ...(prefix ? { referenceKeyPrefix: prefix } : {}),
   }
 }
 
