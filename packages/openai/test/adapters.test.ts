@@ -249,6 +249,16 @@ describe('native / poll', () => {
     expect(list).toHaveLength(2)
   })
 
+  it('兼容渠道的 listModels 取设置里的 Base URL，条目带对话模型类型提示', async () => {
+    const { ctx, fetch } = fakeContext([jsonResponse({ data: [{ id: 'gpt-x' }] })], {
+      secret: { COMPATIBLE_API_KEY: 'k' },
+    })
+    ctx.settings = { baseURL: 'https://llm.example.com/v1' }
+    const list = await openaiCompatibleAdapter.native?.('listModels', {}, ctx)
+    expect(list).toEqual([{ id: 'gpt-x', kind: 'llm' }])
+    expect(String(fetch.mock.calls[0]?.[0])).toBe('https://llm.example.com/v1/models')
+  })
+
   it('未知 op 抛错；同步端点没有异步任务可轮询', async () => {
     const { ctx } = fakeContext([], { secret: { OPENAI_API_KEY: 'k' } })
     await expect(openaiAdapter.native?.('unknown', {}, ctx)).rejects.toMatchObject({

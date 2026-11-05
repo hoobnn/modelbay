@@ -25,11 +25,13 @@ import { allModels as all } from './declarations'
 import { classifyOpenAI, compatibleChat, responsesChat } from './chat'
 import { asJson, request, type Json, type TransportMessages } from './http'
 import { normalizedBase } from './config'
-import { buildEditBody, buildImageBody, openAiModelList, parseImageResponse } from './media'
+import { buildEditBody, buildImageBody, parseImageResponse } from './media'
+import { openAiModelList } from '@modelbay/shared'
 import type { OpenAIAdapterOptions } from './mask'
 
 export type { EditMaskInput, EditMaskPreparer, ImageBytes, PreparedEdit } from './mask'
 export type { OpenAIAdapterOptions } from './mask'
+export { compatibleBaseURL, normalizedBase } from './config'
 
 const OPENAI_BASE = 'https://api.openai.com/v1'
 const DOCS = 'https://developers.openai.com/api/docs'
@@ -237,7 +239,8 @@ function makeAdapter(
         secrets: [key],
         classify: classifyOpenAI,
       })
-      return openAiModelList(data)
+      // 兼容渠道上的模型都是对话模型，给宿主一个类型提示
+      return openAiModelList(data, kind === 'compatible' ? { kind: 'llm' } : {})
     },
   })
 }

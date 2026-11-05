@@ -12,12 +12,13 @@ import {
   type AssetRef,
   type CapabilityInput,
   type ProviderOutput,
-  type RemoteModel,
   type SubmitResult,
 } from '@modelbay/core'
 import { asJson, type Json } from './http'
 import { imageDataUrl } from './chat'
 import type { EditMaskPreparer, ImageBytes } from './mask'
+
+export { openAiModelList } from '@modelbay/shared'
 
 function invalid(message: string): never {
   throw new ProviderError('invalid_input', message)
@@ -243,23 +244,4 @@ export function parseImageResponse(data: Json, format: string): SubmitResult {
     }
   })
   return { state: 'succeeded', outputs, usage: { images: outputs.length } }
-}
-
-/** OpenAI-compatible model list: `{ data: [{ id, owned_by?, created? }] }`. */
-export function openAiModelList(value: unknown): RemoteModel[] {
-  const items = asJson(value).data
-  if (!Array.isArray(items)) throw new ProviderError('unknown', '模型列表响应缺少 data 数组')
-  return items.flatMap((item) => {
-    const entry = asJson(item)
-    if (typeof entry.id !== 'string' || !entry.id) return []
-    return [
-      {
-        id: entry.id,
-        ...(typeof entry.owned_by === 'string' && entry.owned_by
-          ? { ownedBy: entry.owned_by }
-          : {}),
-        ...(typeof entry.created === 'number' ? { created: entry.created } : {}),
-      },
-    ]
-  })
 }
