@@ -262,8 +262,11 @@ export async function request(opts: RequestOptions): Promise<Json> {
     const hasError = root.error !== undefined && root.error !== null
     const tolerated = opts.toleratedStatuses?.includes(String(root.status)) ?? false
     if (response.ok && (!hasError || tolerated)) {
-      if (value === null)
-        throw new ProviderError('unknown', `${label} 返回无效 JSON；不会自动重新提交`)
+      if (!isJson(value))
+        throw new ProviderError('unknown', `${label} 返回无效 JSON；不会自动重新提交`, {
+          ...(method === 'POST' ? { outcome: 'unknown' as const } : {}),
+          retryable: false,
+        })
       return root
     }
     const error = httpError({

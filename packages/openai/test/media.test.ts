@@ -7,6 +7,7 @@ import {
   openAiModelList,
   parseImageResponse,
 } from '../src/media'
+import sizeRules from '../src/models/gpt-image-2-5-sunburst'
 import { fakeContext, fixture, type RecordedCall } from './helpers'
 
 function ctx() {
@@ -19,15 +20,19 @@ function ctx() {
 
 describe('imageSize：画幅与尺寸换算', () => {
   it('默认 auto 与常见画幅', () => {
-    expect(imageSize({ prompt: 'x' })).toBe('auto')
-    expect(imageSize({ prompt: 'x', extra: { aspectRatio: '16:9' } })).toBe('1536x864')
-    expect(imageSize({ prompt: 'x', extra: { aspectRatio: '1:1' } })).toBe('1024x1024')
+    expect(imageSize({ prompt: 'x' }, sizeRules)).toBe('auto')
+    expect(imageSize({ prompt: 'x', extra: { aspectRatio: '16:9' } }, sizeRules)).toBe('1536x864')
+    expect(imageSize({ prompt: 'x', extra: { aspectRatio: '1:1' } }, sizeRules)).toBe('1024x1024')
   })
 
   it('显式宽高合法 / 非法', () => {
-    expect(imageSize({ prompt: 'x', width: 1024, height: 1024 })).toBe('1024x1024')
-    expect(() => imageSize({ prompt: 'x', width: 100, height: 100 })).toThrow(ProviderError)
-    expect(() => imageSize({ prompt: 'x', extra: { aspectRatio: '7:3' } })).toThrow(ProviderError)
+    expect(imageSize({ prompt: 'x', width: 1024, height: 1024 }, sizeRules)).toBe('1024x1024')
+    expect(() => imageSize({ prompt: 'x', width: 100, height: 100 }, sizeRules)).toThrow(
+      ProviderError,
+    )
+    expect(() => imageSize({ prompt: 'x', extra: { aspectRatio: '7:3' } }, sizeRules)).toThrow(
+      ProviderError,
+    )
   })
 })
 
@@ -35,7 +40,7 @@ describe('buildImageBody：图片请求构造', () => {
   it('与录制夹具一致', async () => {
     const recorded = fixture<RecordedCall>('image-success')
     const built = await buildImageBody(
-      'gpt-image-2-5-sunburst',
+      'gpt-image-2.5-sunburst',
       { prompt: '一只猫' },
       ctx(),
       'OpenAI',
@@ -47,7 +52,7 @@ describe('buildImageBody：图片请求构造', () => {
 
   it('参考图切换到 edits 端点并转 data URL', async () => {
     const built = await buildImageBody(
-      'gpt-image-2-5-sunburst',
+      'gpt-image-2.5-sunburst',
       {
         prompt: '猫',
         references: [{ assetId: 'a1', kind: 'image' }],
@@ -59,27 +64,34 @@ describe('buildImageBody：图片请求构造', () => {
     expect(built.edit).toBe(true)
     expect(built.format).toBe('webp')
     expect(built.body.images).toEqual([{ image_url: 'data:image/png;base64,AQID' }])
-    expect(built.body.size).toBeUndefined()
+    expect(built.body.size).toBe('auto')
   })
 
   it('参数校验', async () => {
     await expect(
-      buildImageBody('m', { prompt: 'x', extra: { output_format: 'gif' } }, ctx(), 'OpenAI'),
+      buildImageBody(
+        'gpt-image-2.5-sunburst',
+        { prompt: 'x', extra: { output_format: 'gif' } },
+        ctx(),
+        'OpenAI',
+      ),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     await expect(
       buildImageBody(
-        'm',
+        'gpt-image-2.5-sunburst',
         { prompt: 'x', extra: { output_format: 'jpeg', background: 'transparent' } },
         ctx(),
         'OpenAI',
       ),
     ).rejects.toMatchObject({ code: 'invalid_input' })
-    await expect(buildImageBody('m', { prompt: '' }, ctx(), 'OpenAI')).rejects.toMatchObject({
+    await expect(
+      buildImageBody('gpt-image-2.5-sunburst', { prompt: '' }, ctx(), 'OpenAI'),
+    ).rejects.toMatchObject({
       code: 'invalid_input',
     })
     await expect(
       buildImageBody(
-        'm',
+        'gpt-image-2.5-sunburst',
         {
           prompt: 'x',
           references: Array.from({ length: 17 }, () => ({ assetId: 'a', kind: 'image' as const })),
@@ -94,7 +106,7 @@ describe('buildImageBody：图片请求构造', () => {
 describe('buildEditBody：蒙版编辑请求', () => {
   it('原图与蒙版转成 images / mask', async () => {
     const built = await buildEditBody(
-      'gpt-image-2-5-sunburst',
+      'gpt-image-2.5-sunburst',
       {
         image: { assetId: 'src', kind: 'image' },
         mask: { assetId: 'mask', kind: 'image' },
@@ -116,7 +128,9 @@ describe('buildEditBody：蒙版编辑请求', () => {
 
   it('缺原图或蒙版报错', async () => {
     const input = { image: { assetId: 'src', kind: 'image' } } as CapabilityInput<'image.edit'>
-    await expect(buildEditBody('m', input, ctx(), 'OpenAI')).rejects.toMatchObject({
+    await expect(
+      buildEditBody('gpt-image-2.5-sunburst', input, ctx(), 'OpenAI'),
+    ).rejects.toMatchObject({
       code: 'invalid_input',
     })
   })
@@ -124,7 +138,7 @@ describe('buildEditBody：蒙版编辑请求', () => {
   it('缺蒙版转换实现时拒绝，不会原样发出语义相反的蒙版', async () => {
     await expect(
       buildEditBody(
-        'm',
+        'gpt-image-2.5-sunburst',
         {
           image: { assetId: 'src', kind: 'image' },
           mask: { assetId: 'mask', kind: 'image' },

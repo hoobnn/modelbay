@@ -7,7 +7,7 @@
       "Content-Type": "application/json"
     },
     "body": {
-      "model": "gpt-image-2-5-sunburst",
+      "model": "gpt-image-2.5-sunburst",
       "prompt": "一只猫",
       "n": 1,
       "output_format": "png",

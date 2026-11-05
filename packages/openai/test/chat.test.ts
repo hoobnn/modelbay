@@ -98,12 +98,12 @@ describe('responsesChat：官方渠道 /responses', () => {
     ).rejects.toMatchObject({ outcome: 'unknown', retryable: false })
   })
 
-  it('思考强度只接受 low / medium / high', async () => {
+  it('拒绝模型声明之外的思考强度', async () => {
     const { ctx, fetch } = fakeContext()
     await expect(
       responsesChat({
         ctx,
-        model: 'm',
+        model: 'gpt-6.1-sol',
         apiKey: 'k',
         label: 'OpenAI',
         input: { ...input, extra: { reasoning_effort: 'x' } },
@@ -221,5 +221,110 @@ describe('imageDataUrl 与 terminalResponse', () => {
   it('非事件流响应原样返回', () => {
     const res = Response.json({})
     expect(terminalResponse(res)).toBe(res)
+  })
+})
+
+describe('当前模型与 Responses 原生参数', () => {
+  it.each([
+    ['gpt-6.1-sol', 'max'],
+    ['gpt-6-astra', 'xhigh'],
+    ['gpt-6.1-terra', 'none'],
+    ['gpt-6-luna', 'max'],
+  ])('%s 的 %s 发到 reasoning.effort', async (model, effort) => {
+    const { ctx, body } = fakeContext([sse(responseFrames())])
+    await responsesChat({
+      ctx,
+      model,
+      apiKey: 'k',
+      label: 'OpenAI',
+      messages: transport,
+      input: { ...input, extra: { reasoning_effort: effort } },
+    })
+    expect(body().reasoning).toMatchObject({ effort })
+    expect(body()).not.toHaveProperty('reasoning_effort')
+  })
+
+  it('原生参数保留，归一化模型、消息、工具与结构化输出不能被 extra 覆盖', async () => {
+    const { ctx, body } = fakeContext([sse(responseFrames())])
+    await responsesChat({
+      ctx,
+      model: 'gpt-6.1-sol',
+      apiKey: 'k',
+      label: 'OpenAI',
+      messages: transport,
+      temperatureDisabled: true,
+      input: {
+        ...input,
+        extra: {
+          reasoning: { effort: 'max', mode: 'pro', context: 'all_turns' },
+          text: { verbosity: 'low' },
+          service_tier: 'fast',
+          parallel_tool_calls: false,
+          prompt_cache_options: { ttl: '12h' },
+          safety_identifier: 'hashed-user',
+          metadata: { task: 'test' },
+          include: ['message.output_text.logprobs'],
+          model: 'wrong',
+          input: 'wrong',
+          stream: false,
+          tools: [{ type: 'web_search' }],
+          temperature: 1,
+          max_output_tokens: 1,
+        },
+      },
+    })
+    expect(body()).toMatchObject({
+      model: 'gpt-6.1-sol',
+      stream: true,
+      reasoning: { effort: 'max', mode: 'pro', context: 'all_turns' },
+      text: { verbosity: 'low' },
+      service_tier: 'fast',
+      parallel_tool_calls: false,
+      prompt_cache_options: { ttl: '12h' },
+      safety_identifier: 'hashed-user',
+      metadata: { task: 'test' },
+    })
+    expect(body().include).toEqual(
+      expect.arrayContaining(['reasoning.encrypted_content', 'message.output_text.logprobs']),
+    )
+    expect(body().input).not.toBe('wrong')
+    expect(body()).not.toHaveProperty('temperature')
+    expect(body()).not.toHaveProperty('max_output_tokens')
+    expect(body()).not.toHaveProperty('tools')
+  })
+
+  it('显式存储和 previous_response_id 可用', async () => {
+    const { ctx, body } = fakeContext([sse(responseFrames())])
+    await responsesChat({
+      ctx,
+      model: 'gpt-6.1-sol',
+      apiKey: 'k',
+      label: 'OpenAI',
+      messages: transport,
+      input: { ...input, extra: { store: true, previous_response_id: 'resp_prior' } },
+    })
+    expect(body()).toMatchObject({ store: true, previous_response_id: 'resp_prior' })
+  })
+
+  it.each([
+    { reasoning_effort: 'none' },
+    { reasoning: { effort: 'none' } },
+    { service_tier: 'invalid' },
+    { background: true },
+    { prompt_cache_options: { prewarm: true } },
+    { conversation: 'conv_1', previous_response_id: 'resp_1' },
+  ])('无效组合在发送前拒绝 %j', async (extra) => {
+    const { ctx, fetch } = fakeContext()
+    await expect(
+      responsesChat({
+        ctx,
+        model: 'gpt-6.1-sol',
+        apiKey: 'k',
+        label: 'OpenAI',
+        messages: transport,
+        input: { ...input, extra },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(fetch).not.toHaveBeenCalled()
   })
 })

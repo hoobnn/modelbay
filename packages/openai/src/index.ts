@@ -21,6 +21,8 @@ import {
   type PlatformAdapter,
   type SubmitResult,
 } from '@modelbay/core'
+import { responsesRequest } from './native'
+export { nativeOperationSchemas } from './native'
 import { all } from './models/index'
 import { classifyOpenAI, compatibleChat, responsesChat } from './chat'
 import { asJson, request, type Json, type TransportMessages } from './http'
@@ -144,6 +146,7 @@ async function submit(
         label: tag,
         input: chat,
         messages: transport,
+        declaration: resolveModel(models, req.model)?.declaration,
         temperatureDisabled:
           resolveModel(models, req.model)?.declaration.limits?.temperature === false,
       })
@@ -160,7 +163,13 @@ async function submit(
   }
 
   if (req.capability === 'image.generate') {
-    const built = await buildImageBody(model, input as CapabilityInput<'image.generate'>, ctx, tag)
+    const built = await buildImageBody(
+      model,
+      input as CapabilityInput<'image.generate'>,
+      ctx,
+      tag,
+      resolveModel(models, req.model)?.declaration,
+    )
     const data = await request({
       ctx,
       url: `${base}${built.edit ? '/images/edits' : '/images/generations'}`,
@@ -183,6 +192,7 @@ async function submit(
       ctx,
       tag,
       options.editMask,
+      resolveModel(models, req.model)?.declaration,
     )
     const data = await request({
       ctx,
@@ -212,7 +222,7 @@ function makeAdapter(
     title: label(kind),
     channels: [kind === 'openai' ? 'openai' : 'openai-compatible'],
     models,
-    nativeOperations: ['listModels'],
+    nativeOperations: kind === 'openai' ? ['listModels', 'raw-request'] : ['listModels'],
     docsUrl: DOCS,
     nodeOnly: ['node'],
     submit: (req, ctx) => submit(req, ctx, kind, models, options),
@@ -224,7 +234,9 @@ function makeAdapter(
           `${label(kind)} 的聊天与图片接口均为同步调用，没有异步任务可轮询`,
         ),
       ),
-    native: async (op, _params, ctx) => {
+    native: async (op, params, ctx) => {
+      if (kind === 'openai' && op === 'raw-request')
+        return responsesRequest(asJson(params), ctx, requireKey(kind, ctx), messages(kind))
       if (op !== 'listModels') throw new ProviderError('invalid_input', `未知的 native 操作：${op}`)
       const key = requireKey(kind, ctx)
       const extra = asJson({})

@@ -6,6 +6,9 @@
  */
 import {
   ProviderError,
+  resolveModel,
+  imageModelProblem,
+  type ModelDeclaration,
   fromBase64,
   toBase64,
   type AdapterContext,
@@ -15,6 +18,8 @@ import {
   type SubmitResult,
 } from '@modelbay/core'
 import { asJson, type Json } from './http'
+import { all } from './models/index'
+import { optionDefault, validateOptions } from './options'
 import { imageDataUrl } from './chat'
 import type { EditMaskPreparer, ImageBytes } from './mask'
 
@@ -30,46 +35,137 @@ function dataUrl(image: ImageBytes): string {
 }
 
 /** Map a normalized aspect ratio (or explicit width/height) to the platform size. */
-export function imageSize(input: CapabilityInput<'image.generate'>): string {
+export function imageSize(
+  input: CapabilityInput<'image.generate'>,
+  declaration: ModelDeclaration | undefined,
+): string {
+  const extra = asJson(input.extra)
+  const sizeSchema = asJson(asJson(declaration?.optionsSchema?.properties).size)
+  const sizes = asJson(sizeSchema['x-aspectRatioSizes'])
+  let size = String(extra.size ?? optionDefault(declaration, 'size') ?? 'auto')
   if (input.width !== undefined || input.height !== undefined) {
-    const w = input.width ?? 0
-    const h = input.height ?? 0
+    const w = input.width,
+      h = input.height
+    if (!Number.isInteger(w) || !Number.isInteger(h) || Number(w) <= 0 || Number(h) <= 0)
+      invalid('自定义宽高须一起填写正整数')
+    size = `${w}x${h}`
+  } else if (
+    extra.size === undefined &&
+    extra.aspectRatio !== undefined &&
+    extra.aspectRatio !== 'auto'
+  ) {
+    const mapped = sizes[String(extra.aspectRatio)]
+    if (typeof mapped !== 'string') invalid('不支持所选画幅')
+    size = mapped
+  }
+  if (size !== 'auto') {
+    const match = /^([1-9]\d*)x([1-9]\d*)$/.exec(size)
+    if (!match) invalid('尺寸须为 auto 或 WIDTHxHEIGHT')
+    const width = Number(match[1]),
+      height = Number(match[2])
+    const multiple = Number(sizeSchema['x-multiple'])
     if (
-      ![w, h].every((n) => Number.isInteger(n) && n > 0 && n <= 3840 && n % 16 === 0) ||
-      w * h < 655360 ||
-      w * h > 8294400 ||
-      w / h < 1 / 3 ||
-      w / h > 3
+      !Number.isSafeInteger(width * height) ||
+      (multiple && (width % multiple || height % multiple))
     )
-      invalid('尺寸须为 16 的倍数、每边不超过 3840、总像素 655360–8294400、比例 1:3–3:1')
-    return `${w}x${h}`
+      invalid('尺寸不符合声明的倍数或整数范围')
+    if (declaration) {
+      const problem = imageModelProblem(
+        { ...declaration, capabilities: ['image.generate'] },
+        { width, height, options: { size } },
+        input.references?.length ?? 0,
+      )
+      if (problem) invalid(problem)
+    }
   }
-  const sizes: Record<string, string> = {
-    '1:1': '1024x1024',
-    '3:2': '1536x1024',
-    '2:3': '1024x1536',
-    '16:9': '1536x864',
-    '9:16': '864x1536',
-  }
-  const ratio = String(input.extra?.aspectRatio ?? 'auto')
-  if (ratio !== 'auto' && !sizes[ratio]) invalid('不支持所选画幅')
-  return sizes[ratio] ?? 'auto'
+  return size
 }
 
-const IMAGE_EXTRA = ['quality', 'background', 'output_format'] as const
+// 本地 data URL 请求体预算，不是上游模型的文件大小限制。
 const MAX_BYTES = 14 * 1024 * 1024
 
-/** 只取声明里的图片参数；格式默认 PNG，JPEG 不能透明背景。 */
-function imageOptions(extra: Json): { options: Json; format: string } {
-  const options: Json = {}
-  for (const key of IMAGE_EXTRA) {
-    if (extra[key] !== undefined) options[key] = extra[key]
+/** Validate declared options and protocol combinations before any asset/network work. */
+function imageOptions(
+  extra: Json,
+  declaration: ModelDeclaration | undefined,
+  edit: boolean,
+  count: number,
+): { options: Json; format: string } {
+  validateOptions(declaration, extra)
+  const properties = asJson(declaration?.optionsSchema?.properties)
+  const keys = Object.keys(properties)
+  if (declaration) {
+    const unknown = Object.keys(extra).filter(
+      (key) =>
+        !keys.includes(key) &&
+        !['aspectRatio', 'baseURL', 'stream', 'partial_images', 'prompt_rewriter'].includes(key),
+    )
+    if (unknown.length) invalid(`模型声明不支持参数：${unknown.join('、')}`)
   }
-  const format = String(options.output_format ?? 'png')
-  if (!['png', 'jpeg', 'webp'].includes(format)) invalid('不支持的输出格式')
-  if (format === 'jpeg' && options.background === 'transparent')
+  const options = Object.fromEntries(
+    Object.entries(extra).filter(
+      ([key]) =>
+        (declaration
+          ? keys.includes(key)
+          : !['aspectRatio', 'model', 'prompt', 'n', 'images', 'mask', 'baseURL'].includes(key)) &&
+        key !== 'size',
+    ),
+  )
+  const format = String(extra.output_format ?? optionDefault(declaration, 'output_format') ?? 'png')
+  if (!['png', 'jpeg', 'webp', 'svg', 'gif'].includes(format)) invalid('不支持的输出格式')
+  if (extra.background === 'transparent' && !['png', 'webp'].includes(format))
     invalid('透明背景须使用 PNG 或 WebP')
+  if (extra.output_compression !== undefined && !['jpeg', 'webp'].includes(format))
+    invalid('output_compression 只适用于 JPEG 或 WebP')
+  if (edit && ['svg', 'gif'].includes(format))
+    invalid('SVG / GIF 只支持无参考图的图片生成，不支持编辑')
+  if (format === 'svg' && count !== 1) invalid('SVG 一次只能生成一张')
+  if (
+    format !== 'gif' &&
+    (extra.frame_count !== undefined || extra.frame_duration_ms !== undefined)
+  )
+    invalid('帧数与帧间隔只适用于 GIF')
+  if (format !== 'svg' && extra.svg !== undefined) invalid('svg 参数只适用于 SVG 输出')
+  if (
+    extra.stream !== undefined ||
+    extra.partial_images !== undefined ||
+    extra.prompt_rewriter !== undefined
+  )
+    invalid('归一化图片接口不支持 stream / partial_images / prompt_rewriter')
+  if (extra.markup !== undefined) {
+    if (!edit) invalid('markup 需要参考图')
+    const markup = asJson(extra.markup)
+    if (
+      Object.keys(markup).length !== 1 ||
+      Object.keys(markup).some((k) => !['file_id', 'image_url'].includes(k)) ||
+      [markup.file_id, markup.image_url].filter((v) => typeof v === 'string' && v.length > 0)
+        .length !== 1
+    )
+      invalid('markup 必须包含且只包含一个非空 file_id 或 image_url')
+  }
   return { options, format }
+}
+
+function validateImageInput(
+  input: { prompt: string; count?: number; references?: AssetRef[] },
+  declaration?: ModelDeclaration,
+): number {
+  const count = input.count ?? 1
+  if (!Number.isInteger(count) || count < 1 || !input.prompt?.trim())
+    invalid('图片提示词不能为空，数量须为正整数')
+  if (declaration?.limits?.count && count > declaration.limits.count.max)
+    invalid('图片数量超过模型声明上限')
+  if (
+    declaration?.limits?.promptMaxLength &&
+    input.prompt.length > declaration.limits.promptMaxLength
+  )
+    invalid('图片提示词超过模型声明上限')
+  if (
+    declaration?.limits?.references &&
+    (input.references?.length ?? 0) > declaration.limits.references.max
+  )
+    invalid('参考图数量超过模型声明上限')
+  return count
 }
 
 export interface BuiltImage {
@@ -84,18 +180,16 @@ export async function buildImageBody(
   input: CapabilityInput<'image.generate'>,
   ctx: AdapterContext,
   label: string,
+  declaration: ModelDeclaration | undefined = resolveModel(all, model)?.declaration,
 ): Promise<BuiltImage> {
-  const { options, format } = imageOptions(asJson(input.extra ?? {}))
-
-  const count = input.count ?? 1
-  if (
-    !Number.isInteger(count) ||
-    count < 1 ||
-    count > 10 ||
-    !input.prompt?.trim() ||
-    input.prompt.length > 32000
+  const count = validateImageInput(input, declaration)
+  const references = input.references ?? []
+  const { options, format } = imageOptions(
+    asJson(input.extra),
+    declaration,
+    references.length > 0,
+    count,
   )
-    invalid('图片提示词须为 1–32000 字符，数量须为 1–10')
 
   const body: Json = {
     ...options,
@@ -103,16 +197,14 @@ export async function buildImageBody(
     prompt: input.prompt,
     n: count,
     output_format: format,
+    size: imageSize(input, declaration),
   }
-  const references = input.references ?? []
-  if (references.length > 16) invalid('最多支持 16 张参考图')
   if (references.length) {
     body.images = await Promise.all(
       references.map(async (ref) => ({ image_url: await imageDataUrl(ctx, ref, label) })),
     )
     return { body, format, edit: true }
   }
-  body.size = imageSize(input)
   return { body, format, edit: false }
 }
 
@@ -153,6 +245,7 @@ export async function buildEditBody(
   ctx: AdapterContext,
   label: string,
   editMask?: EditMaskPreparer,
+  declaration: ModelDeclaration | undefined = resolveModel(all, model)?.declaration,
 ): Promise<BuiltImage> {
   if (!input.image || !input.mask) invalid('请提供原图和蒙版')
   if (!editMask)
@@ -160,16 +253,12 @@ export async function buildEditBody(
       `${label} 图片编辑需要把白色重绘蒙版转成 alpha 蒙版：请从 @modelbay/openai/node 引入 editMask，` +
         '再用 createOpenAIAdapter(models, { editMask }) 注入',
     )
-  const { options, format } = imageOptions(asJson(input.extra ?? {}))
-  const count = input.count ?? 1
-  if (
-    !Number.isInteger(count) ||
-    count < 1 ||
-    count > 10 ||
-    !input.prompt?.trim() ||
-    input.prompt.length > 32000
-  )
-    invalid('图片提示词须为 1–32000 字符，数量须为 1–10')
+  const count = validateImageInput(input, declaration)
+  const { options, format } = imageOptions(asJson(input.extra), declaration, true, count)
+  if (options.markup !== undefined) invalid('markup 与 mask 不能同时使用')
+  if (input.image.kind !== 'image' || input.mask.kind !== 'image')
+    invalid('原图和蒙版必须是图片资产')
+  options.size = imageSize({ prompt: input.prompt, extra: input.extra }, declaration)
   const [source, mask] = await Promise.all([
     readFile(ctx, input.image, label),
     readFile(ctx, input.mask, label),
@@ -235,13 +324,29 @@ export function parseImageResponse(data: Json, format: string): SubmitResult {
   if (!items.length) throw unknownImage()
   const outputs: ProviderOutput[] = items.map((item) => {
     const encoded = asJson(item).b64_json
-    if (typeof encoded !== 'string' || !BASE64.test(encoded)) throw unknownImage()
+    if (typeof encoded !== 'string' || !encoded || !BASE64.test(encoded)) throw unknownImage()
     return {
       type: 'file',
       kind: 'image',
-      mime: `image/${format}`,
+      mime: format === 'svg' ? 'image/svg+xml' : `image/${format}`,
       data: fromBase64(encoded),
     }
   })
-  return { state: 'succeeded', outputs, usage: { images: outputs.length } }
+  const usage = asJson(data.usage)
+  const svgUsage = asJson(data.svg_usage)
+  const tokens = (key: string) => {
+    const values = [usage[key], svgUsage[key]].filter(
+      (v): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0,
+    )
+    return values.length ? values.reduce((a, b) => a + b, 0) : undefined
+  }
+  return {
+    state: 'succeeded',
+    outputs,
+    usage: {
+      images: outputs.length,
+      ...(tokens('input_tokens') !== undefined ? { inputTokens: tokens('input_tokens') } : {}),
+      ...(tokens('output_tokens') !== undefined ? { outputTokens: tokens('output_tokens') } : {}),
+    },
+  }
 }

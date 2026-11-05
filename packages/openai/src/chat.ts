@@ -12,8 +12,12 @@ import {
   type AssetRef,
   type CapabilityInput,
   type ProviderErrorCode,
+  type ModelDeclaration,
+  resolveModel,
   type SubmitResult,
 } from '@modelbay/core'
+import { all } from './models/index'
+import { validateOptions } from './options'
 import { chatCompletion, requireSseDone } from '@modelbay/shared'
 import { asJson, readJson, send, withRetry, type TransportMessages } from './http'
 
@@ -132,7 +136,11 @@ function remoteError(call: ErrorCall, status: number, value: unknown): ProviderE
               : status >= 400
                 ? 'invalid_input'
                 : 'unknown'
-  return withRetry(new ProviderError(category, message), 'POST', status)
+  return withRetry(
+    new ProviderError(category, message, { cause: { status, code, message } }),
+    'POST',
+    status,
+  )
 }
 
 /** 兼容渠道的 remoteError：code 优先于状态码，规则与官方渠道不同。 */
@@ -215,6 +223,7 @@ export interface ResponsesChatCall {
   messages: TransportMessages
   /** 声明 `limits.temperature: false` 时不发送节点默认温度。 */
   temperatureDisabled?: boolean
+  declaration?: ModelDeclaration
 }
 
 /**
@@ -222,9 +231,38 @@ export interface ResponsesChatCall {
  * `include: ['reasoning.encrypted_content']`（无状态工具循环的加密思考续传）。
  */
 export async function responsesChat(call: ResponsesChatCall): Promise<SubmitResult> {
-  const effort = asJson(call.input.extra).reasoning_effort
-  if (effort !== undefined && !['low', 'medium', 'high'].includes(String(effort)))
-    throw new ProviderError('invalid_input', 'OpenAI 思考强度无效')
+  const extra = asJson(call.input.extra)
+  const declaration = call.declaration ?? resolveModel(all, call.model)?.declaration
+  for (const key of ['reasoning', 'text']) {
+    if (
+      extra[key] !== undefined &&
+      (extra[key] === null || typeof extra[key] !== 'object' || Array.isArray(extra[key]))
+    )
+      throw new ProviderError('invalid_input', `${key} 必须是对象`)
+  }
+  if (
+    extra.include !== undefined &&
+    (!Array.isArray(extra.include) || extra.include.some((value) => typeof value !== 'string'))
+  )
+    throw new ProviderError('invalid_input', 'include 必须是字符串数组')
+  const reasoning = asJson(extra.reasoning)
+  validateOptions(declaration, {
+    ...extra,
+    ...(reasoning.effort !== undefined ? { reasoning_effort: reasoning.effort } : {}),
+    ...(reasoning.mode !== undefined ? { reasoning_mode: reasoning.mode } : {}),
+    ...(reasoning.context !== undefined ? { reasoning_context: reasoning.context } : {}),
+    ...(reasoning.summary !== undefined ? { reasoning_summary: reasoning.summary } : {}),
+    ...(asJson(extra.text).verbosity !== undefined
+      ? { verbosity: asJson(extra.text).verbosity }
+      : {}),
+  })
+  if (extra.background === true || asJson(extra.prompt_cache_options).prewarm === true)
+    throw new ProviderError(
+      'invalid_input',
+      '后台生成与缓存预热请使用 native raw-request，以保留完整响应状态',
+    )
+  if (extra.conversation && extra.previous_response_id)
+    throw new ProviderError('invalid_input', 'conversation 与 previous_response_id 不能同时设置')
   const fetchImpl = responsesFetch(call)
   const api = createOpenAI({ apiKey: call.apiKey, baseURL: OPENAI_BASE, fetch: fetchImpl })
   return chatCompletion({
@@ -243,14 +281,75 @@ export async function responsesChat(call: ResponsesChatCall): Promise<SubmitResu
     image: (ref) => imageDataUrl(call.ctx, ref, call.label),
     providerOptions: {
       openai: {
-        store: false,
+        store: typeof extra.store === 'boolean' ? extra.store : false,
         include: ['reasoning.encrypted_content'],
-        ...(effort ? { reasoningEffort: String(effort) } : {}),
+        ...(typeof extra.previous_response_id === 'string'
+          ? { previousResponseId: extra.previous_response_id }
+          : {}),
+        ...(typeof extra.conversation === 'string' ? { conversation: extra.conversation } : {}),
       },
     },
     fetch: fetchImpl,
     streamError: (error) => remoteError(call, 200, { error }),
   })
+}
+
+/** SDK owns messages/tools/stream; native snake_case options are merged without losing them. */
+export function responsesBody(
+  body: Record<string, unknown>,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  const reserved = new Set([
+    'model',
+    'input',
+    'messages',
+    'stream',
+    'stream_options',
+    'tools',
+    'tool_choice',
+    'response_format',
+    'temperature',
+    'max_tokens',
+    'max_output_tokens',
+    'n',
+    'baseURL',
+    'reasoning_effort',
+    'reasoning_mode',
+    'reasoning_context',
+    'reasoning_summary',
+    'verbosity',
+    'reasoning',
+    'text',
+    'include',
+  ])
+  const result = {
+    ...body,
+    ...Object.fromEntries(Object.entries(extra).filter(([key]) => !reserved.has(key))),
+  }
+  const reasoning = {
+    ...asJson(body.reasoning),
+    ...(extra.reasoning_effort !== undefined ? { effort: extra.reasoning_effort } : {}),
+    ...(extra.reasoning_mode !== undefined ? { mode: extra.reasoning_mode } : {}),
+    ...(extra.reasoning_context !== undefined ? { context: extra.reasoning_context } : {}),
+    ...(extra.reasoning_summary !== undefined ? { summary: extra.reasoning_summary } : {}),
+    ...asJson(extra.reasoning),
+  }
+  if (Object.keys(reasoning).length) result.reasoning = reasoning
+  const text = {
+    ...asJson(extra.text),
+    ...asJson(body.text),
+    ...(extra.verbosity !== undefined ? { verbosity: extra.verbosity } : {}),
+  }
+  // The normalized JSON Schema is authoritative; native text.verbosity remains available.
+  if (asJson(extra.text).verbosity !== undefined) text.verbosity = asJson(extra.text).verbosity
+  if (Object.keys(text).length) result.text = text
+  result.include = [
+    ...new Set([
+      ...(Array.isArray(body.include) ? body.include : []),
+      ...(Array.isArray(extra.include) ? extra.include : []),
+    ]),
+  ]
+  return result
 }
 
 function responsesFetch(call: ResponsesChatCall): typeof fetch {
@@ -263,7 +362,9 @@ function responsesFetch(call: ResponsesChatCall): typeof fetch {
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${call.apiKey}`, 'Content-Type': 'application/json' },
-        body: String(init?.body),
+        body: JSON.stringify(
+          responsesBody(asJson(JSON.parse(String(init?.body))), asJson(call.input.extra)),
+        ),
       },
       call.messages,
     )
