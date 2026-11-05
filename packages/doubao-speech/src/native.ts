@@ -316,7 +316,12 @@ export async function translation(ctx: AdapterContext, params: Json): Promise<Js
 
 export async function meetingNotes(ctx: AdapterContext, params: Json): Promise<Json> {
   const action = asString(params.action, 'submit')
-  const requestId = asString(params.request_id) || crypto.randomUUID()
+  // 官方：查询时 X-Api-Request-Id 须填提交时返回的 TaskID（提交时的请求 ID 即 TaskID）
+  // 来源：https://docs.volcengine.com/docs/DoubaoVoice/DoubaoVoiceMinutes-APIAccessDocumentation（2026-11-06 核对）
+  const requestId =
+    asString(params.request_id) ||
+    (action === 'query' ? asString(params.task_id) : '') ||
+    crypto.randomUUID()
   if (action === 'submit') {
     const request = asRecord(params.request)
     return postJson(ctx, MINUTES_SUBMIT_PATH, request, {

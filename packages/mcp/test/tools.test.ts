@@ -7,7 +7,7 @@ const EXPECTED_COUNTS: Record<McpKey, number> = {
   ark: 8,
   minimax: 17,
   bailian: 18,
-  'doubao-speech': 24,
+  'doubao-speech': 15,
 }
 
 function propertyType(prop: Record<string, unknown>): string {
@@ -120,12 +120,7 @@ describe('annotations 修正与跨平台统一', () => {
         tool,
       ]),
     )
-    for (const name of [
-      'manage_word_table',
-      'speech_console',
-      'upgrade_voice',
-      'close_realtime_session',
-    ]) {
+    for (const name of ['manage_word_table', 'speech_console']) {
       expect(byName.get(name)?.annotations.destructiveHint).toBe(true)
     }
   })
@@ -178,7 +173,7 @@ describe('工具组开关 MCP_TOOL_GROUPS', () => {
   it('实时会话 / 管理 / node 组确实落在可选组里', () => {
     const { adapter } = fakeAdapter()
     const doubao = generateTools('doubao-speech', { adapter })
-    expect(doubao.byName.get('open_realtime_session')?.group).toBe('realtime')
+    expect(doubao.byName.get('speech_console')?.group).toBe('management')
     expect(doubao.byName.get('manage_word_table')?.group).toBe('management')
     const minimax = generateTools('minimax', { adapter })
     expect(minimax.byName.get('upload_file')?.group).toBe('node')

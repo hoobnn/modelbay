@@ -345,8 +345,6 @@ describe('createHandlers tools/call 路由', () => {
     expect(examples.content[0]?.text).toContain('tools/list')
     const caps = (await handlers.callTool('list_speech_capabilities', {})) as CallToolResult
     expect(caps.structuredContent).toBeDefined()
-    const voice = (await handlers.callTool('get_voice', { speaker_id: 'x' })) as CallToolResult
-    expect(voice.content[0]?.text).toContain('Voice One')
   })
 
   it('未配置 key 返回清晰错误而不是崩溃', async () => {

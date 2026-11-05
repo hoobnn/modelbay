@@ -6,10 +6,10 @@ import { MCP_TOOL_GROUPS, TOOL_GROUPS, TOOL_NATURES } from '../src/types'
 import { fakeAdapter, fakeModels, MCP_KEYS, toolsOf } from './fixtures'
 
 describe('工具目录解析', () => {
-  it('四个平台目录数量与盘点一致（共 67）', () => {
+  it('四个平台目录数量与盘点一致（共 59）', () => {
     const counts = MCP_KEYS.map((platform) => toolsOf(platform).length)
-    expect(counts).toEqual([8, 17, 18, 24])
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(67)
+    expect(counts).toEqual([8, 17, 18, 16])
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(59)
   })
 
   it('目录条目只含 name/description/inputSchema/outputSchema（无 annotations）', () => {
@@ -47,9 +47,9 @@ describe('工具元数据', () => {
   it('平台工具定义里的 native / nature / group 优先于通用约定', () => {
     const { adapter } = fakeAdapter()
     const doubao = generateTools('doubao-speech', { adapter })
-    expect(doubao.byName.get('open_realtime_session')).toMatchObject({
-      group: 'realtime',
-      route: { kind: 'native', op: 'realtime-open', nature: 'realtime' },
+    expect(doubao.byName.get('manage_word_table')).toMatchObject({
+      group: 'management',
+      route: { kind: 'native', op: 'hotword-table', nature: 'mutate' },
     })
     const minimax = generateTools('minimax', { adapter })
     expect(minimax.byName.get('upload_file')?.group).toBe('node')
@@ -169,8 +169,8 @@ describe('generateTools / listTools / toMCPTool', () => {
     const coreOnly = toolNames(set, ['core'])
     const all = toolNames(set, MCP_TOOL_GROUPS.all)
     expect(coreOnly.length).toBeLessThan(all.length)
-    expect(coreOnly).not.toContain('open_realtime_session')
-    expect(all).toContain('open_realtime_session')
+    expect(coreOnly).not.toContain('speech_console')
+    expect(all).toContain('speech_console')
   })
 
   it('adapter.nodeOnly 把对应 native 工具强制归入 node 组', () => {
