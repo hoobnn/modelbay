@@ -46,7 +46,7 @@ import {
   withRetry,
   type Json,
 } from './http'
-import { liftMcpArguments } from './mcp-args'
+import { liftMcpArguments, passthroughParameters } from './mcp-args'
 import { optionsProblem, optionKeys } from './options'
 import type { ImageEditPreparer, ImageProcessPreparer } from './image-edit'
 import {
@@ -340,6 +340,7 @@ async function generateImage(
     input: { messages: [{ role: 'user', content }] },
     parameters: {
       watermark: false,
+      ...passthroughParameters(input),
       ...extra,
       size,
       n,
@@ -459,6 +460,7 @@ async function generateVideo(
       input: { prompt: input.prompt, ...(media.length ? { media } : {}) },
       parameters: {
         watermark: false,
+        ...passthroughParameters(input),
         ...extra,
         resolution,
         ratio,

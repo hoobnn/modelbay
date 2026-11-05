@@ -910,7 +910,13 @@ describe('MCP 目录承诺的参数（白名单透传）', () => {
         thinking: true,
         n: 2,
         seed: 5,
-        parameters: { prompt_extend_mode: 'direct', evil: 1 },
+        parameters: {
+          prompt_extend_mode: 'direct',
+          smart_crop: 1,
+          size: '1*1',
+          n: 9,
+          model: 'evil',
+        },
       } as unknown as CapabilityInput<'image.generate'>,
     })
     expect(body().parameters).toMatchObject({
@@ -922,7 +928,10 @@ describe('MCP 目录承诺的参数（白名单透传）', () => {
       n: 2,
       seed: 5,
     })
-    expect(body().parameters).not.toHaveProperty('evil')
+    // parameters 整体透传未知官方字段，但不能覆盖适配器自己构造的键
+    expect(body().parameters).toMatchObject({ smart_crop: 1, n: 2 })
+    expect(body().parameters.size).not.toBe('1*1')
+    expect(body().model).toBe('qwen-image-3.0-pro')
     await submit(ctx, {
       capability: 'image.generate',
       model: 'wan2.7-image-pro',
@@ -948,6 +957,21 @@ describe('MCP 目录承诺的参数（白名单透传）', () => {
       } as unknown as CapabilityInput<'video.generate'>,
     })
     expect(body().parameters).toMatchObject({ prompt_extend: true, watermark: true, ratio: '9:16' })
+  })
+
+  it('视频：parameters 的未知官方字段到达请求体，保留字段不被覆盖', async () => {
+    const { ctx, body } = setup([{ output: { task_id: 't' } }])
+    await submit(ctx, {
+      capability: 'video.generate',
+      model: 'wan3.0-video',
+      input: {
+        prompt: 'p',
+        duration: 5,
+        parameters: { shot_type: 'multi', duration: 99, resolution: '4K', model: 'evil' },
+      } as unknown as CapabilityInput<'video.generate'>,
+    })
+    expect(body().parameters).toMatchObject({ shot_type: 'multi', duration: 5, resolution: '720P' })
+    expect(body().model).toBe('wan3.0-video')
   })
 
   it('语音：parameters 合并进 input 且不能覆盖 text / voice，language 与 instructions 平铺字段生效', async () => {
