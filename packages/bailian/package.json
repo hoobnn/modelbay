@@ -23,13 +23,20 @@
     "build": "vp pack"
   },
   "peerDependencies": {
+    "sharp": "^0.35.0",
     "zod": "^4.6"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@modelbay/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "sharp": "^0.35.5",
     "typescript": "^7.0.2",
     "zod": "catalog:"
   }

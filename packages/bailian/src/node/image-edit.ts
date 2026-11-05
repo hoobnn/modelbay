@@ -1,14 +1,26 @@
 /**
  * Node-only Bailian image editing (`@modelbay/bailian/image-edit`).
  *
- * This subpath is intentionally excluded from the root entry: the host-side `sharp`
- * mask preprocessing and the OSS multi-part upload are Node-specific. The request
- * builder below is runtime-agnostic; the actual preprocessing/upload is a documented
- * TODO (see the package README).
+ * This subpath is intentionally excluded from the root entry: the mask preprocessing
+ * needs `sharp` (Apache-2.0, Node-only) and the reference upload needs the OSS
+ * temporary storage. The request builder below is runtime-agnostic; the Node-only
+ * helpers add the mask normalization and the upload on top of it.
+ *
+ * 官方对蒙版的要求（万相 2.1 通用图像编辑）：
+ * - 分辨率必须与基准图一致，宽高在 512–4096 像素之间；
+ * - 白色区域表示要编辑的部分，必须是纯白 RGB(255,255,255)；
+ * - 黑色区域表示保持不变，必须是纯黑 RGB(0,0,0)；
+ * - 格式支持 JPG / JPEG / PNG / BMP / TIFF / WEBP，大小不超过 10MB。
  */
-import { ProviderError } from '@modelbay/core'
+import { ProviderError, type AdapterContext, type AssetRef } from '@modelbay/core'
+import { uploadAsset } from '../adapter'
 
 export const IMAGE_EDIT_PATH = '/api/v1/services/aigc/image2image/image-synthesis'
+/** 官方要求的蒙版边长下限与上限（像素）。 */
+export const MASK_MIN_SIDE = 512
+export const MASK_MAX_SIDE = 4096
+/** 官方要求的蒙版文件大小上限。 */
+export const MASK_MAX_BYTES = 10 * 1024 * 1024
 
 export interface ImageEditOptions {
   model?: string
@@ -43,13 +55,137 @@ export function buildImageEditRequest(opts: ImageEditOptions): Record<string, un
   }
 }
 
+/** 一张待处理的图片（字节 + MIME）。 */
+export interface ImageInput {
+  data: Uint8Array
+  mime: string
+}
+
+/** 处理后的蒙版。 */
+export interface PreparedMask {
+  /** 纯黑白（RGB）的 PNG 字节。 */
+  data: Uint8Array
+  mime: string
+  width: number
+  height: number
+}
+
 /**
- * TODO: implement `sharp`-based mask normalization and the Node-only OSS upload.
- * Kept as an explicit marker so consumers get a clear error instead of a silent no-op.
+ * 载入 `sharp`。
+ *
+ * `sharp` 是 Node 专属依赖（Apache-2.0），由集成方安装；没装时给出明确的错误。
  */
-export function imageEditNodeOnly(): never {
-  throw new ProviderError(
-    'unavailable',
-    'Node-only image editing is not implemented yet; use buildImageEditRequest with your own uploader',
+async function loadSharp(): Promise<(typeof import('sharp'))['default']> {
+  try {
+    const mod = await import('sharp')
+    return mod.default
+  } catch (cause) {
+    throw new ProviderError('unavailable', '蒙版处理需要安装 sharp（Apache-2.0，Node 专属依赖）', {
+      cause,
+    })
+  }
+}
+
+/**
+ * 把用户给的蒙版规范化成官方能识别的黑白图。
+ *
+ * - 按 EXIF 方向摆正，和基准图保持同一坐标系；
+ * - 尺寸不一致时按基准图拉伸（官方要求分辨率必须一致）；
+ * - 灰度后按阈值二值化，保证白色区域是纯白、黑色区域是纯黑；
+ * - 输出 PNG，宽高必须在官方规定的 512–4096 像素之间。
+ */
+export async function prepareEditMask(base: ImageInput, mask: ImageInput): Promise<PreparedMask> {
+  const sharp = await loadSharp()
+  let baseMeta: { width?: number; height?: number }
+  try {
+    baseMeta = await sharp(base.data).rotate().metadata()
+  } catch (cause) {
+    throw new ProviderError('invalid_input', '基准图无法解析，请提供 PNG 或 JPEG 图片', { cause })
+  }
+  const width = baseMeta.width ?? 0
+  const height = baseMeta.height ?? 0
+  if (!width || !height) throw new ProviderError('invalid_input', '基准图尺寸无法识别')
+  if (
+    width < MASK_MIN_SIDE ||
+    height < MASK_MIN_SIDE ||
+    width > MASK_MAX_SIDE ||
+    height > MASK_MAX_SIDE
   )
+    throw new ProviderError(
+      'invalid_input',
+      `基准图宽高必须在 ${MASK_MIN_SIDE}-${MASK_MAX_SIDE} 像素之间`,
+    )
+  let data: Buffer
+  try {
+    data = await sharp(mask.data)
+      .rotate()
+      .resize(width, height, { fit: 'fill' })
+      .greyscale()
+      .threshold(128)
+      .png()
+      .toBuffer()
+  } catch (cause) {
+    throw new ProviderError('invalid_input', '蒙版无法解析，请提供 PNG 或 JPEG 图片', { cause })
+  }
+  if (data.length > MASK_MAX_BYTES)
+    throw new ProviderError('invalid_input', '蒙版大小不能超过 10MB')
+  return { data: new Uint8Array(data), mime: 'image/png', width, height }
+}
+
+export interface ImageEditAssetsOptions {
+  /** 基准图。 */
+  image: AssetRef
+  /** 蒙版；白色区域重绘。 */
+  mask: AssetRef
+  prompt: string
+  model?: string
+  count?: number
+  seed?: number
+  extra?: Record<string, unknown>
+}
+
+/**
+ * 端到端准备局部重绘的请求体：处理蒙版 → 上传两张图 → 拼请求体。
+ *
+ * 上传走百炼的临时 OSS 存储（48 小时有效），返回 `oss://` 地址。
+ */
+export async function prepareImageEditRequest(
+  ctx: AdapterContext,
+  opts: ImageEditAssetsOptions,
+): Promise<Record<string, unknown>> {
+  if (!ctx.assets)
+    throw new ProviderError('invalid_input', 'An assets source is required for image editing')
+  const model = opts.model ?? 'wanx2.1-imageedit'
+  const [base, rawMask] = await Promise.all([
+    ctx.assets.load(opts.image.assetId),
+    ctx.assets.load(opts.mask.assetId),
+  ])
+  if (!base.data.length) throw new ProviderError('invalid_input', '基准图内容为空')
+  const prepared = await prepareEditMask(
+    { data: base.data, mime: base.mime || opts.image.mime || 'image/png' },
+    { data: rawMask.data, mime: rawMask.mime || opts.mask.mime || 'image/png' },
+  )
+  const [baseUrl, maskUrl] = await Promise.all([
+    uploadAsset(ctx, opts.image, model),
+    uploadMask(ctx, opts.mask, prepared, model),
+  ])
+  return buildImageEditRequest({
+    model,
+    prompt: opts.prompt,
+    baseImageUrl: baseUrl,
+    maskImageUrl: maskUrl,
+    ...(opts.count === undefined ? {} : { count: opts.count }),
+    ...(opts.seed === undefined ? {} : { seed: opts.seed }),
+    ...(opts.extra === undefined ? {} : { extra: opts.extra }),
+  })
+}
+
+/** 把处理后的蒙版上传到百炼的临时 OSS 存储。 */
+function uploadMask(
+  ctx: AdapterContext,
+  ref: AssetRef,
+  prepared: PreparedMask,
+  model: string,
+): Promise<string> {
+  return uploadAsset(ctx, { ...ref, mime: prepared.mime }, model, prepared.data)
 }

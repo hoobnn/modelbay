@@ -68,6 +68,8 @@ export async function uploadAsset(
   ctx: AdapterContext,
   ref: AssetRef,
   model: string,
+  /** 覆盖要上传的字节（Node 子路径用来上传处理后的蒙版）。 */
+  data?: Uint8Array,
 ): Promise<string> {
   if (!ctx.assets)
     throw new ProviderError('invalid_input', 'An assets source is required to upload references')
@@ -80,7 +82,8 @@ export async function uploadAsset(
     : mime.startsWith('audio/')
       ? 15 * 1024 * 1024
       : 100 * 1024 * 1024
-  if (!source.data.length || source.data.length > maxBytes)
+  const payload = data ?? source.data
+  if (!payload.length || payload.length > maxBytes)
     throw new ProviderError('invalid_input', 'Reference asset is empty or exceeds the size limit')
   const policy = asJson(
     (await requestJson(ctx, `/api/v1/uploads?action=getPolicy&model=${encodeURIComponent(model)}`))
@@ -108,7 +111,7 @@ export async function uploadAsset(
   }
   form.append('key', objectKey)
   form.append('success_action_status', '200')
-  form.append('file', new Blob([new Uint8Array(source.data)], { type: mime }), name)
+  form.append('file', new Blob([new Uint8Array(payload)], { type: mime }), name)
   const messages = {
     cancelled: 'Bailian upload cancelled',
     network: 'Bailian upload failed; submission outcome unknown',

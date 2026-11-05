@@ -75,10 +75,21 @@ adapter in `nativeOperationSchemas` (for the MCP generator):
 
 ## Node-only subpath
 
-`@modelbay/bailian/image-edit` exports `buildImageEditRequest()` and marks the
-`sharp`-based mask normalization plus the OSS multipart upload as a **TODO**. The root
-entry deliberately excludes it; `submit` for `image.edit` / `image.process` returns a
-clear `invalid_input` pointing at this subpath.
+`@modelbay/bailian/image-edit` exports `buildImageEditRequest()` plus the Node-only
+mask handling and upload:
+
+- `prepareEditMask(base, mask)` normalizes the mask with `sharp`: apply the EXIF
+  orientation, resize it to the base image (the platform requires both to have the
+  same resolution), threshold it to pure black / white and emit a PNG. The platform
+  only recognizes a painted region that is exactly RGB(255,255,255) and a kept region
+  that is exactly RGB(0,0,0), so anti-aliased edges would otherwise be ignored.
+- `prepareImageEditRequest(ctx, opts)` runs the whole flow — process the mask, upload
+  the base image and the mask to the DashScope temporary OSS store (48 h) and build the
+  `description_edit_with_mask` body.
+
+`sharp` (Apache-2.0) is Node-only and an **optional peer dependency** — install it
+next to this subpath. The root entry deliberately excludes the subpath; `submit` for
+`image.edit` / `image.process` returns a clear `invalid_input` pointing here.
 
 ## Errors and redaction
 
