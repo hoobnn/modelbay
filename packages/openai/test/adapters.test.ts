@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { AdapterRequest } from '@modelbay/core'
-import { channels, models, openaiAdapter, openaiCompatibleAdapter } from '../src/index'
+import {
+  channels,
+  createOpenAIAdapter,
+  models,
+  openaiAdapter,
+  openaiCompatibleAdapter,
+} from '../src/index'
 import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
 
 function request(
@@ -60,13 +66,21 @@ describe('openaiAdapter.submit：官方数据面', () => {
   })
 
   it('图片编辑走 /v1/images/edits 并传 images / mask', async () => {
+    const adapter = createOpenAIAdapter(models, {
+      editMask: async (_ctx, { source, mask }) => ({
+        original: { ...source, mime: 'image/png' },
+        mask: { ...mask, mime: 'image/png' },
+        width: 1,
+        height: 1,
+      }),
+    })
     const { ctx, fetch } = fakeContext([{ data: [{ b64_json: 'iVBORw0KGgo=' }] }], {
       secret: { OPENAI_API_KEY: 'k' },
       assets: {
         load: async () => ({ data: new Uint8Array([1, 2, 3]), mime: 'image/png' }),
       },
     })
-    await openaiAdapter.submit(
+    await adapter.submit(
       {
         capability: 'image.edit',
         model: 'openai:gpt-image-2-5-sunburst',

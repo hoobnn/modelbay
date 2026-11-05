@@ -16,6 +16,7 @@ import {
   type AdapterContext,
   type AdapterRequest,
   type CapabilityInput,
+  type ModelDeclaration,
   type PlatformAdapter,
   type SubmitResult,
 } from '@modelbay/core'
@@ -24,6 +25,10 @@ import { chatCompletion } from './chat'
 import { asJson, request, type Json, type TransportMessages } from './http'
 import { normalizedBase } from './config'
 import { buildEditBody, buildImageBody, openAiModelList, parseImageResponse } from './media'
+import type { OpenAIAdapterOptions } from './mask'
+
+export type { EditMaskInput, EditMaskPreparer, ImageBytes, PreparedEdit } from './mask'
+export type { OpenAIAdapterOptions } from './mask'
 
 const OPENAI_BASE = 'https://api.openai.com/v1'
 const DOCS = 'https://developers.openai.com/api/docs'
@@ -54,10 +59,10 @@ function requireKey(kind: Kind, ctx: AdapterContext): string {
 }
 
 /** Resolve `渠道:渠道内ID` / canonical id / alias to the platform wire id. */
-function modelId(ref: string): string {
+function modelId(ref: string, models: ModelDeclaration[]): string {
   const colon = ref.indexOf(':')
   const raw = colon >= 0 ? ref.slice(colon + 1) : ref
-  const found = resolveModel(all, ref)
+  const found = resolveModel(models, ref)
   return found?.channel.id ?? raw
 }
 
@@ -79,14 +84,20 @@ function authHeaders(key: string): Record<string, string> {
   return { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
 }
 
-async function submit(req: AdapterRequest, ctx: AdapterContext, kind: Kind): Promise<SubmitResult> {
+async function submit(
+  req: AdapterRequest,
+  ctx: AdapterContext,
+  kind: Kind,
+  models: ModelDeclaration[],
+  options: OpenAIAdapterOptions,
+): Promise<SubmitResult> {
   const key = requireKey(kind, ctx)
   const input = req.input as CapabilityInput<'text.chat'> &
     Partial<CapabilityInput<'image.generate'>> &
     Partial<CapabilityInput<'image.edit'>>
   const extra = asJson(input.extra ?? {})
   const base = baseFor(kind, ctx, extra)
-  const model = modelId(req.model)
+  const model = modelId(req.model, models)
   const tag = label(kind)
   const transport = messages(kind)
 
@@ -125,7 +136,13 @@ async function submit(req: AdapterRequest, ctx: AdapterContext, kind: Kind): Pro
   }
 
   if (req.capability === 'image.edit') {
-    const built = await buildEditBody(model, input as CapabilityInput<'image.edit'>, ctx, tag)
+    const built = await buildEditBody(
+      model,
+      input as CapabilityInput<'image.edit'>,
+      ctx,
+      tag,
+      options.editMask,
+    )
     const data = await request({
       ctx,
       url: `${base}/images/edits`,
@@ -143,7 +160,11 @@ async function submit(req: AdapterRequest, ctx: AdapterContext, kind: Kind): Pro
   throw new ProviderError('invalid_input', `${tag} 不支持此能力：${req.capability}`)
 }
 
-function makeAdapter(kind: Kind): PlatformAdapter {
+function makeAdapter(
+  kind: Kind,
+  models: ModelDeclaration[],
+  options: OpenAIAdapterOptions,
+): PlatformAdapter {
   return defineAdapter({
     id: kind === 'openai' ? 'openai/api' : 'openai/compatible',
     title: label(kind),
@@ -152,7 +173,7 @@ function makeAdapter(kind: Kind): PlatformAdapter {
     nativeOperations: ['listModels'],
     docsUrl: DOCS,
     nodeOnly: ['node'],
-    submit: (req, ctx) => submit(req, ctx, kind),
+    submit: (req, ctx) => submit(req, ctx, kind, models, options),
     // 官方与兼容渠道的聊天 / 生图都是同步接口，没有异步任务可轮询。
     poll: () =>
       Promise.reject(
@@ -180,7 +201,28 @@ function makeAdapter(kind: Kind): PlatformAdapter {
   })
 }
 
+/**
+ * OpenAI 官方渠道适配器工厂。
+ *
+ * `image.edit` 的蒙版 alpha 转换是 Node 专属能力，由宿主从
+ * `@modelbay/openai/node` 注入 `editMask`。
+ */
+export function createOpenAIAdapter(
+  models: ModelDeclaration[],
+  options: OpenAIAdapterOptions = {},
+): PlatformAdapter {
+  return makeAdapter('openai', models, options)
+}
+
+/** OpenAI 兼容渠道适配器工厂（与官方渠道同一套注入点）。 */
+export function createOpenAICompatibleAdapter(
+  models: ModelDeclaration[],
+  options: OpenAIAdapterOptions = {},
+): PlatformAdapter {
+  return makeAdapter('compatible', models, options)
+}
+
 /** OpenAI official API adapter (channel `openai`). */
-export const openaiAdapter: PlatformAdapter = makeAdapter('openai')
+export const openaiAdapter: PlatformAdapter = createOpenAIAdapter(models)
 /** OpenAI-compatible channel adapter (channel `openai-compatible`). */
-export const openaiCompatibleAdapter: PlatformAdapter = makeAdapter('compatible')
+export const openaiCompatibleAdapter: PlatformAdapter = createOpenAICompatibleAdapter(models)

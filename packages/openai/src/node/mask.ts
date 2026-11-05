@@ -16,25 +16,14 @@ import {
 } from '@modelbay/core'
 import { allModels } from '../declarations'
 import { editRequestBody } from '../media'
+import type { EditMaskPreparer, ImageBytes, PreparedEdit } from '../mask'
 import type { Json } from '../http'
+
+export type { EditMaskInput, EditMaskPreparer, ImageBytes, PreparedEdit } from '../mask'
 
 export interface MaskInput {
   data: Uint8Array
   mime: string
-  width: number
-  height: number
-}
-
-/** 一张待转换的图片（字节 + MIME）。 */
-export interface ImageBytes {
-  data: Uint8Array
-  mime: string
-}
-
-/** 转换结果：摆正后的原图 PNG + 反转 alpha 的蒙版 PNG。 */
-export interface PreparedEdit {
-  original: ImageBytes
-  mask: ImageBytes
   width: number
   height: number
 }
@@ -114,6 +103,15 @@ export interface EditRequestOptions {
   mask: AssetRef
   count?: number
 }
+
+/**
+ * 注入点实现：把白色重绘蒙版转成 alpha 蒙版。
+ *
+ * 宿主这样注入：`createOpenAIAdapter(models, { editMask })`。
+ * 转换本身是纯字节处理，`ctx` 目前用不到，但签名与其它平台的注入点一致。
+ */
+export const editMask: EditMaskPreparer = async (_ctx, { source, mask }) =>
+  prepareEditMask(source, mask)
 
 /** 把字节变成 data URL。 */
 function dataUrl(image: ImageBytes): string {

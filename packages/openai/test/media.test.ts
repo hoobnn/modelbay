@@ -102,6 +102,12 @@ describe('buildEditBody：蒙版编辑请求', () => {
       },
       ctx(),
       'OpenAI',
+      async (_ctx, { source, mask }) => ({
+        original: { ...source, mime: 'image/png' },
+        mask: { ...mask, mime: 'image/png' },
+        width: 1,
+        height: 1,
+      }),
     )
     expect(built.edit).toBe(true)
     expect(built.body.images).toEqual([{ image_url: 'data:image/png;base64,AQID' }])
@@ -113,6 +119,21 @@ describe('buildEditBody：蒙版编辑请求', () => {
     await expect(buildEditBody('m', input, ctx(), 'OpenAI')).rejects.toMatchObject({
       code: 'invalid_input',
     })
+  })
+
+  it('缺蒙版转换实现时拒绝，不会原样发出语义相反的蒙版', async () => {
+    await expect(
+      buildEditBody(
+        'm',
+        {
+          image: { assetId: 'src', kind: 'image' },
+          mask: { assetId: 'mask', kind: 'image' },
+          prompt: '改天空',
+        },
+        ctx(),
+        'OpenAI',
+      ),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 })
 

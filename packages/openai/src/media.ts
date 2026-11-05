@@ -7,6 +7,7 @@
 import {
   ProviderError,
   fromBase64,
+  toBase64,
   type AdapterContext,
   type CapabilityInput,
   type ProviderOutput,
@@ -15,9 +16,15 @@ import {
 } from '@modelbay/core'
 import { asJson, type Json } from './http'
 import { imageDataUrl } from './chat'
+import type { EditMaskPreparer, ImageBytes } from './mask'
 
 function invalid(message: string): never {
   throw new ProviderError('invalid_input', message)
+}
+
+/** 把字节变成 data URL。 */
+function dataUrl(image: ImageBytes): string {
+  return `data:${image.mime};base64,${toBase64(image.data)}`
 }
 
 /** Map a normalized aspect ratio (or explicit width/height) to the platform size. */
@@ -121,28 +128,44 @@ export function editRequestBody(opts: {
   }
 }
 
-/** Build an `/images/edits` body from the original image and mask data URLs. */
+/**
+ * Build an `/images/edits` body from the original image and mask data URLs.
+ *
+ * 蒙版语义：白色区域重绘、黑色区域保留；OpenAI 要的是 RGBA alpha 蒙版
+ * （透明处才重绘），所以必须先经过注入的转换实现把亮度反转成 alpha。
+ * 没注入时直接报错，绝不原样发出语义相反的蒙版。
+ */
 export async function buildEditBody(
   model: string,
   input: CapabilityInput<'image.edit'>,
   ctx: AdapterContext,
   label: string,
+  editMask?: EditMaskPreparer,
 ): Promise<BuiltImage> {
   if (!input.image || !input.mask) invalid('请提供原图和蒙版')
-  const format = 'png'
+  if (!editMask)
+    invalid(
+      `${label} 图片编辑需要把白色重绘蒙版转成 alpha 蒙版：请从 @modelbay/openai/node 引入 editMask，` +
+        '再用 createOpenAIAdapter(models, { editMask }) 注入',
+    )
+  if (!ctx.assets) invalid(`${label} 图片编辑需要宿主注入 assets 才能读取原图与蒙版`)
   const [source, mask] = await Promise.all([
-    imageDataUrl(ctx, input.image, label),
-    imageDataUrl(ctx, input.mask, label),
+    ctx.assets.load(input.image.assetId),
+    ctx.assets.load(input.mask.assetId),
   ])
+  const prepared = await editMask(ctx, {
+    source: { data: source.data, mime: source.mime || input.image.mime || 'image/png' },
+    mask: { data: mask.data, mime: mask.mime || input.mask.mime || 'image/png' },
+  })
   return {
     body: editRequestBody({
       model,
       prompt: input.prompt ?? '',
       count: input.count ?? 1,
-      source,
-      mask,
+      source: dataUrl(prepared.original),
+      mask: dataUrl(prepared.mask),
     }),
-    format,
+    format: 'png',
     edit: true,
   }
 }

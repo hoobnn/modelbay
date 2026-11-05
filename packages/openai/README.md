@@ -85,15 +85,29 @@ parts and is never imported by the root entry:
   into the alpha channel (white → transparent = repaint, black → opaque =
   keep). Sizes must match, otherwise `invalid_input` is thrown. Needs `sharp`
   (Apache-2.0, optional peer dependency the integrator installs).
+- `editMask` — the same conversion behind the adapter's injection point
+  (`createOpenAIAdapter(models, { editMask })`).
 - `prepareImageEditRequest(ctx, opts)` — the whole flow: load the original and
   the mask from `ctx.assets`, convert the mask, and return the `/images/edits`
   request body. The model defaults to the `image.edit` default declared in
   `src/models/`.
 
-The root `image.edit` path constructs `/images/edits` with `images` / `mask`
-data URLs from `ctx.assets`; hosts that want the alpha inversion should use
-this subpath before submission. It is listed in `nodeOnly` and not exposed to
-MCP by default.
+**Injecting the mask conversion.** `image.edit` needs the alpha inversion, so
+the adapter asks for it instead of importing `sharp` itself:
+
+```ts
+import { createOpenAIAdapter, models } from '@modelbay/openai'
+import { editMask } from '@modelbay/openai/node'
+
+const adapter = createOpenAIAdapter(models, { editMask })
+```
+
+With the conversion injected, the root path still assembles the
+`/images/edits` body (`images` / `mask` data URLs) so the root entry and the
+subpath share one body builder. Without it, `image.edit` fails with
+`invalid_input` naming the subpath and the injection above — it never sends the
+raw white-repaint mask, whose meaning is the opposite of what OpenAI expects.
+The subpath is listed in `nodeOnly` and not exposed to MCP by default.
 
 ## Tests
 
