@@ -553,3 +553,19 @@ describe('套餐 ASR 与目录接线', () => {
     })
   })
 })
+
+describe('套餐 TTS 与新版 doubao-speech 配合', () => {
+  it('读 ctx.settings 的音色 / 格式，鉴权用套餐 Key', async () => {
+    const stream = '{"code":0,"data":"AQID"}\n{"code":20000000}'
+    const f = setup([new Response(stream)], {}, { ARK_AGENT_PLAN_API_KEY: 'plan-secret' })
+    f.ctx.settings = { voice: 'zh_male_test', format: 'mp3', sampleRate: '24000' }
+    await arkPlanAdapter.submit(
+      gen('audio.speech', 'ark-plan:doubao-seed-tts-2.0', { text: '你好' }),
+      f.ctx,
+    )
+    const [url, init] = f.fetch.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://openspeech.bytedance.com/api/v3/plan/tts/unidirectional')
+    expect(init.headers).toMatchObject({ 'X-Api-Key': 'plan-secret' })
+    expect(JSON.parse(String(init.body)).req_params.speaker).toBe('zh_male_test')
+  })
+})
