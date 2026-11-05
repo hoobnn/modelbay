@@ -135,7 +135,7 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
       body: { type: 'object' },
       resource: { type: 'string' },
       asr: { type: 'boolean' },
-      // product=asr_stream 走 Node 子路径的流式识别；其余 product 走 HTTP 兜底。
+      // product=asr_stream / asr_websocket 走 Node 子路径的流式识别；其余 product 走 HTTP 兜底。
       product: { type: 'string' },
       audio: { type: 'string' },
       mode: { type: 'string' },
@@ -475,8 +475,8 @@ export async function runDoubaoNative(
     case 'voice-query':
       return voiceQueryOp(ctx, p)
     case 'raw-request': {
-      // product=asr_stream 走 Node 子路径注入的流式识别实现（根入口不带 WebSocket）。
-      if (p.product === 'asr_stream')
+      // product=asr_stream / asr_websocket 走 Node 子路径注入的流式识别实现（根入口不带 WebSocket）。
+      if (p.product === 'asr_stream' || p.product === 'asr_websocket')
         throw new ProviderError(
           'unavailable',
           '流式识别需要 Node 子路径 @modelbay/doubao-speech/asr，请在 Node 环境下运行',

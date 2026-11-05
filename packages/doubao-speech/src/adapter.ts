@@ -208,7 +208,7 @@ export function createDoubaoAdapter(
       if (op === 'simultaneous-interpretation' && options.interpretation) {
         return options.interpretation(ctx, params as Json)
       }
-      // 流式识别走 speech_raw_request 的 product=asr_stream 分支。
+      // 流式识别走 speech_raw_request 的 product=asr_stream / asr_websocket 分支。
       if (op === 'raw-request' && options.asr && isAsrStream(params)) {
         return options.asr(ctx, params as Json)
       }
@@ -218,9 +218,13 @@ export function createDoubaoAdapter(
   return defineAdapter(adapter)
 }
 
-/** `speech_raw_request` 里 product=asr_stream 表示走流式识别。 */
+/**
+ * `speech_raw_request` 里 product=asr_stream / asr_websocket 表示走流式识别。
+ *
+ * 两者共用同一个 Node 实现，端点由 product / mode 决定。
+ */
 function isAsrStream(params: Record<string, unknown>): boolean {
-  return params.product === 'asr_stream'
+  return params.product === 'asr_stream' || params.product === 'asr_websocket'
 }
 
 export { nativeOperationSchemas, buildSpeechRequest }

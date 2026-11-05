@@ -9,6 +9,7 @@
  * Protocol (official "大模型流式语音识别API" doc):
  * -  双向流式：`wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async`
  * -  单流（流式输入、末尾统一返回）：`.../api/v3/sauc/bigmodel_nostream`
+ * -  标准双向流式（旧版链路）：`.../api/v3/sauc/bigmodel`
  * -  资源 ID `volc.seedasr.sauc.duration`
  *
  * The frame codec below was ported from the Python implementation in
@@ -23,6 +24,8 @@ import { readPcm, type PcmAudio } from './pcm'
 export const ASR_ASYNC_PATH = '/api/v3/sauc/bigmodel_async'
 /** 流式输入、末尾统一返回的单流接口。 */
 export const ASR_NOSTREAM_PATH = '/api/v3/sauc/bigmodel_nostream'
+/** 标准双向流式接口（旧版链路）：每包输入对应一包返回。 */
+export const ASR_WEBSOCKET_PATH = '/api/v3/sauc/bigmodel'
 export const ASR_HOST = 'wss://openspeech.bytedance.com'
 /** 豆包流式语音识别模型的资源 ID。 */
 export const ASR_RESOURCE_ID = 'volc.seedasr.sauc.duration'
@@ -106,8 +109,24 @@ export function decodeAsrFrame(bytes: Uint8Array): DecodedAsrFrame {
   }
 }
 
-/** 两种流式识别模式。 */
-export type AsrMode = 'realtime' | 'sentence'
+/** 三种流式识别模式。 */
+export type AsrMode = 'realtime' | 'sentence' | 'websocket'
+
+/**
+ * 各模式的端点与请求参数差异（官方「大模型流式语音识别 API」文档）。
+ *
+ * - realtime：双向流式优化版，每包输入对应一包返回，性能最好；
+ * - sentence：流式输入（末尾统一返回），准确率更高；
+ * - websocket：标准双向流式（旧版链路），每包输入对应一包返回。
+ *
+ * `enableNonStream` 是二遍识别开关，只在官方文档支持的链路上打开；
+ * 调用方在 `request` 里显式传的值优先级更高。
+ */
+const ASR_MODES: Record<AsrMode, { path: string; enableNonStream: boolean }> = {
+  realtime: { path: ASR_ASYNC_PATH, enableNonStream: false },
+  sentence: { path: ASR_NOSTREAM_PATH, enableNonStream: true },
+  websocket: { path: ASR_WEBSOCKET_PATH, enableNonStream: false },
+}
 
 /** 宿主注入的二进制 WebSocket 工厂。 */
 export type AsrSocketFactory = (url: string, headers: Record<string, string>) => Promise<AsrSocket>
@@ -134,7 +153,7 @@ export function asrHeaders(
 export interface AsrStreamOptions {
   /** 本地 .wav / .pcm 路径。 */
   audio: string
-  /** realtime（双流，边发边返回）或 sentence（末尾统一返回）。 */
+  /** realtime（双流，边发边返回）、sentence（末尾统一返回）或 websocket（标准双向流式）。 */
   mode?: AsrMode
   /** 覆盖资源 ID，默认 `volc.seedasr.sauc.duration`。 */
   resourceId?: string
@@ -231,18 +250,18 @@ export async function transcribeStream(
   socket?: AsrSocketFactory,
 ): Promise<AsrStreamResult> {
   const mode = options.mode ?? 'realtime'
-  if (mode !== 'realtime' && mode !== 'sentence')
-    throw new ProviderError('invalid_input', 'mode must be realtime or sentence')
+  const config = ASR_MODES[mode]
+  if (!config)
+    throw new ProviderError('invalid_input', 'mode must be realtime, sentence or websocket')
   const apiKey = firstSecret(ctx, ['DOUBAO_API_KEY', 'VOLC_SPEECH_API_KEY'])
   if (!apiKey) throw new ProviderError('auth', '流式识别需要 DOUBAO_API_KEY')
   const pcm = readPcm(options.audio)
   const requestId = crypto.randomUUID()
-  const path = mode === 'realtime' ? ASR_ASYNC_PATH : ASR_NOSTREAM_PATH
-  const url = `${ASR_HOST}${path}`
+  const url = `${ASR_HOST}${config.path}`
   const headers = asrHeaders(apiKey, { requestId, resourceId: options.resourceId })
   const payload = asrPayload(pcm, {
     parameters: options.parameters,
-    enableNonStream: mode === 'sentence',
+    enableNonStream: config.enableNonStream,
   })
   const segments = asrSegments(pcm, { segmentMs: options.segmentMs })
   const remote = socket ? await socket(url, headers) : await connectWithWs(url, headers)
@@ -351,10 +370,11 @@ function asJson(value: unknown): Json {
 }
 
 /**
- * `speech_raw_request(product='asr_stream')` 的实现入口。
+ * `speech_raw_request(product='asr_stream' / 'asr_websocket')` 的实现入口。
  *
  * 参数与 Python 版一致：`audio` 是本地 WAV / PCM 路径，`mode` 是 realtime 或 sentence，
  * `request` 是官方的完整请求体（`audio` / `request` 两段原样合并）。
+ * `product=asr_websocket` 走标准双向流式端点（`/api/v3/sauc/bigmodel`）。
  */
 export async function runAsrStream(
   ctx: AdapterContext,
@@ -363,7 +383,7 @@ export async function runAsrStream(
 ): Promise<Json> {
   const audio = typeof params.audio === 'string' ? params.audio : ''
   if (!audio) throw new ProviderError('invalid_input', 'asr_stream 需要 audio 文件路径')
-  const mode = params.mode === 'sentence' ? 'sentence' : 'realtime'
+  const mode = asrModeOf(params)
   const request = asJson(params.request)
   const result = await transcribeStream(
     ctx,
@@ -376,4 +396,16 @@ export async function runAsrStream(
     socket,
   )
   return { ok: true, text: result.text, response: result.response, messages: result.messages }
+}
+
+/**
+ * 用哪个端点：显式传的 `mode` 优先，否则按 product 选默认模式。
+ *
+ * `asr_websocket` 就是标准双向流式（`/api/v3/sauc/bigmodel`）；
+ * `asr_stream` 默认 realtime（优化版），传 mode=sentence 换成末尾统一返回。
+ */
+export function asrModeOf(params: Json): AsrMode {
+  const mode = params.mode
+  if (mode === 'realtime' || mode === 'sentence' || mode === 'websocket') return mode
+  return params.product === 'asr_websocket' ? 'websocket' : 'realtime'
 }

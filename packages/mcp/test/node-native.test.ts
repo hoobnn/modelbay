@@ -54,6 +54,17 @@ describe('Node 子路径的 native 实现注入', () => {
       adapter?.native?.('raw-request', { product: 'asr_stream', audio: 'x.wav' }, ctx),
     ).rejects.toMatchObject({ code: 'auth' })
   })
+
+  it('asr_websocket 走同一份流式识别实现', async () => {
+    const adapter = await loadAdapter('doubao-speech')
+    const ctx = {
+      secret: () => undefined,
+      log: () => undefined,
+    } as unknown as AdapterContext
+    await expect(
+      adapter?.native?.('raw-request', { product: 'asr_websocket', audio: 'x.wav' }, ctx),
+    ).rejects.toMatchObject({ code: 'auth' })
+  })
 })
 
 describe('Node 子路径的适配器注入点', () => {

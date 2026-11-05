@@ -195,6 +195,20 @@ describe('流式识别：真实 WSS 会话', () => {
     expect(result.text).toBe('一句话')
   })
 
+  it('websocket 模式走标准双向流式接口', async () => {
+    const { ctx } = fakeContext([], { secrets: { DOUBAO_API_KEY: 'speech-key' } })
+    const { socket } = fakeSocket([responseFrame({ result: { text: '标准双向' } })])
+    const result = await transcribeStream(
+      ctx,
+      { audio: writeWav(200), mode: 'websocket', pace: false },
+      async (url) => {
+        expect(url).toBe('wss://openspeech.bytedance.com/api/v3/sauc/bigmodel')
+        return socket
+      },
+    )
+    expect(result.text).toBe('标准双向')
+  })
+
   it('缺凭证时报 auth，不建连', async () => {
     const { ctx } = fakeContext([], { secrets: {} })
     await expect(
@@ -240,6 +254,33 @@ describe('runAsrStream：speech_raw_request 的 asr_stream 分支', () => {
       async () => socket,
     )
     expect(result).toMatchObject({ ok: true, text: '识别结果' })
+  })
+
+  it('product=asr_websocket 走标准双向流式接口', async () => {
+    const { ctx } = fakeContext([], { secrets: { DOUBAO_API_KEY: 'k' } })
+    const { socket } = fakeSocket([responseFrame({ result: { text: '双向结果' } })])
+    const result = await runAsrStream(
+      ctx,
+      { product: 'asr_websocket', audio: writeWav(100) },
+      async (url) => {
+        expect(url).toBe('wss://openspeech.bytedance.com/api/v3/sauc/bigmodel')
+        return socket
+      },
+    )
+    expect(result).toMatchObject({ ok: true, text: '双向结果' })
+  })
+
+  it('显式传的 mode 优先于 product 的默认模式', async () => {
+    const { ctx } = fakeContext([], { secrets: { DOUBAO_API_KEY: 'k' } })
+    const { socket } = fakeSocket([responseFrame({ result: { text: '按模式' } })])
+    await runAsrStream(
+      ctx,
+      { product: 'asr_websocket', audio: writeWav(100), mode: 'sentence' },
+      async (url) => {
+        expect(url).toBe('wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_nostream')
+        return socket
+      },
+    )
   })
 
   it('缺 audio 路径时报 invalid_input', async () => {

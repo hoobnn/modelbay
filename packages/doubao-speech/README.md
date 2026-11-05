@@ -82,12 +82,16 @@ tests and for hosts without a socket.
 frame codec (`encodeAsrFrame` / `decodeAsrFrame`) and `transcribeStream()`, which opens
 the WSS session, sends the full client request, streams the PCM in 200 ms chunks and
 collects the recognition results. `runAsrStream()` is the entry point the MCP injects
-for `speech_raw_request(product='asr_stream')`. It is excluded from the root entry.
+for `speech_raw_request(product='asr_stream')` and `product='asr_websocket'`. It is
+excluded from the root entry.
 
 The endpoints follow the official streaming-ASR doc: `realtime` uses
 `wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async` (send and receive
-concurrently) and `sentence` uses `.../api/v3/sauc/bigmodel_nostream` (one result at
-the end). The resource id is `volc.seedasr.sauc.duration`.
+concurrently), `sentence` uses `.../api/v3/sauc/bigmodel_nostream` (one result at
+the end) and `websocket` uses `.../api/v3/sauc/bigmodel` (the standard bidirectional
+stream). The resource id is `volc.seedasr.sauc.duration`. The three modes share one
+implementation — only the endpoint and the request parameters differ — and an explicit
+`mode` wins over the product default.
 
 `@modelbay/doubao-speech/interpretation` exports the simultaneous-interpretation
 client: the minimal protobuf codec for the official `data.speech.ast` messages
