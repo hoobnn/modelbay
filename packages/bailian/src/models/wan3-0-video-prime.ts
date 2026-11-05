@@ -35,11 +35,20 @@ export default {
     },
   },
   optionsSchema: {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
     type: 'object',
     properties: {
-      adaptive_duration: { type: 'boolean' },
-      prompt_extend: { type: 'boolean' },
-      watermark: { type: 'boolean' },
+      adaptive_duration: {
+        title: '自动时长',
+        description: '由模型在有效范围内选择时长',
+        type: 'boolean',
+      },
+      prompt_extend: {
+        title: '提示词扩写',
+        description: '由模型自动润色、补充提示词',
+        type: 'boolean',
+      },
+      watermark: { title: '水印', type: 'boolean' },
     },
   },
   channels: [{ channel: 'bailian', id: 'wan3.0-video-prime' }],

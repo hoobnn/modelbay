@@ -31,25 +31,39 @@
     }
   },
   "optionsSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
       "negative_prompt": {
+        "title": "反向提示词",
+        "placeholder": "不希望出现的内容",
         "type": "string"
       },
       "size": {
+        "title": "自定义尺寸",
+        "placeholder": "如 2048*2048 或 auto",
+        "description": "留空用画幅 / 分辨率；填写后优先于画幅和分辨率",
         "type": "string"
       },
       "prompt_extend": {
+        "title": "提示词扩写",
         "type": "boolean"
       },
       "prompt_extend_mode": {
+        "title": "扩写方式",
+        "labels": {
+          "direct": "直接增强",
+          "agent": "智能体增强（仅文生图）"
+        },
         "type": "string",
         "enum": ["direct", "agent"]
       },
       "enable_thinking": {
+        "title": "思考模式",
         "type": "boolean"
       },
       "watermark": {
+        "title": "水印",
         "type": "boolean"
       }
     }
