@@ -69,15 +69,15 @@ export {
   doubaoEmbeddingVision,
 }
 
+/**
+ * 声明顺序就是宿主目录的展示顺序。按量渠道的顺序与 plein 原目录一致（默认对话模型是
+ * doubao-seed-2-1-pro-260628）；套餐专属模型穿插其间，使套餐渠道在每个能力内的顺序也不变。
+ */
 export const all: ModelDeclaration[] = [
-  doubaoSeedream50Pro260628,
-  doubaoSeedream50Flash260915,
-  doubaoSeedance25260628,
-  doubaoSeedance20260128,
-  doubaoSeedance20Fast260128,
-  doubaoSeedance20Mini260615,
-  customImage,
-  customVideo,
+  doubaoSeed21Pro260628,
+  doubaoSeed21Pro260915,
+  doubaoSeed21Lite260915,
+  doubaoSeed21Turbo260628,
   arkCodeLatest,
   minimaxM3,
   kimiK27Code,
@@ -94,13 +94,17 @@ export const all: ModelDeclaration[] = [
   kimiK28Preview,
   kimiK3,
   kimiK31Pro,
+  doubaoSeedream50Pro260628,
+  doubaoSeedream50Flash260915,
+  doubaoSeedream50260128,
+  doubaoSeedance25260628,
+  doubaoSeedance20260128,
+  doubaoSeedance20Fast260128,
+  doubaoSeedance20Mini260615,
   customChat,
+  customImage,
+  customVideo,
   doubaoSeedTts20,
   doubaoSeedAsr20,
-  doubaoSeed21Pro260628,
-  doubaoSeed21Pro260915,
-  doubaoSeed21Lite260915,
-  doubaoSeed21Turbo260628,
-  doubaoSeedream50260128,
   doubaoEmbeddingVision,
 ]

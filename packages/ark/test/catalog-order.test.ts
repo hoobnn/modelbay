@@ -1,0 +1,67 @@
+import { describe, expect, it } from 'vite-plus/test'
+import { selectDefaultModel } from '@modelbay/core'
+import { allModels } from '../src/declarations'
+
+const idsIn = (channel: string, capability: string) =>
+  allModels
+    .filter((item) => item.capabilities.includes(capability as never))
+    .flatMap((item) => item.channels.filter((ref) => ref.channel === channel).map((ref) => ref.id))
+
+describe('方舟目录顺序', () => {
+  it('按量对话模型的顺序与 plein 原目录一致，宿主默认取第一个', () => {
+    expect(idsIn('ark', 'text.chat')).toEqual([
+      'doubao-seed-2-1-pro-260628',
+      'doubao-seed-2-1-pro-260915',
+      'doubao-seed-2-1-lite-260915',
+      'doubao-seed-2-1-turbo-260628',
+      'doubao-seed-evolving',
+      'custom-chat',
+    ])
+  })
+
+  it('按量图片与视频模型的顺序与 plein 原目录一致', () => {
+    expect(idsIn('ark', 'image.generate')).toEqual([
+      'doubao-seedream-5-0-pro-260628',
+      'doubao-seedream-5-0-flash-260915',
+      'doubao-seedream-5-0-260128',
+      'custom-image',
+    ])
+    expect(idsIn('ark', 'video.generate')).toEqual([
+      'doubao-seedance-2-5-260628',
+      'doubao-seedance-2-0-260128',
+      'doubao-seedance-2-0-fast-260128',
+      'doubao-seedance-2-0-mini-260615',
+      'custom-video',
+    ])
+  })
+
+  it('套餐渠道在每个能力内的顺序保持不变', () => {
+    expect(idsIn('ark-plan', 'text.chat')).toEqual([
+      'ark-code-latest',
+      'minimax-m3',
+      'kimi-k2.7-code',
+      'doubao-seed-2.0-mini',
+      'doubao-seed-2.1-lite',
+      'doubao-seed-2.1-pro',
+      'doubao-seed-evolving',
+      'deepseek-v4-flash',
+      'deepseek-v4-pro',
+      'deepseek-v4.1-flash',
+      'deepseek-v4.1-flash-economy',
+      'glm-5.3',
+      'glm-5.3-flash',
+      'kimi-k2.8-preview',
+      'kimi-k3',
+      'kimi-k3.1-pro',
+      'custom-chat',
+    ])
+  })
+
+  it('MCP 默认模型由 default 标记决定，不受声明顺序影响', () => {
+    const defaults = (channel: string, capability: never) =>
+      selectDefaultModel(allModels, capability, channel)?.channel.id
+    expect(defaults('ark', 'text.chat' as never)).toBe('doubao-seed-2-1-pro-260915')
+    expect(defaults('ark', 'image.generate' as never)).toBe('doubao-seedream-5-0-pro-260628')
+    expect(defaults('ark', 'video.generate' as never)).toBe('doubao-seedance-2-5-260628')
+  })
+})
