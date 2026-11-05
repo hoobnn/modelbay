@@ -230,9 +230,15 @@ importers:
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      '@types/ws':
+        specifier: ^8.18.2
+        version: 8.18.2
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      ws:
+        specifier: ^8.22.1
+        version: 8.22.1
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -964,6 +970,9 @@ packages:
 
   '@types/unist@2.0.11':
     resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
+
+  '@types/ws@8.18.2':
+    resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
@@ -2805,6 +2814,10 @@ snapshots:
       undici-types: 8.9.0
 
   '@types/unist@2.0.11': {}
+
+  '@types/ws@8.18.2':
+    dependencies:
+      '@types/node': 26.6.6
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true

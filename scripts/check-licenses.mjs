@@ -1,4 +1,5 @@
 // 依赖许可检查：运行时依赖只允许 MIT / Apache-2.0 / BSD / ISC（及其等价写法）。
+// dependencies 与 peerDependencies 都要检查（可选 peer 也是集成方会装进产物的东西）；
 // workspace 内部包按自己的 license 字段检查；devDependencies 不进发布产物，不检查。
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -56,7 +57,11 @@ const seen = new Set()
 for (const dir of packageDirs()) {
   const pkg = readJson(join(dir, 'package.json'))
   if (!pkg) continue
-  for (const name of Object.keys(pkg.dependencies ?? {})) {
+  const runtime = [
+    ...Object.keys(pkg.dependencies ?? {}),
+    ...Object.keys(pkg.peerDependencies ?? {}),
+  ]
+  for (const name of runtime) {
     if (seen.has(name)) continue
     seen.add(name)
     const license = licenseOf(name)

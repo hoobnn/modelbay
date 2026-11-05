@@ -179,7 +179,7 @@ async function submit(
   if (req.capability === 'audio.transcribe' && plane === 'plan') {
     throw new ProviderError(
       'unavailable',
-      'TODO: Agent Plan 流式语音识别请使用 @modelbay/ark/tos 的 transcribePlan（需宿主 socket 钩子）',
+      'Agent Plan 流式语音识别请使用 @modelbay/ark/tos 的 transcribePlan（Node 子路径，需要 ws）',
     )
   }
   throw new ProviderError('invalid_input', `${label} 不支持此能力：${req.capability}`)

@@ -87,11 +87,23 @@ require Node and must not be loaded from the root entry:
 - `planDirectoryHeaders()` / `listPlanModels()` — the AK/SK-signed Agent Plan
   model-directory request (`node:crypto`).
 - `asrFrame()` / `asrPacket()` — the gzip frame codec for plan ASR (`node:zlib`).
+- `planAsrHeaders()` / `planAsrPayload()` / `planAsrSegments()` /
+  `transcribePlan()` — the Agent Plan streaming ASR: the request headers
+  (`X-Api-Key`, `X-Api-Resource-Id: volc.seedasr.sauc.duration`,
+  `X-Api-Request-Id`, `X-Api-Connect-Id`), the `user`/`audio`/`request` body, the
+  200 ms audio segmentation and the WebSocket session.
+
+**Agent Plan streaming ASR.** `transcribePlan(ctx, { audio })` opens the official
+WebSocket endpoint (`wss://openspeech.bytedance.com/api/v3/plan/sauc/bigmodel_nostream`,
+or `bigmodel_async` with `duplex: true`), sends the full client request, streams the
+PCM audio and returns the transcript. The WebSocket comes from `ws` (MIT), an
+**optional peer dependency** — install it next to this subpath, or pass your own
+socket factory as the third argument. Hosts that already own a socket pool can
+therefore use this package without `ws` at all.
 
 **TODO (M3):** `tosUploader()` still needs `@volcengine/tos-sdk` (a Node-only
-dependency for the integrator to install) and `transcribePlan()` needs a
-`ctx.socket` WebSocket hook. Both currently throw descriptive
-`ProviderError('unavailable')` stubs. They are listed in `nodeOnly` and are not
+dependency for the integrator to install) and currently throws a descriptive
+`ProviderError('unavailable')` stub. It is listed in `nodeOnly` and is not
 exposed to MCP by default. `native('listModels')` on the plan channel likewise
 directs callers to `listPlanModels` in this subpath.
 
