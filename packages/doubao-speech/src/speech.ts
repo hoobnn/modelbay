@@ -14,12 +14,16 @@ import {
 } from '@modelbay/core'
 import { asJson, events, failure, incomplete, postRaw, readSecret, type Json } from './http'
 
-/** Default speech settings. Kept as a zod object so `.shape` / `.parse` stay available. */
+/**
+ * Default speech settings. Kept as a zod object so `.shape` / `.parse` stay available.
+ * `.meta({ title })` is the label host settings forms show; hosts that do not expose
+ * `speed` (it is a per-request option) drop it with `.omit({ speed: true })`.
+ */
 export const speechSettings = z.object({
-  voice: z.string().min(1).default('zh_female_vv_uranus_bigtts'),
-  format: z.enum(['mp3', 'wav']).default('mp3'),
-  sampleRate: z.enum(['16000', '24000', '48000']).default('24000'),
-  speed: z.number().min(0.5).max(2).default(1),
+  voice: z.string().min(1).default('zh_female_vv_uranus_bigtts').meta({ title: '默认音色 ID' }),
+  format: z.enum(['mp3', 'wav']).default('mp3').meta({ title: '音频格式' }),
+  sampleRate: z.enum(['16000', '24000', '48000']).default('24000').meta({ title: '采样率' }),
+  speed: z.number().min(0.5).max(2).default(1).meta({ title: '语速' }),
 })
 export type SpeechSettings = z.output<typeof speechSettings>
 

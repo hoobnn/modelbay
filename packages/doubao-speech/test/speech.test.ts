@@ -162,3 +162,30 @@ describe('synthesizeSpeech (the ark-facing export)', () => {
     expect(calls()[0]?.url).toContain('/api/v3/plan/tts/unidirectional')
   })
 })
+
+describe('speechSettings 表单元信息', () => {
+  it('voice / format / sampleRate / speed 都带中文 title', async () => {
+    const { speechSettings } = await import('../src/speech')
+    const titles = Object.fromEntries(
+      Object.entries(speechSettings.shape).map(([key, field]) => [key, field.meta()?.title]),
+    )
+    expect(titles).toEqual({
+      voice: '默认音色 ID',
+      format: '音频格式',
+      sampleRate: '采样率',
+      speed: '语速',
+    })
+  })
+
+  it('omit speed 后仍保留其余字段的 title 与默认值', async () => {
+    const { speechSettings } = await import('../src/speech')
+    const form = speechSettings.omit({ speed: true })
+    expect(Object.keys(form.shape)).toEqual(['voice', 'format', 'sampleRate'])
+    expect(form.shape.voice.meta()?.title).toBe('默认音色 ID')
+    expect(form.parse({})).toEqual({
+      voice: 'zh_female_vv_uranus_bigtts',
+      format: 'mp3',
+      sampleRate: '24000',
+    })
+  })
+})
