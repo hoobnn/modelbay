@@ -82,7 +82,6 @@
       "volc/kimi-k2.7-code",
       "volc/minimax-m3",
       "volc/doubao-seedream-5-0-260128",
-      "aliyun/qwen3-tts-instruct-flash",
       "doubao/seed-icl-1.0"
     ]
   },
@@ -273,7 +272,7 @@
       "deprecated": true,
       "description": "已于 2026-10-10 下线；仅保留旧画布引用，请改用 qwen3-tts-flash 或豆包语音",
       "missingSource": "未找到对应的官方下线/状态公告原文",
-      "handling": "lifecycle.status 保持 active，不写入任何非 active 状态"
+      "handling": "按 plein 原有判断写成 lifecycle.status = retired，来源为 plein 引用的阿里云 2026-10-10 公告"
     },
     {
       "providerId": "volc/ark-plan",

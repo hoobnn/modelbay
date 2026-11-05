@@ -83,7 +83,6 @@
 - `volc/kimi-k2.7-code`
 - `volc/minimax-m3`
 - `volc/doubao-seedream-5-0-260128`
-- `aliyun/qwen3-tts-instruct-flash`
 - `doubao/seed-icl-1.0`
 
 逐页核对中发现的出入（按官方原文改了声明）：
@@ -127,16 +126,23 @@
 | minimax/music-3.0               | deprecated: true | closed-to-new-accounts | inventory.md 第三节：自 2026-08-20 起付费接口不再向新用户开放，历史付费用户可继续使用；music-3.0 仍是推荐型号 |
 | volc/doubao-seedream-5-0-260128 | deprecated: true | sunsetting             | inventory.md 第三节 + 下线公告：停止新购，2026-11-24 14:00（UTC+8）关停                                       |
 
-### 待核对清单（4 个）
+### 已按 plein 判断落声明（1 个）
+
+| provider       | 模型 id                  | 状态    | 依据                                                                                                                                                                                                |
+| -------------- | ------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| aliyun/bailian | qwen3-tts-instruct-flash | retired | plein 提交 f04895dd 按阿里云 2026-10-10 公告（`https://www.alibabacloud.com/zh/notice/detail?id=2009`）把它恢复为 deprecated 条目；公告页读不到正文，`checkedAt` 取 plein 引用公告的日期 2026-10-31 |
+
+这一条原先因找不到公告原文保持 `active`。plein 的目录改为完全以声明为准后，不能再在宿主侧手工补 `deprecated`，所以按 plein 原有判断写成 `retired`；拿到公告原文后应把 `checkedAt` 改成实际核对日期。
+
+### 待核对清单（3 个）
 
 这些模型在 plein 里带 `deprecated: true`，但本次找不到对应的官方下线/状态公告原文，**不伪造状态**，一律保持 `active`，仅在此列出：
 
-| provider       | 模型 id                  | 原始 deprecated | 原始说明                                                                         | 缺失项                            | 处理                                                   |
-| -------------- | ------------------------ | --------------- | -------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------ |
-| minimax/api    | MiniMax-M2.7             | true            | 已停止向新用户开放；按量付费存量用户可调用至 2026-11-18，请提前迁移至 M3.1 Flash | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
-| aliyun/bailian | qwen3-tts-instruct-flash | true            | 已于 2026-10-10 下线；仅保留旧画布引用，请改用 qwen3-tts-flash 或豆包语音        | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
-| volc/ark-plan  | minimax-m3               | true            | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位                  | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
-| volc/ark-plan  | kimi-k2.7-code           | true            | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位                  | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
+| provider      | 模型 id        | 原始 deprecated | 原始说明                                                                         | 缺失项                            | 处理                                                   |
+| ------------- | -------------- | --------------- | -------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------ |
+| minimax/api   | MiniMax-M2.7   | true            | 已停止向新用户开放；按量付费存量用户可调用至 2026-11-18，请提前迁移至 M3.1 Flash | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
+| volc/ark-plan | minimax-m3     | true            | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位                  | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
+| volc/ark-plan | kimi-k2.7-code | true            | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位                  | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
 
 ### 未触发 / 待补
 
@@ -223,36 +229,36 @@
 
 转换明细：
 
-| 模型 id                          | 字段         | 处理                                                                                  | 原因                                                             |
-| -------------------------------- | ------------ | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| doubao-seedance-2-0-260128       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| doubao-seedance-2-0-fast-260128  | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| doubao-seedance-2-0-mini-260615  | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| doubao-seedance-2-5-260628       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| doubao-seedream-5-0-260128       | `deprecated` | 不写入声明；映射为 lifecycle.status = 'sunsetting'                                    | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
-| doubao-seedream-5-0-260128       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| doubao-seedream-5-0-flash-260915 | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| doubao-seedream-5-0-pro-260628   | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| kimi-k2.7-code                   | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                        | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
-| minimax-m3                       | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                        | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
-| qwen-image-3.0-pro               | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| qwen-image-3.0                   | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| qwen3-tts-instruct-flash         | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                        | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
-| wan2.7-image-pro                 | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| wan3.0-video-prime               | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| wan3.0-video                     | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| image-01-live                    | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| image-01                         | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| MiniMax-M2.7                     | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                        | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
-| music-3.0                        | `deprecated` | 不写入声明；映射为 lifecycle.status = 'closed-to-new-accounts'                        | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
-| speech-2.8-hd                    | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| speech-2.8-turbo                 | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| gpt-6.1-sol                      | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| gpt-6.1-terra                    | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| gpt-6-astra                      | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| gpt-6-luna                       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| gpt-image-2.5-flare              | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| gpt-image-2.5-sunburst           | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder） | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| 模型 id                          | 字段         | 处理                                                                                    | 原因                                                             |
+| -------------------------------- | ------------ | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| doubao-seedance-2-0-260128       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| doubao-seedance-2-0-fast-260128  | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| doubao-seedance-2-0-mini-260615  | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| doubao-seedance-2-5-260628       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| doubao-seedream-5-0-260128       | `deprecated` | 不写入声明；映射为 lifecycle.status = 'sunsetting'                                      | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| doubao-seedream-5-0-260128       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| doubao-seedream-5-0-flash-260915 | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| doubao-seedream-5-0-pro-260628   | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| kimi-k2.7-code                   | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                          | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| minimax-m3                       | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                          | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| qwen-image-3.0-pro               | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| qwen-image-3.0                   | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| qwen3-tts-instruct-flash         | `deprecated` | 映射为 lifecycle.status = 'retired'（沿用 plein 判断，见下方「已按 plein 判断落声明」） | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| wan2.7-image-pro                 | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| wan3.0-video-prime               | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| wan3.0-video                     | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| image-01-live                    | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| image-01                         | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| MiniMax-M2.7                     | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                          | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| music-3.0                        | `deprecated` | 不写入声明；映射为 lifecycle.status = 'closed-to-new-accounts'                          | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| speech-2.8-hd                    | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| speech-2.8-turbo                 | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| gpt-6.1-sol                      | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| gpt-6.1-terra                    | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| gpt-6-astra                      | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| gpt-6-luna                       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| gpt-image-2.5-flare              | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
+| gpt-image-2.5-sunburst           | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
 
 ### 6.4 version / price / promptGuide 与参数元信息
 
