@@ -98,6 +98,12 @@ describe('resolveAudio', () => {
       'data:audio/wav;base64,AQID',
     )
   })
+  it('accepts standard MIME subtypes such as audio/mpeg', async () => {
+    const { ctx } = fakeContext([], { mime: 'audio/mpeg' })
+    expect(await resolveAudio({ assetId: 'a1', kind: 'audio' }, ctx)).toBe(
+      'data:audio/mpeg;base64,AQID',
+    )
+  })
   it('rejects unsupported mime, empty data and a missing assets source', async () => {
     const a = fakeContext([], { mime: 'application/zip' })
     await expect(resolveAudio({ assetId: 'a1', kind: 'audio' }, a.ctx)).rejects.toMatchObject({

@@ -127,7 +127,10 @@ export async function resolveAudio(src: string | AssetRef, ctx: AdapterContext):
   const loaded = await ctx.assets.load(src.assetId)
   const mime = (loaded.mime || src.mime || '').toLowerCase()
   const subtype = mime.split('/')[1] ?? ''
-  const encoded = AUDIO_MIME[subtype]
+  // 既认扩展名式的子类型（audio/mp3），也认标准 MIME 子类型（audio/mpeg、audio/x-wav）
+  const standard = subtype.replace(/^x-/, '')
+  const encoded =
+    AUDIO_MIME[subtype] ?? (Object.values(AUDIO_MIME).includes(standard) ? standard : undefined)
   if (!encoded) throw new ProviderError('invalid_input', `不支持的识别音频格式：${mime}`)
   if (!loaded.data.length) throw new ProviderError('invalid_input', '识别音频为空')
   return `data:audio/${encoded};base64,${toBase64(loaded.data)}`
