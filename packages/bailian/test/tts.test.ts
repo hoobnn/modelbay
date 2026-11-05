@@ -161,15 +161,15 @@ describe('ttsRequest', () => {
 
 describe('checkTts', () => {
   it('合成模型必须给音色', () => {
-    expect(checkTts('qwen-audio-3.1-tts-flash', { text: 'hi' }, models)).toMatch(/require a/)
+    expect(checkTts('qwen-audio-3.1-tts-flash', { text: 'hi' }, models)).toMatch(/必须指定/)
   })
   it('拒绝声明里不支持指令的模型', () => {
     expect(
       checkTts('cosyvoice-v2', { text: 'hi', voice: 'v', instructions: 'soft' }, models),
-    ).toMatch(/does not support/)
+    ).toMatch(/不支持语气指令/)
     expect(
       checkTts('qwen3-tts-flash', { text: 'hi', voice: 'v', instructions: 'soft' }, models),
-    ).toMatch(/does not support/)
+    ).toMatch(/不支持 instructions/)
   })
   it('拒绝超过声明上限的 CosyVoice 指令', () => {
     expect(
@@ -183,10 +183,10 @@ describe('checkTts', () => {
   it('拒绝非法语种代码和用错模型的 language=other', () => {
     expect(
       checkTts('cosyvoice-v3.5-plus', { text: 'hi', voice: 'v', language: 'Chinese' }, models),
-    ).toMatch(/language must be/)
+    ).toMatch(/语言须为/)
     expect(
       checkTts('qwen-audio-3.0-tts-flash', { text: 'hi', voice: 'v', language: 'other' }, models),
-    ).toMatch(/only applies/)
+    ).toMatch(/仅适用于/)
   })
   it('拒绝 parameters 覆盖受保护字段与非 wav 的本地交付', () => {
     expect(
@@ -195,7 +195,7 @@ describe('checkTts', () => {
         { text: 'hi', voice: 'v', parameters: { text: 'x' } },
         models,
       ),
-    ).toMatch(/must not override/)
+    ).toMatch(/不能覆盖/)
     expect(
       checkTts(
         'qwen-audio-3.1-tts-flash',
@@ -207,7 +207,7 @@ describe('checkTts', () => {
   })
   it('拒绝未知模型', () => {
     expect(checkTts('qwen3-tts-flash-realtime', { text: 'hi', voice: 'v' }, models)).toMatch(
-      /Unsupported TTS model/,
+      /不支持的语音模型/,
     )
   })
   it('接受合法的合成请求', () => {
@@ -477,7 +477,7 @@ describe('移植：other_language_is_scoped_to_qwen_audio_31_flash', () => {
     expect((body.input as Record<string, unknown>).instruction).toBe('请用荷兰话说')
     for (const model of synthModelIds(models).filter((id) => id !== 'qwen-audio-3.1-tts-flash')) {
       expect(checkTts(model, opts({ model, voice: 'v', language: 'other' }), models)).toMatch(
-        /only applies/,
+        /仅适用于/,
       )
     }
   })

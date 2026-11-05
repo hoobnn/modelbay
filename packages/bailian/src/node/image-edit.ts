@@ -38,9 +38,9 @@ export interface ImageEditOptions {
 
 /** Build the `description_edit_with_mask` request body (no `node:` imports here). */
 export function buildImageEditRequest(opts: ImageEditOptions): Record<string, unknown> {
-  if (!opts.prompt.trim()) throw new ProviderError('invalid_input', 'Image edit prompt is required')
+  if (!opts.prompt.trim()) throw new ProviderError('invalid_input', '局部重绘需要提示词')
   if (!opts.baseImageUrl || !opts.maskImageUrl)
-    throw new ProviderError('invalid_input', 'base_image_url and mask_image_url are required')
+    throw new ProviderError('invalid_input', '须提供 base_image_url 与 mask_image_url')
   return {
     model: opts.model ?? 'wanx2.1-imageedit',
     input: {

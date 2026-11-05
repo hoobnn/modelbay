@@ -199,7 +199,7 @@ export async function rerank(
   )
     throw new ProviderError(
       'invalid_input',
-      'query and non-empty documents are required; top_n within 1..len(documents)',
+      '须提供 query 和非空的 documents，且 top_n 在 1 到 documents 数量之间',
     )
   const parameters: Json = { return_documents: params.return_documents === true }
   if (topN !== undefined) parameters.top_n = topN
@@ -223,7 +223,7 @@ export async function textEmbed(
   const texts = asStringArray(params.texts)
   const contents = arr(params.contents).map(asJson)
   if (texts.length === contents.length)
-    throw new ProviderError('invalid_input', 'Provide exactly one of texts or contents')
+    throw new ProviderError('invalid_input', 'texts 与 contents 须二选一')
   const options = { ...asRecord(params.parameters) }
   if (params.dimensions !== undefined) {
     if (contents.length) options.dimension = params.dimensions
@@ -238,12 +238,12 @@ export async function textEmbed(
   let path: string
   if (contents.length) {
     if (Object.keys(options).some((key) => ['model', 'input'].includes(key)))
-      throw new ProviderError('invalid_input', 'parameters must not override model/input')
+      throw new ProviderError('invalid_input', 'parameters 不能覆盖 model / input')
     body = { model, input: { contents }, parameters: options }
     path = EMBED_MULTIMODAL_PATH
   } else {
     if (Object.keys(options).some((key) => ['model', 'input'].includes(key)))
-      throw new ProviderError('invalid_input', 'parameters must not override model/input')
+      throw new ProviderError('invalid_input', 'parameters 不能覆盖 model / input')
     body = { model, input: texts, encoding_format: 'float', ...options }
     path = EMBED_TEXT_PATH
   }
@@ -266,12 +266,9 @@ export async function digitalHumanLipsync(
   const audioUrl = asString(params.audio_url)
   const resolution = asString(params.resolution, '720P')
   if (!imageUrl || !audioUrl || !['480P', '720P'].includes(resolution))
-    throw new ProviderError(
-      'invalid_input',
-      'image_url/audio_url and 480P|720P resolution are required',
-    )
+    throw new ProviderError('invalid_input', '须提供 image_url、audio_url 以及 480P 或 720P 分辨率')
   if ([imageUrl, audioUrl].some((src) => src.startsWith('data:')))
-    throw new ProviderError('invalid_input', 'Portrait inputs must be public URLs, not data URIs')
+    throw new ProviderError('invalid_input', '数字人输入须为公网 URL，不能是 Data URI')
   const body: Json = {
     model:
       asString(params.model) ||
@@ -283,7 +280,7 @@ export async function digitalHumanLipsync(
   const data = await requestJson(ctx, PORTRAIT_PATH, body, { asyncTask: true, oss: true })
   const taskId = asJson(data.output).task_id
   if (typeof taskId !== 'string' || !taskId)
-    throw new ProviderError('unknown', 'Portrait submission is missing task_id')
+    throw new ProviderError('unknown', '数字人任务缺少 task_id；请勿重新提交任务')
   return { taskId, requestId: data.request_id }
 }
 
@@ -380,7 +377,7 @@ export async function runBailianNative(
       if (!result.voiceId)
         throw new ProviderError(
           'unknown',
-          'Clone response has no voice ID; check voice-list before retrying',
+          '复刻结果缺少音色 ID；重试前请先查看音色列表，避免重复复刻',
         )
       return result
     }
@@ -407,7 +404,7 @@ export async function runBailianNative(
       if (!result.voiceId)
         throw new ProviderError(
           'unknown',
-          'Design response has no voice ID; check voice-list before retrying',
+          '设计结果缺少音色 ID；重试前请先查看音色列表，避免重复创建',
         )
       return result
     }
@@ -444,7 +441,7 @@ export async function runBailianNative(
     case 'raw-request': {
       const path = asString(p.path)
       if (!path.startsWith('/'))
-        throw new ProviderError('invalid_input', 'raw-request path must start with /')
+        throw new ProviderError('invalid_input', 'raw-request 的 path 必须以 / 开头')
       const method = (
         ['GET', 'POST', 'DELETE'].includes(asString(p.method)) ? p.method : 'POST'
       ) as 'GET' | 'POST' | 'DELETE'
@@ -452,6 +449,6 @@ export async function runBailianNative(
       return requestJson(ctx, path, body, { method, asyncTask: p.async_task === true })
     }
     default:
-      throw new ProviderError('invalid_input', `Unknown Bailian native operation: ${op}`)
+      throw new ProviderError('invalid_input', `百炼不支持的原生操作：${op}`)
   }
 }

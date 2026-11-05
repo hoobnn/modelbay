@@ -20,11 +20,11 @@ describe('checkAsrModel', () => {
     expect(checkAsrModel(ASR_MODEL, models)).toBeNull()
   })
   it('rejects retired date snapshots', () => {
-    expect(checkAsrModel('qwen3-asr-flash-2026-10-01', models)).toMatch(/retired/)
-    expect(checkAsrModel('qwen3-asr-flash-2026-10-01-filetrans', models)).toMatch(/retired/)
+    expect(checkAsrModel('qwen3-asr-flash-2026-10-01', models)).toMatch(/已下线/)
+    expect(checkAsrModel('qwen3-asr-flash-2026-10-01-filetrans', models)).toMatch(/已下线/)
   })
   it('rejects other protocols', () => {
-    expect(checkAsrModel('fun-asr', models)).toMatch(/Only/)
+    expect(checkAsrModel('fun-asr', models)).toMatch(/只支持/)
   })
 })
 

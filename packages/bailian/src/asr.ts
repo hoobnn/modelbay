@@ -59,9 +59,8 @@ export function asrModels(declarations: readonly ModelDeclaration[]): AsrModels 
 /** Reject retired date-snapshot IDs and protocols that use a different ASR endpoint. */
 export function checkAsrModel(model: string, models: AsrModels): string | null {
   if (/-\d{4}-\d{2}-\d{2}(?:-[a-z]+)?$/.test(model) && !models.allowed.includes(model))
-    return `${model} is a retired date snapshot; use ${models.default}`
-  if (!models.allowed.includes(model))
-    return `Only ${models.allowed.join('、')} are supported by this HTTP ASR endpoint`
+    return `${model} 是已下线的日期快照，请改用 ${models.default}`
+  if (!models.allowed.includes(model)) return `该 HTTP 识别端点只支持 ${models.allowed.join('、')}`
   return null
 }
 
@@ -86,7 +85,7 @@ export function buildAsrRequest(
   const body: Json = { model, messages, asr_options: asrOptions }
   const extra = opts.parameters ?? {}
   if (Object.keys(extra).some((key) => ['model', 'messages', 'stream'].includes(key)))
-    throw new ProviderError('invalid_input', 'parameters must not override model/messages/stream')
+    throw new ProviderError('invalid_input', 'parameters 不能覆盖 model / messages / stream')
   Object.assign(body, extra)
   return { path: ASR_PATH, body }
 }
@@ -120,21 +119,18 @@ function isRemote(src: string): boolean {
 /** Resolve an audio reference to a URL/data URI using the host-provided asset source. */
 export async function resolveAudio(src: string | AssetRef, ctx: AdapterContext): Promise<string> {
   if (typeof src === 'string') {
-    if (!src) throw new ProviderError('invalid_input', 'ASR audio is required')
+    if (!src) throw new ProviderError('invalid_input', '识别音频不能为空')
     if (isRemote(src)) return src
-    throw new ProviderError(
-      'invalid_input',
-      'Local paths are not supported; pass a URL, data URI or AssetRef',
-    )
+    throw new ProviderError('invalid_input', '不支持本地路径，请传 URL、Data URI 或素材引用')
   }
   if (!ctx.assets)
-    throw new ProviderError('invalid_input', 'An assets source is required for AssetRef audio')
+    throw new ProviderError('invalid_input', '读取素材引用的音频需要宿主提供素材来源')
   const loaded = await ctx.assets.load(src.assetId)
   const mime = (loaded.mime || src.mime || '').toLowerCase()
   const subtype = mime.split('/')[1] ?? ''
   const encoded = AUDIO_MIME[subtype]
-  if (!encoded) throw new ProviderError('invalid_input', `Unsupported ASR audio MIME: ${mime}`)
-  if (!loaded.data.length) throw new ProviderError('invalid_input', 'ASR audio is empty')
+  if (!encoded) throw new ProviderError('invalid_input', `不支持的识别音频格式：${mime}`)
+  if (!loaded.data.length) throw new ProviderError('invalid_input', '识别音频为空')
   return `data:audio/${encoded};base64,${toBase64(loaded.data)}`
 }
 

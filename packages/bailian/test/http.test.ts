@@ -255,3 +255,31 @@ describe('requestJson (recorded fixtures)', () => {
     })
   })
 })
+
+describe('百炼面向用户的错误文案', () => {
+  it('缺密钥提示 DASHSCOPE_API_KEY', async () => {
+    const { apiKey } = await import('../src/http')
+    expect(() => apiKey({ secret: () => undefined } as never)).toThrow('请配置 DASHSCOPE_API_KEY')
+  })
+
+  it('提交状态未知时提示先恢复查询、勿重新生成', async () => {
+    const { requestMessages } = await import('../src/http')
+    expect(requestMessages('POST')).toEqual({
+      cancelled: '百炼提交状态未知；请先恢复查询，勿重新生成',
+      network: '百炼提交状态未知；请先恢复查询，勿重新生成',
+      timeout: '百炼提交状态未知；请先恢复查询，勿重新生成',
+    })
+    expect(requestMessages('GET').network).toBe('百炼请求中断或网络不可用')
+  })
+})
+
+describe('百炼响应异常的中文文案', () => {
+  it('无效 JSON 与空响应都提示勿自动重新提交或说明原因', async () => {
+    const a = fakeContext([new Response('not-json')])
+    await expect(requestJson(a.ctx, '/x')).rejects.toMatchObject({
+      message: '百炼返回无效 JSON；请勿自动重新提交生成任务',
+    })
+    const b = fakeContext([{}])
+    await expect(requestJson(b.ctx, '/x')).rejects.toMatchObject({ message: '百炼返回空响应' })
+  })
+})

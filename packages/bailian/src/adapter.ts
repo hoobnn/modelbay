@@ -81,7 +81,7 @@ const FILE_EXT: Record<string, string> = {
 
 function fileOutput(kind: 'image' | 'video' | 'audio', url: unknown): ProviderOutput {
   if (typeof url !== 'string' || !/^https?:\/\//.test(url))
-    throw new ProviderError('unknown', 'Bailian result is missing a file URL')
+    throw new ProviderError('unknown', '百炼生成结果缺少文件地址')
   const secure = new URL(url)
   secure.protocol = 'https:'
   return {

@@ -258,31 +258,31 @@ export function checkTts(
   const known = models.find((item) => item.id === model)
   if (!known) {
     const supported = models.map((item) => item.id).join('、')
-    return `Unsupported TTS model: ${model}. Supported models: ${supported}`
+    return `不支持的语音模型 ${model}；可用模型：${supported}`
   }
   if (known.protocol === 'synthesizer') {
-    if (!opts.voice) return 'SpeechSynthesizer models require a system or custom voice ID'
+    if (!opts.voice) return '该语音模型必须指定系统音色或复刻音色 ID'
     const extra = opts.parameters ?? {}
     const instruction = extra.instruction ?? opts.instructions
     if (instruction) {
-      if (typeof instruction !== 'string') return 'instruction must be a string'
-      if (!known.instruction) return `${model} does not support instruction`
+      if (typeof instruction !== 'string') return '语气指令须为字符串'
+      if (!known.instruction) return `${model} 不支持语气指令`
       const limit = known.instructionMaxLength
       if (limit !== undefined && instructionLength(instruction) > limit) {
-        return `${model} instruction must be at most ${limit} characters (CJK counts as 2)`
+        return `${model} 的语气指令不能超过 ${limit} 字符（汉字按 2 计）`
       }
     }
     if (opts.language === 'other') {
-      if (!known.otherLanguage) return `language=other only applies to ${model}`
+      if (!known.otherLanguage) return `language=other 仅适用于 ${model}`
     } else if (opts.language && !/^[a-z]{2,3}$/.test(opts.language))
-      return 'language must be a code such as zh, en or ja'
+      return '语言须为 zh、en、ja 这类语言代码'
     if (Object.keys(extra).some((key) => ['text', 'voice', 'model'].includes(key)))
-      return 'parameters must not override text/voice/model'
+      return 'parameters 不能覆盖 text / voice / model'
     if (mode === 'local' && (extra.format ?? 'wav') !== 'wav')
-      return 'local delivery concatenates WAV chunks; use url delivery for other formats'
+      return '本地交付按 WAV 拼接分段；其他格式请改用 url 交付'
     return null
   }
-  if (opts.instructions) return `${model} does not support instructions; use an audio model`
+  if (opts.instructions) return `${model} 不支持 instructions，请改用音频模型`
   return null
 }
 
@@ -298,7 +298,7 @@ export function parseTtsResponse(data: Json): TtsResult {
   const audio = asJson(output.audio)
   const url = audio.url ?? output.audio
   if (typeof url !== 'string' || !url)
-    throw new ProviderError('unknown', 'Bailian TTS response is missing audio.url')
+    throw new ProviderError('unknown', '百炼语音合成结果缺少 audio.url')
   return {
     url,
     ...(typeof data.request_id === 'string' ? { requestId: data.request_id } : {}),
@@ -323,10 +323,10 @@ export async function synthesizeQwenAudioTts(
     parameters: opts.parameters,
   })
   const text = (opts.text ?? '').trim()
-  if (!text) throw new ProviderError('invalid_input', 'TTS text is required')
+  if (!text) throw new ProviderError('invalid_input', '语音文本不能为空')
   const chunks = splitText(text)
   if (chunks.length > 1)
-    throw new ProviderError('invalid_input', 'URL delivery accepts one chunk (<= 250 characters)')
+    throw new ProviderError('invalid_input', 'url 交付一次只能合成一段（不超过 250 字符）')
   const voice = opts.voice ?? defaultVoiceFor(models, model, Boolean(opts.model))
   const problem = checkTts(model, { ...opts, text, voice }, models, 'url')
   if (problem) throw new ProviderError('invalid_input', problem)
@@ -347,7 +347,7 @@ export function audioFile(data: Json): {
   const audio = asJson(output.audio)
   const url = audio.url
   if (typeof url !== 'string' || !/^https?:\/\//.test(url))
-    throw new ProviderError('unknown', 'Bailian generation response is missing a file URL')
+    throw new ProviderError('unknown', '百炼语音生成结果缺少文件地址')
   const secure = new URL(url)
   secure.protocol = 'https:'
   return { type: 'file', kind: 'audio', mime: 'audio/wav', url: secure.href, name: 'bailian.wav' }

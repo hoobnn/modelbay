@@ -208,8 +208,7 @@ export function pollAfter(ctx: AdapterContext): number {
 /** 读素材：优先宿主的 `files.read`（带媒体元数据），回退到 `assets.load`。 */
 export async function readAsset(ctx: AdapterContext, ref: AssetRef): Promise<LoadedFile> {
   if (ctx.files) return ctx.files.read(ref)
-  if (!ctx.assets)
-    throw new ProviderError('invalid_input', 'An assets source is required to read references')
+  if (!ctx.assets) throw new ProviderError('invalid_input', '读取参考素材需要宿主提供素材来源')
   const loaded = await ctx.assets.load(ref.assetId)
   return { data: loaded.data, mime: (loaded.mime || ref.mime || '').toLowerCase() }
 }
@@ -219,14 +218,12 @@ export function apiKey(ctx: AdapterContext): string {
     const value = ctx.secret(name)?.trim()
     if (value) return value
   }
-  throw new ProviderError('auth', `Missing ${API_KEY_NAMES[0]}`)
+  throw new ProviderError('auth', '请配置 DASHSCOPE_API_KEY')
 }
 
 export function requestMessages(method: Method): TransportMessages {
   const failed =
-    method === 'GET'
-      ? 'Bailian request interrupted or network unavailable'
-      : 'Bailian submission outcome unknown; query the task before retrying'
+    method === 'GET' ? '百炼请求中断或网络不可用' : '百炼提交状态未知；请先恢复查询，勿重新生成'
   return { cancelled: failed, network: failed, timeout: failed }
 }
 
@@ -311,10 +308,11 @@ export async function requestJson(
   const res = await requestResponse(ctx, path, body, opts)
   const value = await readJson(ctx, res, method, requestMessages(method))
   if (value === null)
-    throw new ProviderError('unknown', 'Bailian returned invalid JSON', { retryable: false })
+    throw new ProviderError('unknown', '百炼返回无效 JSON；请勿自动重新提交生成任务', {
+      retryable: false,
+    })
   const data = asJson(value)
-  if (Object.keys(data).length === 0)
-    throw new ProviderError('unknown', 'Bailian returned an empty response')
+  if (Object.keys(data).length === 0) throw new ProviderError('unknown', '百炼返回空响应')
   if (data.code || data.error)
     throw withRetry(remoteError(res.status, data, ctx), method, res.status)
   return data
