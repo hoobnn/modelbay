@@ -36,11 +36,11 @@
 
 ## M3：搬适配器
 
-| 验收项                                                                    | 结果           | 证据                                                   |
-| ------------------------------------------------------------------------- | -------------- | ------------------------------------------------------ |
-| plein 现有的 provider 测试全部通过                                        | 受外部依赖限制 | 见「阻碍与未决」                                       |
-| plein 的 `packages/providers` 里不再有请求构造和响应解析的代码            | 受外部依赖限制 | 见「阻碍与未决」                                       |
-| 五家适配器落地，百炼 Qwen-Audio-TTS / ASR / 音色复刻 / 设计从 Python 移植 | 见各包 README  | `packages/{ark,bailian,minimax,doubao-speech,openai}/` |
+| 验收项                                                                    | 结果                   | 证据                                                                                                                                         |
+| ------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| plein 现有的 provider 测试全部通过                                        | 通过（本地 link 联调） | plein 分支 `feat/modelbay`：`pnpm verify` 通过，provider 测试保留并经桥接层跑在 modelbay 适配器上                                            |
+| plein 的 `packages/providers` 里不再有请求构造和响应解析的代码            | 通过（本地 link 联调） | 各平台 `index.ts` 只剩 `adapterToProvider` 包装层；`shared/*`、`size.ts`、方舟套餐与参考图上传实现已删除，改用 `@modelbay/shared` 与各平台包 |
+| 五家适配器落地，百炼 Qwen-Audio-TTS / ASR / 音色复刻 / 设计从 Python 移植 | 见各包 README          | `packages/{ark,bailian,minimax,doubao-speech,openai}/`                                                                                       |
 
 ## M4：MCP 生成器与逐平台迁移
 
@@ -62,7 +62,7 @@
 以下事项需要外部系统、维护者批准或额外仓库改动，实施 agent 无法在本环境完成，按用户要求统一列出：
 
 1. **npm / PyPI 发布**：`goals.md` 与 `engineering.md` 明确规定发布需维护者批准，实施 agent 不执行 `npm publish`、不打发布标签。因此 M1 第 5 条、M5 的「最后一版」与 1.0 条件都只完成到「配置与文档就绪」。
-2. **plein 侧完整改造**：M3 要求 plein 的 `packages/providers` 只保留包装层、且现有 provider 测试全部通过。这需要把 plein 的 provider 测试整体迁移到新包，属于另一个仓库的独立 PR；本环境只完成了 M1 的 plugin-sdk 再导出联调。
+2. **plein 合入 main**：plein 侧改造已在 `feat/modelbay` 分支完成，但依赖 `pnpm-workspace.yaml` 的本地 `link:` 覆盖。按[工程规范](engineering.md#和-plein-联调)，link 覆盖不能合进 plein main，需先发布 0.x 或改用 git 依赖。
 3. **在 Claude Code 里实跑 MCP 命令**：无法在当前会话注册 Claude Code 自定义命令，改用本地 stdio 冒烟（`initialize` + `tools/list`）验证协议可用。
 4. **官方原文逐条核对**：`docs/inventory.md` 第三节已核对三条模型状态，其余模型的 `checkedAt` 沿用 2026-11-04 盘点记录，未逐一重新联网核对；待核对清单见 `declaration-diff.md`。
 5. **夜间真实冒烟**：`engineering.md` 写明 M3 之前不做，且 key 存放与预算未定。
