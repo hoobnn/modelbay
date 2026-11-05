@@ -10,11 +10,13 @@ export default {
   agentOnly: true,
   channels: [{ channel: 'ark-plan', id: 'minimax-m3' }],
   aliases: { official: [], short: [] },
+  // 弃用状态沿用 plein 原目录的判断（deprecated: true，置后）；官方公告原文没读到，
+  // checkedAt 取 plein 打该标记的提交日期，不是本仓库核对正文的日期（见 docs/declaration-diff.md）。
   lifecycle: {
-    status: 'active',
+    status: 'retired',
     source: {
       url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
-      checkedAt: '2026-11-04',
+      checkedAt: '2026-11-01',
     },
   },
   source: {

@@ -86,3 +86,13 @@ describe('方舟自定义对话模型的渠道差异', () => {
     expect(api.agentOnly).toBeUndefined()
   })
 })
+
+describe('套餐弃用模型', () => {
+  it('minimax-m3 与 kimi-k2.7-code 沿用 plein 判断，派生为 deprecated', () => {
+    for (const id of ['minimax-m3', 'kimi-k2.7-code']) {
+      const declaration = allModels.find((item) => item.id === id)!
+      expect(declaration.lifecycle.status).toBe('retired')
+      expect(toModelInfo(declaration, declaration.channels[0]).deprecated).toBe(true)
+    }
+  })
+})

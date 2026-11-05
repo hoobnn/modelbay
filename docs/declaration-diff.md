@@ -80,8 +80,6 @@
 - `volc/custom-chat`
 - `volc/custom-image`
 - `volc/custom-video`
-- `volc/kimi-k2.7-code`
-- `volc/minimax-m3`
 - `volc/doubao-seedream-5-0-260128`
 - `doubao/seed-icl-1.0`
 
@@ -126,23 +124,23 @@
 | minimax/music-3.0               | deprecated: true | closed-to-new-accounts | inventory.md 第三节：自 2026-08-20 起付费接口不再向新用户开放，历史付费用户可继续使用；music-3.0 仍是推荐型号 |
 | volc/doubao-seedream-5-0-260128 | deprecated: true | sunsetting             | inventory.md 第三节 + 下线公告：停止新购，2026-11-24 14:00（UTC+8）关停                                       |
 
-### 已按 plein 判断落声明（1 个）
+### 已按 plein 判断落声明（3 个）
 
 | provider       | 模型 id                  | 状态    | 依据                                                                                                                                                                                                |
 | -------------- | ------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | aliyun/bailian | qwen3-tts-instruct-flash | retired | plein 提交 f04895dd 按阿里云 2026-10-10 公告（`https://www.alibabacloud.com/zh/notice/detail?id=2009`）把它恢复为 deprecated 条目；公告页读不到正文，`checkedAt` 取 plein 引用公告的日期 2026-10-31 |
+| volc/ark-plan  | minimax-m3               | retired | plein 提交 6422d893（2026-11-01）给这两个套餐文本模型标了 `deprecated: true`（置后），没有留下官方公告；沿用该判断落声明，`checkedAt` 取该提交日期，来源链接是模型列表页（正文未见下线说明）        |
+| volc/ark-plan  | kimi-k2.7-code           | retired | 同上                                                                                                                                                                                                |
 
 这一条原先因找不到公告原文保持 `active`。plein 的目录改为完全以声明为准后，不能再在宿主侧手工补 `deprecated`，所以按 plein 原有判断写成 `retired`；拿到公告原文后应把 `checkedAt` 改成实际核对日期。
 
-### 待核对清单（3 个）
+### 待核对清单（1 个）
 
 这些模型在 plein 里带 `deprecated: true`，但本次找不到对应的官方下线/状态公告原文，**不伪造状态**，一律保持 `active`，仅在此列出：
 
-| provider      | 模型 id        | 原始 deprecated | 原始说明                                                                         | 缺失项                            | 处理                                                   |
-| ------------- | -------------- | --------------- | -------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------ |
-| minimax/api   | MiniMax-M2.7   | true            | 已停止向新用户开放；按量付费存量用户可调用至 2026-11-18，请提前迁移至 M3.1 Flash | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
-| volc/ark-plan | minimax-m3     | true            | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位                  | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
-| volc/ark-plan | kimi-k2.7-code | true            | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位                  | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
+| provider    | 模型 id      | 原始 deprecated | 原始说明                                                                         | 缺失项                            | 处理                                                   |
+| ----------- | ------------ | --------------- | -------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------ |
+| minimax/api | MiniMax-M2.7 | true            | 已停止向新用户开放；按量付费存量用户可调用至 2026-11-18，请提前迁移至 M3.1 Flash | 未找到对应的官方下线/状态公告原文 | lifecycle.status 保持 active，不写入任何非 active 状态 |
 
 ### 未触发 / 待补
 
@@ -239,8 +237,8 @@
 | doubao-seedream-5-0-260128       | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
 | doubao-seedream-5-0-flash-260915 | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
 | doubao-seedream-5-0-pro-260628   | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
-| kimi-k2.7-code                   | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                          | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
-| minimax-m3                       | `deprecated` | 不写入声明；映射为 lifecycle.status = 'active'                                          | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| kimi-k2.7-code                   | `deprecated` | 映射为 lifecycle.status = 'retired'（沿用 plein 判断，见上方「已按 plein 判断落声明」） | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
+| minimax-m3                       | `deprecated` | 映射为 lifecycle.status = 'retired'（沿用 plein 判断，见上方「已按 plein 判断落声明」） | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
 | qwen-image-3.0-pro               | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
 | qwen-image-3.0                   | `options`    | 转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）   | options 是 zod 内部结构，声明是纯数据，不保留 def/innerType      |
 | qwen3-tts-instruct-flash         | `deprecated` | 映射为 lifecycle.status = 'retired'（沿用 plein 判断，见下方「已按 plein 判断落声明」） | 0003 用生命周期枚举表达状态，ModelDeclaration 已 Omit deprecated |
