@@ -201,15 +201,13 @@ describe('对话（按量）', () => {
 })
 
 describe('extra：白名单放行，其余报错', () => {
-  it('白名单字段（含 MCP 目录承诺的缓存路由 / 联网 / 续接）到达请求体', async () => {
+  it('白名单字段到达请求体', async () => {
     const extra = {
       thinking: { type: 'enabled' },
       top_p: 0.9,
       frequency_penalty: 0.1,
       presence_penalty: 0.2,
       prompt_cache_key: 'session-1',
-      web_search: { enable: true },
-      previous_response_id: 'resp_1',
     }
     const { ctx, body } = fakeContext([say('ok')])
     await arkAdapter.submit(chat(CHAT, { messages: user, extra }), ctx)
@@ -217,7 +215,13 @@ describe('extra：白名单放行，其余报错', () => {
   })
 
   it('白名单外的字段在请求前报 invalid_input（包括 model / messages 等保留字段）', async () => {
-    for (const extra of [{ model: 'hacked' }, { messages: [] }, { stream: false }, { foo: 1 }]) {
+    for (const extra of [
+      { model: 'hacked' },
+      { messages: [] },
+      { stream: false },
+      { foo: 1 },
+      { web_search: true },
+    ]) {
       const { ctx, fetch } = fakeContext([])
       await expect(
         arkAdapter.submit(chat(CHAT, { messages: user, extra }), ctx),

@@ -56,21 +56,6 @@
           "default": null,
           "title": "Images"
         },
-        "videos": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Videos"
-        },
         "thinking": {
           "anyOf": [
             {
@@ -107,28 +92,6 @@
           "default": null,
           "title": "Temperature"
         },
-        "json_mode": {
-          "default": false,
-          "title": "Json Mode",
-          "type": "boolean"
-        },
-        "web_search": {
-          "default": false,
-          "title": "Web Search",
-          "type": "boolean"
-        },
-        "previous_response_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Previous Response Id"
-        },
         "parameters": {
           "anyOf": [
             {
@@ -141,109 +104,10 @@
           ],
           "default": null,
           "title": "Parameters"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
         }
       },
       "required": ["prompt"],
       "title": "chatArguments",
-      "type": "object"
-    },
-    "outputSchema": {
-      "type": "object",
-      "required": ["ok"],
-      "properties": {
-        "ok": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": true
-    },
-    "annotations": {
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": true
-    }
-  },
-  {
-    "name": "embed",
-    "description": "方舟文本/多模态向量化，model必须显式指定。texts为文本列表；contents用官方格式，如\n[{\"type\":\"text\",\"text\":\"猫\"},{\"type\":\"image_url\",\"image_url\":{\"url\":\"/absolute/cat.png\"}}]。\n两项只能选一项；图片支持本地路径，视频须URL。parameters支持instructions、multi_embedding等模型选项。\n保留data和usage，不自动建索引或知识库；按输入计费。尚未完成云端验证。百炼 text-embedding / qwen3-vl-embedding 及 rerank 用 ali-bailian。\n",
-    "inputSchema": {
-      "properties": {
-        "model": {
-          "title": "Model",
-          "type": "string"
-        },
-        "texts": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Texts"
-        },
-        "contents": {
-          "anyOf": [
-            {
-              "items": {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Contents"
-        },
-        "dimensions": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Dimensions"
-        },
-        "parameters": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Parameters"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
-        }
-      },
-      "required": ["model"],
-      "title": "embedArguments",
       "type": "object"
     },
     "outputSchema": {
@@ -316,33 +180,6 @@
           ],
           "default": null,
           "title": "Output Format"
-        },
-        "transparent": {
-          "default": false,
-          "title": "Transparent",
-          "type": "boolean"
-        },
-        "layers": {
-          "default": false,
-          "title": "Layers",
-          "type": "boolean"
-        },
-        "group": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Group"
-        },
-        "web_search": {
-          "default": false,
-          "title": "Web Search",
-          "type": "boolean"
         },
         "fast": {
           "default": false,
@@ -616,12 +453,6 @@
           "minimum": 0,
           "title": "Wait",
           "type": "integer"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
         }
       },
       "title": "get_jobArguments",
@@ -760,12 +591,6 @@
           "minimum": 0,
           "title": "Wait",
           "type": "integer"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
         }
       },
       "required": ["job_id"],

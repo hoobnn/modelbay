@@ -25,7 +25,7 @@ import { capturePlanContinuation } from './plan-chat'
 
 /**
  * `input.extra` 在对话里只放行这些平台字段；其余一律报错，不能覆盖模型 / 输入 / 路由。
- * 前四项是通用参数；后三项是 MCP 目录 `chat` 工具承诺的参数（缓存路由标识、联网搜索、续接响应）。
+ * 前四项是通用参数；`prompt_cache_key` 是缓存路由标识。联网搜索 / 续接响应需要 Responses API，这里不支持。
  */
 export const CHAT_EXTRA = [
   'thinking',
@@ -33,8 +33,6 @@ export const CHAT_EXTRA = [
   'frequency_penalty',
   'presence_penalty',
   'prompt_cache_key',
-  'web_search',
-  'previous_response_id',
 ]
 
 /** 按白名单检查 `extra`，返回副本；出现白名单外的键时抛 invalid_input。 */
