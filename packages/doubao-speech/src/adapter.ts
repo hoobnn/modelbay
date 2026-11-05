@@ -29,7 +29,9 @@ import {
   buildSpeechRequest,
   decodeAudioStream,
   resolveSpeechSettings,
+  settingsOverrides,
   synthesizeSpeech,
+  type SpeechExtras,
   text,
   type SpeechSettings,
 } from './speech'
@@ -79,6 +81,16 @@ export function buildAudioCreateBody(
   }
 }
 
+/** MCP 工具目录里的原始识别参数（SDK 调用不传，行为不变）。 */
+interface AsrExtras {
+  hotwords?: unknown
+  context?: unknown
+  itn?: unknown
+  punc?: unknown
+  ddc?: unknown
+  utterances?: unknown
+}
+
 /** Build the flash ASR request body from a loaded audio asset. */
 export function buildFlashAsrBody(
   input: CapabilityInput<'audio.transcribe'>,
@@ -87,6 +99,24 @@ export function buildFlashAsrBody(
   const format = ASR_FORMAT[loaded.mime.toLowerCase()]
   if (!format)
     throw new ProviderError('invalid_input', '极速识别支持 MP3、WAV、Ogg Opus、FLAC、M4A 音频')
+  // 来源：https://docs.volcengine.com/docs/6561/1354868（录音文件识别标准版，极速版请求字段与其一致，
+  // 2026-11-06 核对）：request.enable_itn / enable_punc / enable_ddc / show_utterances；
+  // request.corpus.context 是 JSON 字符串，热词为 {"hotwords":[{"word":"…"}]}，
+  // 对话上下文为 {"context_type":"dialog_ctx","context_data":[{"text":"…"}]}，两者二选一。
+  const extras = input as AsrExtras
+  const flag = (value: unknown, fallback: boolean) =>
+    typeof value === 'boolean' ? value : fallback
+  const hotwords = Array.isArray(extras.hotwords)
+    ? extras.hotwords.filter((w): w is string => typeof w === 'string' && w !== '')
+    : []
+  const context = typeof extras.context === 'string' ? extras.context.trim() : ''
+  if (hotwords.length && context)
+    throw new ProviderError('invalid_input', 'hotwords 与 context 只能二选一')
+  const corpusContext = hotwords.length
+    ? JSON.stringify({ hotwords: hotwords.map((word) => ({ word })) })
+    : context
+      ? JSON.stringify({ context_type: 'dialog_ctx', context_data: [{ text: context }] })
+      : undefined
   return {
     audio: {
       data: toBase64(loaded.data),
@@ -94,7 +124,14 @@ export function buildFlashAsrBody(
       ...(format === 'ogg' ? { codec: 'opus' } : {}),
       ...(input.language ? { language: input.language } : {}),
     },
-    request: { model_name: 'bigmodel', enable_itn: true, enable_punc: true, show_utterances: true },
+    request: {
+      model_name: 'bigmodel',
+      enable_itn: flag(extras.itn, true),
+      enable_punc: flag(extras.punc, true),
+      ...(typeof extras.ddc === 'boolean' ? { enable_ddc: extras.ddc } : {}),
+      show_utterances: flag(extras.utterances, true),
+      ...(corpusContext ? { corpus: { context: corpusContext } } : {}),
+    },
   }
 }
 
@@ -201,7 +238,7 @@ export function createDoubaoAdapter(
         case 'audio.music':
         case 'audio.sfx': {
           const input = request.input as CapabilityInput<'audio.music'>
-          const settings = resolveSpeechSettings(ctx)
+          const settings = resolveSpeechSettings(ctx, settingsOverrides(input as SpeechExtras))
           const body = buildAudioCreateBody(input, settings, capability)
           const response = await postRaw(ctx, AUDIO_CREATE_PATH, { model, ...body })
           const data = response.decode((raw) =>

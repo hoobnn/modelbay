@@ -110,6 +110,35 @@ export function customVoiceId(value: string): boolean {
   )
 }
 
+/**
+ * MCP 工具目录里的原始参数（`CapabilityInput` 之外的字段，随 input 原样带到适配器）。
+ * SDK 调用不传这些字段，行为不变。
+ */
+export interface SpeechExtras {
+  speech_rate?: unknown
+  loudness_rate?: unknown
+  pitch?: unknown
+  language?: unknown
+  format?: unknown
+  sample_rate?: unknown
+}
+
+function integer(value: unknown, name: string): number | undefined {
+  if (value === undefined || value === null) return undefined
+  if (typeof value !== 'number' || !Number.isInteger(value))
+    throw new ProviderError('invalid_input', `${name} 须为整数`)
+  return value
+}
+
+/** MCP 的 format / sample_rate 覆盖宿主设置；其余取值由 speechSettings 校验。 */
+export function settingsOverrides(input: SpeechExtras): Partial<SpeechSettings> {
+  const overrides: Partial<SpeechSettings> = {}
+  if (typeof input.format === 'string') overrides.format = input.format as SpeechSettings['format']
+  if (typeof input.sample_rate === 'number' || typeof input.sample_rate === 'string')
+    overrides.sampleRate = String(input.sample_rate) as SpeechSettings['sampleRate']
+  return overrides
+}
+
 /** Build the v3 TTS request body. */
 export function buildSpeechRequest(
   model: string,
@@ -131,6 +160,21 @@ export function buildSpeechRequest(
   const speed = input.speed ?? settings.speed
   if (!Number.isFinite(speed) || speed < 0.5 || speed > 2)
     throw new ProviderError('invalid_input', '语速须在 0.5 至 2 之间')
+  // 来源：https://docs.volcengine.com/docs/6561/1598757（2026-11-06 核对）
+  // audio_params.speech_rate / loudness_rate 是 -50..100 的整数（100 为 2 倍）；
+  // additions（JSON 字符串）里 context_texts 是语气指令（仅 2.0），explicit_language 指定语种，
+  // post_process.pitch 是音调（-12..12）。MCP 给了整数 speech_rate 就原样传，否则由归一化 speed 换算。
+  const extras = input as SpeechExtras
+  const speechRate = integer(extras.speech_rate, 'speech_rate') ?? Math.round((speed - 1) * 100)
+  const loudnessRate = integer(extras.loudness_rate, 'loudness_rate')
+  const pitch = integer(extras.pitch, 'pitch')
+  const additions: Json = {
+    ...(instruction ? { context_texts: [instruction] } : {}),
+    ...(typeof extras.language === 'string' && extras.language
+      ? { explicit_language: extras.language }
+      : {}),
+    ...(pitch === undefined ? {} : { post_process: { pitch } }),
+  }
   const body: Json = {
     req_params: {
       text: content,
@@ -138,9 +182,10 @@ export function buildSpeechRequest(
       audio_params: {
         format: settings.format === 'wav' ? 'pcm' : settings.format,
         sample_rate: Number(settings.sampleRate),
-        speech_rate: Math.round((speed - 1) * 100),
+        speech_rate: speechRate,
+        ...(loudnessRate === undefined ? {} : { loudness_rate: loudnessRate }),
       },
-      additions: JSON.stringify(instruction ? { context_texts: [instruction] } : {}),
+      additions: JSON.stringify(additions),
     },
   }
   return {
@@ -224,10 +269,10 @@ export async function synthesizeSpeech(
   ctx: AdapterContext,
   plan = false,
 ): Promise<SubmitResult> {
-  const settings = resolveSpeechSettings(
-    ctx,
-    input.speed === undefined ? {} : { speed: input.speed },
-  )
+  const settings = resolveSpeechSettings(ctx, {
+    ...settingsOverrides(input as SpeechExtras),
+    ...(input.speed === undefined ? {} : { speed: input.speed }),
+  })
   const { path, resource, body } = buildSpeechRequest(model, input, settings, plan)
   const response = await postRaw(ctx, path, body, { resource })
   const data = response.decode((raw) => decodeAudioStream(raw, 'data', ctx, settings, true))
