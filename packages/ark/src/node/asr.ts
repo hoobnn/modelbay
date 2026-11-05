@@ -277,7 +277,10 @@ export async function transcribePlanAudio(
   ctx: AdapterContext,
 ): Promise<SubmitResult> {
   if (!ctx.socket)
-    throw new ProviderError('unavailable', '当前宿主不支持 Agent Plan 流式语音识别，请升级宿主')
+    throw new ProviderError(
+      'unavailable',
+      '当前宿主不支持 Agent Plan 流式语音识别，请升级 Plein 或宿主',
+    )
   const key = ctx.secret('ARK_AGENT_PLAN_API_KEY')
   if (!key) throw new ProviderError('auth', '请先配置 Agent Plan 专属 API Key')
   const asset = await readFile(ctx, input.audio)

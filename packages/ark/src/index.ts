@@ -319,7 +319,7 @@ function makeAdapter(
     title: planeTitle(plane),
     channels: [planeChannel(plane)],
     models,
-    nativeOperations: ['listModels'],
+    nativeOperations: ['listModels', 'listTasks'],
     docsUrl: DOCS,
     nodeOnly: ['tos', 'plan-directory', 'asr'],
     submit: (req, ctx) => submit(req, ctx, plane, models, options),
@@ -327,7 +327,22 @@ function makeAdapter(
     cancel: (remoteId, ctx) =>
       cancelVideo(remoteId, taskOptions(plane, ctx, requireKey(plane, ctx))),
     native: async (op, _params, ctx) => {
-      if (op !== 'listModels') throw new ProviderError('invalid_input', `未知的 native 操作：${op}`)
+      if (op !== 'listModels' && op !== 'listTasks')
+        throw new ProviderError('invalid_input', `未知的 native 操作：${op}`)
+      if (op === 'listTasks') {
+        // 连接测试：只查任务列表（不计费），验证 Key 与数据面可达
+        const key = requireKey(plane, ctx)
+        return request({
+          ctx,
+          url: `${planeBase(plane)}/contents/generations/tasks?page_size=1`,
+          method: 'GET',
+          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          label: LABEL,
+          messages: TRANSPORT,
+          secrets: [key],
+          retries: 0,
+        })
+      }
       if (plane === 'plan') {
         if (!options.listPlanModels)
           throw new ProviderError(

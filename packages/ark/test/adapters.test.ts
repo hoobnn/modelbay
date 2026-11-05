@@ -182,6 +182,20 @@ describe('native / poll / cancel', () => {
     expect(list).toHaveLength(2)
   })
 
+  it('listTasks 只查任务列表（page_size=1），两个数据面各用自己的前缀与 Key', async () => {
+    const api = fakeContext([{ items: [] }], { secret: { ARK_API_KEY: 'k' } })
+    await arkAdapter.native?.('listTasks', {}, api.ctx)
+    expect(api.fetch).toHaveBeenCalledWith(
+      'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks?page_size=1',
+      expect.objectContaining({ method: 'GET' }),
+    )
+    const plan = fakeContext([{ items: [] }], { secret: { ARK_AGENT_PLAN_API_KEY: 'p' } })
+    await arkPlanAdapter.native?.('listTasks', {}, plan.ctx)
+    expect(plan.fetch.mock.calls[0]?.[0]).toBe(
+      'https://ark.cn-beijing.volces.com/api/plan/v3/contents/generations/tasks?page_size=1',
+    )
+  })
+
   it('套餐 listModels 指向 node 子路径，未知 op 抛错', async () => {
     const { ctx } = fakeContext([], {
       secret: { ARK_AGENT_PLAN_API_KEY: 'k', ARK_API_KEY: 'k' },
