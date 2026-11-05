@@ -11,6 +11,8 @@ export default {
     {
       channel: 'ark-plan',
       id: 'doubao-seed-evolving',
+      title: 'doubao-seed-evolving',
+      description: 'Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位',
       agentOnly: true,
       source: {
         url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',

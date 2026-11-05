@@ -96,3 +96,24 @@ describe('套餐弃用模型', () => {
     }
   })
 })
+
+describe('Seed Evolving 的套餐渠道说明', () => {
+  it('套餐渠道沿用 plein 原目录的标题与说明，按量渠道不变', () => {
+    const evolving = allModels.find((item) => item.id === 'doubao-seed-evolving')!
+    const plan = toModelInfo(
+      evolving,
+      evolving.channels.find((ref) => ref.channel === 'ark-plan'),
+    )
+    expect(plan).toMatchObject({
+      title: 'doubao-seed-evolving',
+      description: 'Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位',
+      agentOnly: true,
+    })
+    const api = toModelInfo(
+      evolving,
+      evolving.channels.find((ref) => ref.channel === 'ark'),
+    )
+    expect(api.title).toBe('Doubao Seed Evolving（快速迭代）')
+    expect(api.description).toBeUndefined()
+  })
+})
