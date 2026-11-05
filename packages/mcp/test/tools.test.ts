@@ -5,7 +5,7 @@ import { fakeAdapter, readInventory, MCP_KEYS, type McpKey } from './fixtures'
 
 const EXPECTED_COUNTS: Record<McpKey, number> = {
   ark: 8,
-  minimax: 18,
+  minimax: 17,
   bailian: 19,
   'doubao-speech': 24,
 }

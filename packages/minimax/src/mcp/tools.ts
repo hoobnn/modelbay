@@ -14,14 +14,27 @@ const okOutput = {
   additionalProperties: true,
 }
 
+/** 去掉适配器自己渠道的 `minimax:` 前缀（native 路由没有通用的 model 解析） */
+const channelModel = (model: unknown): string | undefined =>
+  typeof model === 'string' && model ? model.replace(/^minimax:/, '') : undefined
+
+/** 声音样本按扩展名补 MIME；MCP 素材源只给路径时不带元数据，复刻前要校验格式 */
+const CLONE_MIME: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  wav: 'audio/wav',
+}
+const sampleMime = (file: string): string | undefined =>
+  CLONE_MIME[file.split(/[?#]/)[0]!.split('.').pop()?.toLowerCase() ?? '']
+
 export const minimaxTools: ToolSpec[] = [
   {
     name: 'create_h3_context_ir_task',
     native: 'context-ir',
     description:
       '创建 H3-Context-IR 任务（官方 POST /v2/h3_context_ir）：深度理解多模态输入，异步返回结构化增强提示词，不直接生成视频；按Token计费。\n' +
-      '纯文本传prompt，多模态传官方content数组（二选一）；素材/组合限制同generate_video。\n' +
-      'parameters仅支持callback_url。wait=0只提交，后续get_job返回prompt及prompt.txt；需要生成视频时把返回的prompt交给generate_video。\n',
+      '纯文本传prompt，多模态传官方content数组（二选一）；content里的素材须是公网URL、mm_file://ID或data URI，不会自动上传本地文件。\n' +
+      'parameters仅支持callback_url。只提交并返回task_id，用get_job查询，结果里的增强提示词放在text输出；需要生成视频时把它交给generate_video。\n',
     capability: 'video.generate',
     modelParams: { duration: 'duration', ratio: 'aspectRatio' },
     inputSchema: {
@@ -38,8 +51,6 @@ export const minimaxTools: ToolSpec[] = [
         },
         duration: { type: 'integer' },
         ratio: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
-        output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
@@ -50,7 +61,7 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'delete_video_task',
-    native: 'video-task-delete',
+    native: 'delete-video-task',
     nature: 'mutate',
     group: 'management',
     description:
@@ -68,10 +79,10 @@ export const minimaxTools: ToolSpec[] = [
     name: 'generate_video',
     description:
       'MiniMax H3 V2 音画视频生成，支持文生、首帧、尾帧、首尾帧和多模态参考。按量计费。\n' +
-      '多模态参考须显式给具体ratio。prompt 与快捷素材参数可组合；或单独传官方 content 数组，不能混用。所有模式需要1个非空text。\n' +
+      '多模态参考须显式给具体ratio。prompt 为必填文本，可与首/尾帧或参考素材参数组合。\n' +
       '素材接受公网URL、mm_file://ID、data URI或本地绝对路径；本地文件自动上传，有效期7天。\n' +
       '首/尾帧各最多1张，与参考素材互斥。具体素材数量、时长、分辨率与文件大小上限见下面的模型清单。\n' +
-      'ratio省略时文生为16:9，其余adaptive；首尾帧总是跟随图片比例。parameters支持callback_url/aigc_watermark；不允许覆盖模型或content。\n' +
+      'ratio省略时文生为16:9，其余adaptive；首尾帧总是跟随图片比例。parameters只支持callback_url/aigc_watermark。\n' +
       'wait=0只提交，最多等待90秒；返回job_id/task_id，get_job后续查询及下载，recover_job只补交付不重新生成。\n' +
       '工具超时可用list_jobs找回。HTTP超时且无task_id时不自动重试，避免重复付费。离线契约已测试，账号权限需实际调用验证。\n',
     capability: 'video.generate',
@@ -86,13 +97,6 @@ export const minimaxTools: ToolSpec[] = [
       properties: {
         prompt: { type: 'string', default: '' },
         model: { type: 'string' },
-        content: {
-          anyOf: [
-            { type: 'array', items: { type: 'object', additionalProperties: true } },
-            { type: 'null' },
-          ],
-          default: null,
-        },
         first_frame: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         last_frame: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         reference_images: {
@@ -174,11 +178,11 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'list_video_tasks',
-    native: 'video-task-list',
+    native: 'list-video-tasks',
     nature: 'query',
     group: 'management',
     description:
-      '分页查询云端最近7天H3任务，不下载。task_type为generation/h3_context_ir/regeneration。\n' +
+      '分页查询云端最近7天H3任务，不下载。task_type为generation/h3_context_ir/regeneration；model按官方filter.model过滤（如MiniMax-H3）。\n' +
       'status为queued/running/succeeded/failed/cancelled；本地历史记录用list_jobs。\n',
     inputSchema: {
       type: 'object',
@@ -187,10 +191,6 @@ export const minimaxTools: ToolSpec[] = [
         page_num: { type: 'integer', default: 1 },
         page_size: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
         status: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        task_ids: {
-          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
-          default: null,
-        },
         model: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         task_type: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
@@ -214,8 +214,12 @@ export const minimaxTools: ToolSpec[] = [
       '生成歌曲或纯音乐，生成计费。人声歌曲须lyrics或lyrics_optimizer=true；纯音乐设is_instrumental=true并填写prompt。\n' +
       '官方2026-08-20公告：付费音乐API仅历史付费用户可继续使用，免费接口已停止。账号可用性以服务端为准。\n' +
       '当前文档指向 MiniMax-Music3 开源模型作为其他使用方式；该开源模型不属于本工具的API model枚举。\n' +
-      'parameters支持audio_setting等官方字段，不支持stream；结果可recover_job补下载。\n',
+      '输出固定为hex音频，使用默认audio_setting；结果可recover_job补下载。\n',
     capability: 'audio.music',
+    // 官方 is_instrumental 默认 false（POST /v1/music_generation，2026-11-06 核对：
+    // https://platform.minimax.cn/docs/api-reference/music-generation）；
+    // 适配器在字段缺失时按 SDK 习惯当纯音乐，MCP 这里显式补上官方默认值
+    mapArguments: (args) => ({ ...args, is_instrumental: args.is_instrumental ?? false }),
     modelParams: { prompt: 'promptLength' },
     inputSchema: {
       type: 'object',
@@ -226,31 +230,7 @@ export const minimaxTools: ToolSpec[] = [
         model: { type: 'string' },
         is_instrumental: { type: 'boolean', default: false },
         lyrics_optimizer: { type: 'boolean', default: false },
-        output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        parameters: {
-          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
-          default: null,
-        },
       },
-    },
-    outputSchema: okOutput,
-  },
-  {
-    name: 'query_video_generation',
-    native: 'video-task-query',
-    nature: 'query',
-    description:
-      '查询H3 V2任务（generation/h3_context_ir/regeneration），成功后下载或返回URL，不重新生成。\n' +
-      '保留官方MCP工具名，但不支持旧V1任务。平台查询窗口7天；未知task_id会建立本地记录，已有记录沿用原输出目录。\n',
-    inputSchema: {
-      type: 'object',
-      title: 'query_video_generationArguments',
-      properties: {
-        task_id: { type: 'string' },
-        output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
-      },
-      required: ['task_id'],
     },
     outputSchema: okOutput,
   },
@@ -284,7 +264,7 @@ export const minimaxTools: ToolSpec[] = [
       'source_task_id与content二选一。按ID需要白名单、属于本账号且7天内成功生成的源任务。\n' +
       'content须原样包含源视频生成时最终prompt和全部参考素材，加且只加1个type=video_url/role=base_video项。\n' +
       '源视频须带音轨、24fps、宽高均可被32整除，像素面积589824–1032192，总帧数107–362且每档递增17帧。\n' +
-      '本地输入自动上传；parameters支持callback_url/aigc_watermark。返回task_id/job_id，后续get_job查询并下载。\n',
+      'content里的素材须是公网URL、mm_file://ID或data URI，不会自动上传本地文件；parameters只支持callback_url/aigc_watermark。返回task_id，后续get_job查询并下载。\n',
     capability: 'video.generate',
     inputSchema: {
       type: 'object',
@@ -298,8 +278,6 @@ export const minimaxTools: ToolSpec[] = [
           ],
           default: null,
         },
-        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
-        output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
@@ -313,7 +291,7 @@ export const minimaxTools: ToolSpec[] = [
     // 历史工具名保留兼容，同时注册跨平台统一命名
     description:
       '同步语音合成，按字符计费。voice_id用list_voices获取；speed=0.5–2，vol=(0,10]，pitch=-12–12，format=mp3/wav/flac/pcm。\n' +
-      'parameters深度合并voice_setting/audio_setting等官方选项，不支持stream；结果持久保存，可recover_job补下载。\n',
+      'emotion、language_boost按官方取值；采样率/码率/声道/格式写入audio_setting。不支持stream；结果可recover_job补下载。\n',
     capability: 'audio.speech',
     modelParams: { speed: 'speed', text: 'promptLength' },
     inputSchema: {
@@ -333,10 +311,6 @@ export const minimaxTools: ToolSpec[] = [
         format: { type: 'string', default: 'mp3' },
         language_boost: { type: 'string', default: 'auto' },
         output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        parameters: {
-          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
-          default: null,
-        },
       },
       required: ['text'],
     },
@@ -347,9 +321,18 @@ export const minimaxTools: ToolSpec[] = [
     // 历史工具名保留兼容，同时注册跨平台统一命名
     description:
       'MiniMax文生图/人物参考图生图，按张计费。subject_reference为单人人像公网URL/data URI或本地JPG/PNG(<10MB)。\n' +
-      'parameters支持官方高级字段（如style、seed、aigc_watermark），不能覆盖model/response_format/subject_reference。\n' +
+      'parameters只支持seed、aigc_watermark和style（{style_type, style_weight}，仅image-01-live生效，style_type为漫画/元气/中世纪/水彩）。\n' +
       'local模式下载图片，url模式返回24小时链接；部分失败如实报告，recover_job只补交付。\n',
     capability: 'image.generate',
+    // subject_reference 是单张人像：换成通用的 images，由 MCP 素材源读取后进适配器的人物参考
+    // （POST /v1/image_generation，type=character，JPG/PNG <10MB，2026-11-06 核对：
+    // https://platform.minimax.cn/docs/api-reference/image-generation-i2i）
+    mapArguments: ({ subject_reference, ...args }) => ({
+      ...args,
+      ...(typeof subject_reference === 'string' && subject_reference
+        ? { images: [subject_reference] }
+        : {}),
+    }),
     modelParams: { aspect_ratio: 'aspectRatio', n: 'count', prompt: 'promptLength' },
     inputSchema: {
       type: 'object',
@@ -373,7 +356,14 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'upload_file',
-    native: 'file-upload',
+    native: 'upload-file',
+    // POST /v1/files/upload（2026-11-06 核对：
+    // https://platform.minimax.cn/docs/api-reference/file-management-upload）；
+    // 本地路径作为素材 ID 交给 MCP 素材源读取
+    mapArguments: ({ file, purpose }) => ({
+      asset_id: file,
+      ...(typeof purpose === 'string' && purpose ? { purpose } : {}),
+    }),
     group: 'node',
     description:
       '上传指定本地绝对路径，返回file_id和mm_file://引用，不生成媒体。\n' +
@@ -396,7 +386,24 @@ export const minimaxTools: ToolSpec[] = [
     description:
       '音色快速复刻，file（本地绝对路径）或已上传file_id二选一；mp3/m4a/wav，10秒–5分钟，<=20MB。\n' +
       'voice_id须8–256字符且字母开头，仅字母数字-_且不能以-_结尾。可选试听text<=1000字符，试听按合成计费。\n',
+    native: 'voice-clone',
     capability: 'voice.clone',
+    // POST /v1/voice_clone：file_id 来自 /v1/files/upload（purpose=voice_clone），
+    // 试听 text 需要 model（2026-11-06 核对：
+    // https://platform.minimax.cn/docs/api-reference/voice-cloning-clone）。
+    // 本地路径 / URL 换成素材引用，由适配器先上传再复刻
+    mapArguments: ({ file, file_id, model, ...rest }) => {
+      const sample = typeof file === 'string' ? file : ''
+      const mime = sample ? sampleMime(sample) : undefined
+      return {
+        ...rest,
+        ...(channelModel(model) ? { model: channelModel(model) } : {}),
+        ...(typeof file_id === 'string' && file_id ? { file_id } : {}),
+        ...(sample && !(typeof file_id === 'string' && file_id)
+          ? { audio: { assetId: sample, kind: 'audio', ...(mime ? { mime } : {}) } }
+          : {}),
+      }
+    },
     modelParams: { text: 'promptLength' },
     inputSchema: {
       type: 'object',
@@ -407,11 +414,6 @@ export const minimaxTools: ToolSpec[] = [
         file_id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         text: { type: 'string', default: '' },
         model: { type: 'string' },
-        output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        parameters: {
-          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
-          default: null,
-        },
       },
       required: ['voice_id'],
     },
@@ -420,7 +422,9 @@ export const minimaxTools: ToolSpec[] = [
   {
     name: 'design_voice',
     // 历史工具名保留兼容，同时注册跨平台统一命名
-    description: '按文字描述设计音色，preview_text为试听文本。生成的音色用于text_to_speech。',
+    description:
+      '按文字描述设计音色（POST /v1/voice_design）。prompt<=2000字符，preview_text<=500字符，试听按字符计费；voice_id为自定义音色ID。生成的音色用于text_to_speech。',
+    native: 'voice-design',
     capability: 'voice.design',
     inputSchema: {
       type: 'object',
@@ -428,14 +432,9 @@ export const minimaxTools: ToolSpec[] = [
       properties: {
         prompt: { type: 'string' },
         preview_text: { type: 'string' },
-        voice_id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        parameters: {
-          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
-          default: null,
-        },
+        voice_id: { type: 'string' },
       },
-      required: ['prompt', 'preview_text'],
+      required: ['prompt', 'preview_text', 'voice_id'],
     },
     outputSchema: okOutput,
   },

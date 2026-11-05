@@ -218,6 +218,15 @@ export function createMinimaxAdapter(models: ModelDeclaration[]): PlatformAdapte
         }
       if (status !== 'succeeded')
         throw new ProviderError('unknown', 'MiniMax 查询返回了未知的任务状态')
+      // H3-Context-IR 任务的产物是 content.prompt（modality=text），没有视频 URL；
+      // 2026-11-06 核对：https://platform.minimax.cn/docs/api-reference/video-generation-v2-query
+      const prompt = asJson(task.content).prompt
+      if (task.task_type === 'h3_context_ir' && typeof prompt === 'string' && prompt)
+        return {
+          state: 'succeeded',
+          outputs: [{ type: 'text', text: prompt }],
+          usage: usage({ usage: task.usage }),
+        }
       const url = asJson(task.content).url
       if (typeof url !== 'string' || !url)
         throw new ProviderError('unknown', 'MiniMax 成功任务缺少视频 URL')
