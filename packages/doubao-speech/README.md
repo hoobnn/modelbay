@@ -55,8 +55,10 @@ adapter in `nativeOperationSchemas` (for the MCP generator). M3 baseline:
 
 Also implemented: `translation` (`matx_translate`), `meeting-notes` (lark submit/query),
 `hotword-table` (`/api/proxy/invoke`), `voice-clone` / `voice-design` / `voice-query`,
-`raw-request`, and `console-management` (a **validated stub** — HMAC request signing
-is a TODO).
+`raw-request`, and `console-management` (HMAC-SHA256 signed with the IAM
+`VOLC_ACCESS_KEY_ID` / `VOLC_SECRET_ACCESS_KEY` pair — `signedHeaders()`,
+`CONSOLE_VERSIONS` and `consoleRoute()` are exported for hosts that need to sign
+their own requests; there is no API-Key fallback).
 
 ## Realtime session
 

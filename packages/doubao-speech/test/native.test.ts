@@ -225,12 +225,39 @@ describe('translation / meeting-notes / hotword-table / console', () => {
       code: 'invalid_input',
     })
   })
-  it('consoleManagement is a validated signing stub', () => {
-    expect(consoleManagement({ action: 'ListVoices' })).toMatchObject({
-      ok: false,
-      requires: 'signed-console-request',
+  it('consoleManagement 用 AK/SK 签名后请求控制面', async () => {
+    const { ctx, calls } = fakeContext([{ status: 'success', Result: {} }], {
+      secrets: {
+        VOLC_ACCESS_KEY_ID: 'test-access-key',
+        VOLC_SECRET_ACCESS_KEY: 'test-secret-key',
+      },
     })
-    expect(() => consoleManagement({})).toThrow(ProviderError)
+    const data = await consoleManagement(ctx, {
+      action: 'ListAPIKeys',
+      parameters: { ProjectName: 'default' },
+    })
+    expect(data).toMatchObject({ status: 'success' })
+    const call = calls()[0]
+    expect(call?.url).toContain('https://open.volcengineapi.com/?')
+    expect(call?.url).toContain('Action=ListAPIKeys')
+    expect(call?.url).toContain('Version=2025-05-20')
+    const headers = call?.headers ?? {}
+    expect(headers['X-Date']).toMatch(/^\d{8}T\d{6}Z$/)
+    expect(headers['X-Content-Sha256']).toMatch(/^[0-9a-f]{64}$/)
+    expect(headers['Authorization']).toMatch(
+      /^HMAC-SHA256 Credential=test-access-key\/\d{8}\/cn-beijing\/speech_saas_prod\/request, SignedHeaders=host;x-content-sha256;x-date, Signature=[0-9a-f]{64}$/,
+    )
+    expect(call?.body).toEqual({ ProjectName: 'default' })
+  })
+  it('consoleManagement 缺凭证或缺 Action 时拒绝', async () => {
+    const { ctx } = fakeContext([])
+    await expect(consoleManagement(ctx, { action: 'ListAPIKeys' })).rejects.toMatchObject({
+      code: 'auth',
+    })
+    await expect(consoleManagement(ctx, {})).rejects.toMatchObject({ code: 'invalid_input' })
+    await expect(consoleManagement(ctx, { action: 'UnknownAction' })).rejects.toMatchObject({
+      code: 'invalid_input',
+    })
   })
 })
 
@@ -313,7 +340,11 @@ describe('runDoubaoNative dispatch', () => {
         [fixtureReply(fixture('minutes-query'))],
       ],
       ['hotword-table', { action: 'ListBoostingTable' }, [fixtureReply(fixture('hotword-table'))]],
-      ['console-management', { action: 'ListVoices' }, []],
+      [
+        'console-management',
+        { action: 'ListAPIKeys', parameters: { ProjectName: 'default' } },
+        [{ status: 'success' }],
+      ],
       [
         'voice-clone',
         { speaker_id: 'S_x', audio_data: 'AQID' },
@@ -328,7 +359,13 @@ describe('runDoubaoNative dispatch', () => {
       ['raw-request', { path: '/api/v3/tts/query', body: { task_id: 'x' } }, [{ code: 0 }]],
     ]
     for (const [op, params, replies] of cases) {
-      const { ctx } = fakeContext(replies)
+      const { ctx } = fakeContext(replies, {
+        secrets: {
+          DOUBAO_API_KEY: '<redacted>',
+          VOLC_ACCESS_KEY_ID: 'test-access-key',
+          VOLC_SECRET_ACCESS_KEY: 'test-secret-key',
+        },
+      })
       await expect(runDoubaoNative(op, params, ctx)).resolves.toBeDefined()
     }
   })

@@ -4,6 +4,7 @@
 import { ProviderError, toBase64 } from '@modelbay/core'
 import type { AdapterContext } from '@modelbay/core'
 import { asJson, arr, postJson, postText, type Json } from './http'
+import { consoleAction } from './console'
 import {
   interpretationStartRequest,
   INTERPRETATION_CHUNK_BYTES,
@@ -362,18 +363,17 @@ export async function hotwordTable(ctx: AdapterContext, params: Json): Promise<J
   return postJson(ctx, path, body, { resource: 'volc.speech.hotword' })
 }
 
-/** Signed Volcengine console API stub (TODO: HMAC request signing). */
-export function consoleManagement(params: Json): Json {
+/**
+ * 语音控制面（OpenAPI）：用 IAM 的 AK/SK 做 HMAC-SHA256 签名。
+ *
+ * 没有 API Key 的退路，凭证缺失直接报 auth 错误。
+ */
+export async function consoleManagement(ctx: AdapterContext, params: Json): Promise<Json> {
   const action = asString(params.action)
   if (!action) throw new ProviderError('invalid_input', 'console-management requires an action')
-  return {
-    ok: false,
-    requires: 'signed-console-request',
-    host: 'api.volcengine.com',
-    action,
-    parameters: asRecord(params.parameters),
-    todo: 'HMAC request signing is not implemented',
-  }
+  const parameters = asRecord(params.parameters)
+  const version = asString(params.version)
+  return consoleAction(ctx, action, parameters, version ? { version } : {})
 }
 
 // ── voice clone / design / query ───────────────────────────────────────────
@@ -462,7 +462,7 @@ export async function runDoubaoNative(
     case 'hotword-table':
       return hotwordTable(ctx, p)
     case 'console-management':
-      return consoleManagement(p)
+      return consoleManagement(ctx, p)
     case 'voice-clone':
       return voiceCloneOp(ctx, p)
     case 'voice-design':

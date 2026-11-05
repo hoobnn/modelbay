@@ -57,6 +57,19 @@ export {
   text,
 } from './speech'
 export {
+  CONSOLE_ENDPOINT,
+  CONSOLE_HOST,
+  CONSOLE_SERVICE,
+  CONSOLE_VERSIONS,
+  buildQuery,
+  consoleAction,
+  consoleRoute,
+  quoteValue,
+  signedHeaders,
+  utcTimestamp,
+} from './console'
+export type { ConsoleActionOptions, SignedHeaderOptions } from './console'
+export {
   INTERPRETATION_CHUNK_BYTES,
   INTERPRETATION_EVENTS,
   INTERPRETATION_MODES,
