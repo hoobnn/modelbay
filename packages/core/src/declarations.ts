@@ -55,6 +55,13 @@ export interface ModelDeclaration extends Omit<
   aliases: ModelAliases
   lifecycle: Lifecycle
   source: ModelSource
+  /**
+   * 该模型是这项能力的默认模型。
+   * 只有 `active` 的模型能带这个标记；`selectDefaultModel()` 优先选它，
+   * 没标记时按声明顺序取第一个 active 的。
+   * 这样「谁是默认」写在声明数据里，适配器和消费方都不用自己写死。
+   */
+  default?: true
   /** 模型专属参数的 JSON Schema（声明是纯数据，不写 zod 对象） */
   optionsSchema?: Record<string, unknown>
   /** 只有一家平台有的能力，走 native(op, params) */
@@ -116,6 +123,9 @@ export function validateDeclaration(model: ModelDeclaration): string[] {
   if (model.lifecycle?.status === 'superseded' && !model.lifecycle.by) {
     problems.push('superseded 需要记录 by')
   }
+  if (model.default === true && model.lifecycle?.status !== 'active') {
+    problems.push('非 active 模型不能当默认模型')
+  }
   for (const channel of model.channels) {
     if (!channel.channel || !channel.id) problems.push('渠道缺少 channel 或 id')
   }
@@ -159,13 +169,47 @@ export function customModel(ref: string, capability: NormalizedCapability): { cu
   return { custom: `${capability}:${ref}` }
 }
 
+/**
+ * 选「可用」的默认模型：优先 active 的默认模型；
+ * 该能力没有任何 active 模型时，退回第一个还能选的（`closed-to-new-accounts` 之类）。
+ *
+ * 用途：MCP 工具的 model 字段要给出可选值和默认值。
+ * 只有 active 才能当默认（见 0003），但某项能力如果只剩 closed-to-new-accounts 的模型，
+ * 工具还得能用——这时退回它，并把它的账号限制提示写进说明里，让调用方自己判断。
+ */
+export function selectUsableDefaultModel(
+  declarations: readonly ModelDeclaration[],
+  capability: NormalizedCapability,
+  channel?: string,
+): ResolvedModel | null {
+  const preferred = selectDefaultModel(declarations, capability, channel)
+  if (preferred) return preferred
+  for (const declaration of declarations) {
+    if (!isSelectable(declaration) || !declaration.capabilities.includes(capability)) continue
+    const found = declaration.channels.find((item) => !channel || item.channel === channel)
+    if (found) return { declaration, channel: found }
+  }
+  return null
+}
+
+/** 挑默认模型的另一种用法：只看「能不能当默认」，不看有没有 default 标记。
+ * 没有标记时按声明顺序取第一个 active 的。默认模型永远不写死在适配器里。
+ */
 export function selectDefaultModel(
   declarations: readonly ModelDeclaration[],
   capability: NormalizedCapability,
   channel?: string,
 ): ResolvedModel | null {
-  for (const declaration of declarations) {
-    if (!canBeDefault(declaration) || !declaration.capabilities.includes(capability)) continue
+  const candidates = declarations.filter(
+    (declaration) => canBeDefault(declaration) && declaration.capabilities.includes(capability),
+  )
+  const marked = candidates.find(
+    (declaration) =>
+      declaration.default === true &&
+      declaration.channels.some((item) => !channel || item.channel === channel),
+  )
+  const ordered = marked ? [marked, ...candidates.filter((item) => item !== marked)] : candidates
+  for (const declaration of ordered) {
     const found = declaration.channels.find((item) => !channel || item.channel === channel)
     if (found) return { declaration, channel: found }
   }

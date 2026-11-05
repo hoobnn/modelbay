@@ -1,1505 +1,524 @@
-// 来源：docs/inventory/mcp-ali-bailian.json（M4 工具清单最小基线）
-// 核对日期：2026-11-04（对照 hoobnn-mcps / plein 盘点）
-// 由 scripts/gen-catalog.mjs 生成，请勿手工编辑。
-// 仅保留 name / description / inputSchema / outputSchema；annotations 由生成器按能力元数据重新派生。
-// 基线里各工具的模型参数默认值在此仅作「平台特有字段」保留；运行时的 model 字段由声明派生后覆盖。
+/**
+ * 百炼 MCP 工具定义（手写源码）。
+ *
+ * 这里只写与模型无关的平台特有部分：字段形状、平台开关、参数含义。
+ * 与模型有关的部分（可选模型 ID、默认值、时长 / 分辨率 / 画幅等上下限、生命周期提示）
+ * 由 `src/derive.ts` 在运行时从 `ModelDeclaration` 派生，改声明就跟着变。
+ */
+import type { CatalogEntry } from './types'
+
+const okOutput = {
+  type: 'object',
+  required: ['ok'],
+  properties: { ok: { type: 'boolean' } },
+  additionalProperties: true,
+}
+
 export default [
   {
     name: 'animate_portrait',
     description:
-      'wan2.2-s2v数字人对口型：图片+人声驱动人物口型、表情、动作。输入本地文件或公开URL。\n图片jpg/png/webp等，音频wav/mp3，音频须小于15MB且小于20秒；resolution=480P/720P。\n本地素材上传百炼临时存储。parameters合并进官方parameters对象。按输出秒数计费；wait=0默认只提交，最多90秒，之后用get_job查进度。\n返回task_id/job_id。北京地域能力。\n',
+      '数字人对口型：图片+人声驱动人物口型、表情、动作。输入本地文件或公开URL。\n' +
+      '图片jpg/png/webp等，音频wav/mp3，音频须小于15MB且小于20秒。\n' +
+      '本地素材上传百炼临时存储。parameters合并进官方parameters对象。按输出秒数计费；wait=0默认只提交，最多90秒，之后用get_job查进度。\n' +
+      '返回task_id/job_id。北京地域能力。\n',
     inputSchema: {
+      type: 'object',
+      title: 'animate_portraitArguments',
       properties: {
-        image: {
-          title: 'Image',
-          type: 'string',
-        },
-        audio: {
-          title: 'Audio',
-          type: 'string',
-        },
-        resolution: {
-          default: '480P',
-          title: 'Resolution',
-          type: 'string',
-        },
-        wait: {
-          default: 0,
-          maximum: 90,
-          minimum: 0,
-          title: 'Wait',
-          type: 'integer',
-        },
-        out_dir: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Out Dir',
-        },
+        image: { type: 'string' },
+        audio: { type: 'string' },
+        resolution: { type: 'string' },
+        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
+        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
       },
       required: ['image', 'audio'],
-      title: 'animate_portraitArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'chat',
     description:
-      '调用百炼语言或视觉模型（千问及 DeepSeek、Kimi、GLM 等第三方）；豆包 Seed 模型用 volcengine-ark 的 chat。model=max（默认）、plus、flash或完整ID；不确定ID用list_models。history为OpenAI消息列表，不含本轮prompt；images支持本地路径或URL，模型须支持视觉。thinking/thinking_budget控制思考，max_tokens限制回答，json_mode需提示词明确JSON，web_search联网计费。返回content、reasoning、usage、finish_reason；断流保留partial文本并标记失败。未列出的官方字段放parameters。完整用法见get_tool_help。',
+      '调用百炼语言或视觉模型（千问及 DeepSeek、Kimi、GLM 等第三方）；豆包 Seed 模型用 volcengine-ark 的 chat。' +
+      '不确定ID用list_models。history为OpenAI消息列表，不含本轮prompt；images支持本地路径或URL，模型须支持视觉。' +
+      'thinking/thinking_budget控制思考，max_tokens限制回答，json_mode需提示词明确JSON，web_search联网计费。' +
+      '返回content、reasoning、usage、finish_reason；断流保留partial文本并标记失败。未列出的官方字段放parameters。完整用法见get_tool_help。\n',
+    capability: 'text.chat',
     inputSchema: {
+      type: 'object',
+      title: 'chatArguments',
       properties: {
-        prompt: {
-          title: 'Prompt',
-          type: 'string',
-        },
-        model: {
-          default: 'max',
-          title: 'Model',
-          type: 'string',
-        },
-        system: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'System',
-        },
+        prompt: { type: 'string' },
+        model: { type: 'string' },
+        system: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         history: {
           anyOf: [
-            {
-              items: {
-                additionalProperties: true,
-                type: 'object',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
+            { type: 'array', items: { type: 'object', additionalProperties: true } },
+            { type: 'null' },
           ],
           default: null,
-          title: 'History',
         },
         images: {
-          anyOf: [
-            {
-              items: {
-                type: 'string',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
-          title: 'Images',
         },
-        thinking: {
-          anyOf: [
-            {
-              type: 'boolean',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Thinking',
-        },
-        thinking_budget: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Thinking Budget',
-        },
-        max_tokens: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Max Tokens',
-        },
-        temperature: {
-          anyOf: [
-            {
-              type: 'number',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Temperature',
-        },
-        json_mode: {
-          default: false,
-          title: 'Json Mode',
-          type: 'boolean',
-        },
-        web_search: {
-          default: false,
-          title: 'Web Search',
-          type: 'boolean',
-        },
+        thinking: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
+        thinking_budget: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        max_tokens: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        temperature: { anyOf: [{ type: 'number' }, { type: 'null' }], default: null },
+        json_mode: { type: 'boolean', default: false },
+        web_search: { type: 'boolean', default: false },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
         include_response: {
+          type: 'boolean',
           default: false,
           description: '返回原始响应，默认false',
-          title: 'Include Response',
-          type: 'boolean',
         },
       },
       required: ['prompt'],
-      title: 'chatArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'clone_voice',
     description:
-      '声音复刻：用 voice-enrollment（action=create_voice）从一段录音创建自定义音色，返回 voice（音色 ID）。创建免费。\n- audio：本地文件、公网 http/https URL 或 Base64 Data URI（WAV 16bit/MP3/M4A，≤10MB，≥16kHz，推荐10–20秒、最长60秒，含至少5秒清晰朗读）。\n  本地文件编码为Data URI，直接放入官方input.audio，不经过临时上传；oss://未获官方确认，仍拒绝。\n- url：旧公网URL别名，不能与audio同时传；内部统一发送input.audio（官方input.url已逐步废弃）。\n- target_model：后续合成用的模型，默认 qwen-audio-3.0-tts-flash；可选 qwen-audio-3.1-tts-plus、qwen-audio-3.0-tts-plus、qwen-audio-3.1-tts-flash、\n  cosyvoice-v3.5-plus/v3.5-flash/v3-plus/v3-flash/v2。音色只能用于该模型。\n- prefix：音色名前缀，1–10 位字母或数字；音色 ID 形如 {target_model}-{prefix}-{唯一标识}。\n- language：样本语种代码（zh、en…，language_hints），cosyvoice-v2 不支持。\n- enable_preprocess（降噪增强）、max_prompt_audio_length（3–30 秒）：cosyvoice-v3-plus/v2 不支持。\n音色需审核：用 get_voice 确认 status=OK 后，再 text_to_speech(voice=音色ID) 合成。响应缺少音色 ID 时不自动重建。\n每个账号复刻/设计合计最多1000个音色。北京支持上述全部模型；新加坡支持3.1/3.0-tts-plus/flash和cosyvoice-v3-plus/flash。\n使用同地域API Key和workspace根域名；模型列出不代表账号授权。Qwen-Audio-Realtime协议尚未接入。\n',
+      '声音复刻：用 voice-enrollment（action=create_voice）从一段录音创建自定义音色，返回 voice（音色 ID）。创建免费。\n' +
+      '- audio：本地文件、公网 http/https URL 或 Base64 Data URI（WAV 16bit/MP3/M4A，≤10MB，≥16kHz，推荐10–20秒、最长60秒，含至少5秒清晰朗读）。\n' +
+      '  本地文件编码为Data URI，直接放入官方input.audio，不经过临时上传；oss://未获官方确认，仍拒绝。\n' +
+      '- url：旧公网URL别名，不能与audio同时传；内部统一发送input.audio（官方input.url已逐步废弃）。\n' +
+      '- target_model：后续合成用的模型；可选范围见下面的模型清单。音色只能用于该模型。\n' +
+      '- prefix：音色名前缀，1–10 位字母或数字；音色 ID 形如 {target_model}-{prefix}-{唯一标识}。\n' +
+      '- language：样本语种代码（zh、en…，language_hints）。\n' +
+      '- enable_preprocess（降噪增强）、max_prompt_audio_length（3–30 秒）：部分模型不支持。\n' +
+      '音色需审核：用 get_voice 确认 status=OK 后，再 text_to_speech(voice=音色ID) 合成。响应缺少音色 ID 时不自动重建。\n' +
+      '每个账号复刻/设计合计最多1000个音色。使用同地域API Key和workspace根域名；模型列出不代表账号授权。Qwen-Audio-Realtime协议尚未接入。\n',
+    capability: 'voice.clone',
     inputSchema: {
-      properties: {
-        audio: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Audio',
-        },
-        target_model: {
-          default: 'qwen-audio-3.0-tts-flash',
-          title: 'Target Model',
-          type: 'string',
-        },
-        prefix: {
-          default: 'custom',
-          title: 'Prefix',
-          type: 'string',
-        },
-        language: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Language',
-        },
-        enable_preprocess: {
-          anyOf: [
-            {
-              type: 'boolean',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Enable Preprocess',
-        },
-        max_prompt_audio_length: {
-          anyOf: [
-            {
-              type: 'number',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Max Prompt Audio Length',
-        },
-        url: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Url',
-        },
-      },
+      type: 'object',
       title: 'clone_voiceArguments',
-      type: 'object',
-    },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
       properties: {
-        ok: {
-          type: 'boolean',
-        },
+        audio: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        target_model: { type: 'string' },
+        prefix: { type: 'string', default: 'custom' },
+        language: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        enable_preprocess: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
+        max_prompt_audio_length: { anyOf: [{ type: 'number' }, { type: 'null' }], default: null },
+        url: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
-      additionalProperties: true,
     },
+    outputSchema: okOutput,
   },
   {
     name: 'design_voice',
     description:
-      '声音设计：用 voice-enrollment（action=create_voice）按文字描述创建音色，返回 voice（音色 ID）并保存试听音频。创建免费。\n- voice_prompt：声音描述，仅中英文，≤500 字符，如「沉稳的中年男性，语速缓慢，音色低沉有磁性」。描述声音特质，不要求模仿真人。\n- preview_text：试听文本，15–200 字符，中英文。\n- target_model：默认 qwen-audio-3.0-tts-flash；可选 qwen-audio-3.1-tts-plus、qwen-audio-3.0-tts-plus、qwen-audio-3.1-tts-flash、\n  cosyvoice-v3.5-plus/v3.5-flash/v3-plus/v3-flash。音色只能用于该模型。\n- prefix：1–10 位字母或数字；音色 ID 形如 {target_model}-vd-{prefix}-{唯一标识}。\n- language：zh 或 en，须与 preview_text 语种一致。sample_rate=16000/24000/48000，response_format=wav/mp3/pcm。\n音色 ID 先于试听文件记入本地任务；试听下载失败可用 recover_job 补交付，不会重新创建。设计带随机性，可多次生成择优。\n返回 job_id、job_state、artifacts、files、voice、target_model、error。北京地域能力。\n',
+      '声音设计：用 voice-enrollment（action=create_voice）按文字描述创建音色，返回 voice（音色 ID）并保存试听音频。创建免费。\n' +
+      '- voice_prompt：声音描述，仅中英文，≤500 字符，如「沉稳的中年男性，语速缓慢，音色低沉有磁性」。描述声音特质，不要求模仿真人。\n' +
+      '- preview_text：试听文本，15–200 字符，中英文。\n' +
+      '- target_model：合成时用的模型；可选范围见下面的模型清单。音色只能用于该模型。\n' +
+      '- prefix：1–10 位字母或数字；音色 ID 形如 {target_model}-vd-{prefix}-{唯一标识}。\n' +
+      '- language：zh 或 en，须与 preview_text 语种一致。sample_rate=16000/24000/48000，response_format=wav/mp3/pcm。\n' +
+      '音色 ID 先于试听文件记入本地任务；试听下载失败可用 recover_job 补交付，不会重新创建。设计带随机性，可多次生成择优。\n' +
+      '返回 job_id、job_state、artifacts、files、voice、target_model、error。北京地域能力。\n',
+    capability: 'voice.design',
     inputSchema: {
+      type: 'object',
+      title: 'design_voiceArguments',
       properties: {
-        voice_prompt: {
-          title: 'Voice Prompt',
-          type: 'string',
-        },
-        preview_text: {
-          title: 'Preview Text',
-          type: 'string',
-        },
-        target_model: {
-          default: 'qwen-audio-3.0-tts-flash',
-          title: 'Target Model',
-          type: 'string',
-        },
-        prefix: {
-          default: 'custom',
-          title: 'Prefix',
-          type: 'string',
-        },
-        language: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Language',
-        },
-        sample_rate: {
-          default: 24000,
-          title: 'Sample Rate',
-          type: 'integer',
-        },
-        response_format: {
-          default: 'wav',
-          title: 'Response Format',
-          type: 'string',
-        },
-        out_dir: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Out Dir',
-        },
+        voice_prompt: { type: 'string' },
+        preview_text: { type: 'string' },
+        target_model: { type: 'string' },
+        prefix: { type: 'string', default: 'custom' },
+        language: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        sample_rate: { type: 'integer', default: 24000 },
+        response_format: { type: 'string', default: 'wav' },
+        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
       required: ['voice_prompt', 'preview_text'],
-      title: 'design_voiceArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'edit_video',
     description:
-      'HappyHorse视频指令编辑：修改风格/元素，video为本地文件或公开URL，reference_images最多5张本地图片/URL。\n输入视频3–60秒，输出最多15秒，超15秒只取前15秒；详细文件限制见官方接口。\nresolution=720P/1080P；audio_setting=origin保留原音轨、auto由模型决定。\nparameters合并进官方parameters对象。异步计费任务，wait=0默认只提交，最多90秒；之后用get_job查进度，返回task_id/job_id。\n',
+      'HappyHorse视频指令编辑：修改风格/元素，video为本地文件或公开URL，reference_images为本地图片/URL。\n' +
+      '输入视频3–60秒，输出最多15秒，超15秒只取前15秒；详细文件限制见官方接口。\n' +
+      'audio_setting=origin保留原音轨、auto由模型决定。\n' +
+      'parameters合并进官方parameters对象。异步计费任务，wait=0默认只提交，最多90秒；之后用get_job查进度，返回task_id/job_id。\n',
     inputSchema: {
+      type: 'object',
+      title: 'edit_videoArguments',
       properties: {
-        video: {
-          title: 'Video',
-          type: 'string',
-        },
-        prompt: {
-          title: 'Prompt',
-          type: 'string',
-        },
+        video: { type: 'string' },
+        prompt: { type: 'string' },
         reference_images: {
-          anyOf: [
-            {
-              items: {
-                type: 'string',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
-          title: 'Reference Images',
         },
-        resolution: {
-          default: '720P',
-          title: 'Resolution',
-          type: 'string',
-        },
-        audio_setting: {
-          default: 'auto',
-          title: 'Audio Setting',
-          type: 'string',
-        },
-        watermark: {
-          default: false,
-          title: 'Watermark',
-          type: 'boolean',
-        },
-        seed: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Seed',
-        },
-        wait: {
-          default: 0,
-          maximum: 90,
-          minimum: 0,
-          title: 'Wait',
-          type: 'integer',
-        },
-        out_dir: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Out Dir',
-        },
+        resolution: { type: 'string' },
+        audio_setting: { type: 'string', default: 'auto' },
+        watermark: { type: 'boolean', default: false },
+        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
+        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
       },
       required: ['video', 'prompt'],
-      title: 'edit_videoArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'embed',
     description:
-      '百炼文本/多模态向量化。texts为文本列表；contents用[{"text":"猫"},{"image":"/absolute/cat.png"}]等官方结构。方舟 Doubao 向量模型用 volcengine-ark 的 embed。\n必须且只能选一项。多模态请显式指定model=qwen3-vl-embedding等；图片支持本地路径，视频需公开URL。\ndimensions设置维度；parameters透传模型支持的参数，如enable_fusion。返回向量、usage；include_response=true可取完整response。\n按输入计费，不自动建索引或知识库。\n',
+      '百炼文本/多模态向量化。texts为文本列表；contents用[{"text":"猫"},{"image":"/absolute/cat.png"}]等官方结构。方舟 Doubao 向量模型用 volcengine-ark 的 embed。\n' +
+      '必须且只能选一项。多模态请显式指定对应模型；图片支持本地路径，视频需公开URL。\n' +
+      'dimensions设置维度；parameters透传模型支持的参数，如enable_fusion。返回向量、usage；include_response=true可取完整response。\n' +
+      '按输入计费，不自动建索引或知识库。\n',
+    capability: 'text.embed',
     inputSchema: {
+      type: 'object',
+      title: 'embedArguments',
       properties: {
-        model: {
-          default: 'text-embedding-v4',
-          title: 'Model',
-          type: 'string',
-        },
+        model: { type: 'string' },
         texts: {
-          anyOf: [
-            {
-              items: {
-                type: 'string',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
-          title: 'Texts',
         },
         contents: {
           anyOf: [
-            {
-              items: {
-                additionalProperties: true,
-                type: 'object',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
+            { type: 'array', items: { type: 'object', additionalProperties: true } },
+            { type: 'null' },
           ],
           default: null,
-          title: 'Contents',
         },
-        dimensions: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Dimensions',
-        },
+        dimensions: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
         include_response: {
+          type: 'boolean',
           default: false,
           description: '返回原始响应，默认false',
-          title: 'Include Response',
-          type: 'boolean',
         },
       },
-      title: 'embedArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'generate_image',
     description:
-      '百炼生成或编辑图片；中英文字渲染选 qwen，多图融合选 wan，图层拆分/透明背景用 volcengine-ark。model=qwen（默认）、wan或z，也可传完整ID。qwen默认3.0支持文字和编辑，最多3张参考图、n<=6；wan最多9张参考图，非组图n<=4、group<=12；4K仅pro无参考非组图支持；z仅文生图，单张。images为本地路径或URL，size为档位或宽*高，默认不加watermark。返回job_id、job_state、files、artifacts、usage，交付失败可recover_job补下载。多张按生成数量计费。未列出的官方字段放parameters。完整参数与限制见get_tool_help。',
+      '百炼生成或编辑图片；中英文字渲染选 qwen，多图融合选 wan，图层拆分/透明背景用 volcengine-ark。' +
+      'images为本地路径或URL，size为档位或宽*高，默认不加watermark。返回job_id、job_state、files、artifacts、usage，交付失败可recover_job补下载。' +
+      '多张按生成数量计费。未列出的官方字段放parameters。完整参数与限制见get_tool_help。\n',
+    capability: 'image.generate',
+    modelParams: { size: 'resolution', n: 'count', seed: 'seed' },
     inputSchema: {
+      type: 'object',
+      title: 'generate_imageArguments',
       properties: {
-        prompt: {
-          title: 'Prompt',
-          type: 'string',
-        },
-        model: {
-          default: 'qwen',
-          title: 'Model',
-          type: 'string',
-        },
+        prompt: { type: 'string' },
+        model: { type: 'string' },
         images: {
-          anyOf: [
-            {
-              items: {
-                type: 'string',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
-          title: 'Images',
         },
-        size: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Size',
-        },
-        n: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'N',
-        },
-        group: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Group',
-        },
-        negative_prompt: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Negative Prompt',
-        },
-        prompt_extend: {
-          anyOf: [
-            {
-              type: 'boolean',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Prompt Extend',
-        },
-        seed: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Seed',
-        },
-        thinking: {
-          anyOf: [
-            {
-              type: 'boolean',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Thinking',
-        },
-        watermark: {
-          default: false,
-          title: 'Watermark',
-          type: 'boolean',
-        },
-        out_dir: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Out Dir',
-        },
+        size: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        n: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        group: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        negative_prompt: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        prompt_extend: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
+        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        thinking: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
+        watermark: { type: 'boolean', default: false },
+        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
       },
       required: ['prompt'],
-      title: 'generate_imageArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'generate_video',
     description:
-      '万相3.0生成视频，本地参考视频/音频会自动上传（volcengine-ark 的 Seedance 需公网 URL）；model=wan（默认）或wan-fast。支持文生、首帧、首尾帧、图片/视频/音频参考及file文档或link网页；file/link二选一且需prompt_extend，参考素材与首尾帧互斥。素材可用本地路径或URL，本地文件自动上传临时存储。resolution=1080P/720P/480P；ratio默认adaptive；duration=2–30或-1；audio默认true。wait默认0只提交，最多90秒轮询。返回task_id/job_id，之后用get_job查进度并自动下载。按输出秒数计费。参考数量与完整模型参数见get_tool_help。',
+      '生成视频，本地参考视频/音频会自动上传（volcengine-ark 的 Seedance 需公网 URL）。' +
+      '支持文生、首帧、首尾帧、图片/视频/音频参考及file文档或link网页；file/link二选一且需prompt_extend，参考素材与首尾帧互斥。' +
+      '素材可用本地路径或URL，本地文件自动上传临时存储。wait默认0只提交，最多90秒轮询。' +
+      '返回task_id/job_id，之后用get_job查进度并自动下载。按输出秒数计费。参考数量与完整模型参数见get_tool_help。\n',
+    capability: 'video.generate',
+    modelParams: {
+      resolution: 'resolution',
+      ratio: 'aspectRatio',
+      duration: 'duration',
+      seed: 'seed',
+    },
     inputSchema: {
+      type: 'object',
+      title: 'generate_videoArguments',
       properties: {
-        prompt: {
-          default: '',
-          title: 'Prompt',
-          type: 'string',
-        },
-        model: {
-          default: 'wan',
-          title: 'Model',
-          type: 'string',
-        },
-        first_frame: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'First Frame',
-        },
-        last_frame: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Last Frame',
-        },
+        prompt: { type: 'string', default: '' },
+        model: { type: 'string' },
+        first_frame: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        last_frame: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         reference_images: {
-          anyOf: [
-            {
-              items: {
-                type: 'string',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
-          title: 'Reference Images',
         },
         reference_videos: {
-          anyOf: [
-            {
-              items: {
-                type: 'string',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
-          title: 'Reference Videos',
         },
         reference_audios: {
-          anyOf: [
-            {
-              items: {
-                type: 'string',
-              },
-              type: 'array',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
-          title: 'Reference Audios',
         },
-        file: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'File',
-        },
-        link: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Link',
-        },
-        resolution: {
-          default: '1080P',
-          title: 'Resolution',
-          type: 'string',
-        },
-        ratio: {
-          default: 'adaptive',
-          title: 'Ratio',
-          type: 'string',
-        },
-        duration: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Duration',
-        },
-        audio: {
-          default: true,
-          title: 'Audio',
-          type: 'boolean',
-        },
-        prompt_extend: {
-          anyOf: [
-            {
-              type: 'boolean',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Prompt Extend',
-        },
-        seed: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Seed',
-        },
-        watermark: {
-          default: false,
-          title: 'Watermark',
-          type: 'boolean',
-        },
-        wait: {
-          default: 0,
-          maximum: 90,
-          minimum: 0,
-          title: 'Wait',
-          type: 'integer',
-        },
-        out_dir: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Out Dir',
-        },
+        file: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        link: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        resolution: { type: 'string' },
+        ratio: { type: 'string' },
+        duration: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        audio: { type: 'boolean', default: true },
+        prompt_extend: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
+        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        watermark: { type: 'boolean', default: false },
+        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
+        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
       },
-      title: 'generate_videoArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'get_job',
     description:
-      '查任务进度和结果，job_id 或 task_id 二选一（都给时须属于同一任务）。\n视频类任务（generate_video/edit_video/animate_portrait）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n完成即下载到原输出目录；已结束的任务只读本地记录。只给 task_id 且本地没有记录时，新建本地记录再查询。\n不会重新提交生成。返回 job_state、completed、files、usage；ok=false 表示查询或交付失败。\n',
+      '查任务进度和结果，job_id 或 task_id 二选一（都给时须属于同一任务）。\n' +
+      '视频类任务（generate_video/edit_video/animate_portrait）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n' +
+      '完成即下载到原输出目录；已结束的任务只读本地记录。只给 task_id 且本地没有记录时，新建本地记录再查询。\n' +
+      '不会重新提交生成。返回 job_state、completed、files、usage；ok=false 表示查询或交付失败。\n',
     inputSchema: {
+      type: 'object',
+      title: 'get_jobArguments',
       properties: {
-        job_id: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Job Id',
-        },
-        task_id: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Task Id',
-        },
-        wait: {
-          default: 0,
-          maximum: 90,
-          minimum: 0,
-          title: 'Wait',
-          type: 'integer',
-        },
+        job_id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        task_id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
         include_response: {
+          type: 'boolean',
           default: false,
           description: '返回原始响应，默认false',
-          title: 'Include Response',
-          type: 'boolean',
         },
       },
-      title: 'get_jobArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'get_tool_help',
     description: '按工具名读取完整用法、模型限制与示例，不联网、不计费。',
     inputSchema: {
-      properties: {
-        tool: {
-          title: 'Tool',
-          type: 'string',
-        },
-      },
-      required: ['tool'],
+      type: 'object',
       title: 'get_tool_helpArguments',
-      type: 'object',
+      properties: { tool: { type: 'string' } },
+      required: ['tool'],
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'get_voice',
     description:
-      '查询自定义音色详情（voice-enrollment query_voice）：status（DEPLOYING 审核中 / OK 可用 / UNDEPLOYED 未通过）、\ntarget_model（合成时必须用的模型）、创建时间等。kind 旧值 clone/design/cosyvoice 等价；max_pages 仅为兼容旧调用保留，不再使用。\n',
+      '查询自定义音色详情（voice-enrollment query_voice）：status（DEPLOYING 审核中 / OK 可用 / UNDEPLOYED 未通过）、\n' +
+      'target_model（合成时必须用的模型）、创建时间等。kind 旧值 clone/design/cosyvoice 等价；max_pages 仅为兼容旧调用保留，不再使用。\n',
     inputSchema: {
+      type: 'object',
+      title: 'get_voiceArguments',
       properties: {
-        voice: {
-          title: 'Voice',
-          type: 'string',
-        },
-        kind: {
-          default: 'enrollment',
-          title: 'Kind',
-          type: 'string',
-        },
-        max_pages: {
-          anyOf: [
-            {
-              maximum: 100,
-              minimum: 1,
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Max Pages',
-        },
+        voice: { type: 'string' },
+        kind: { type: 'string', default: 'enrollment' },
+        max_pages: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
       },
       required: ['voice'],
-      title: 'get_voiceArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'list_capabilities',
     description:
       '列出百炼MCP工具和官方来源，不联网，不代表账号权限；各工具已于2026-10-13用北京地域账号做过小样本云端验证。',
-    inputSchema: {
-      properties: {},
-      title: 'list_capabilitiesArguments',
-      type: 'object',
-    },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    inputSchema: { type: 'object', title: 'list_capabilitiesArguments', properties: {} },
+    outputSchema: okOutput,
   },
   {
     name: 'list_jobs',
     description:
       '列出最近本地任务，不联网。工具超时未拿到job_id时可按时间/model/summary找回记录；limit=1–100，kind可筛选image/video/tts等。',
     inputSchema: {
-      properties: {
-        limit: {
-          default: 20,
-          maximum: 100,
-          minimum: 1,
-          title: 'Limit',
-          type: 'integer',
-        },
-        kind: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Kind',
-        },
-      },
+      type: 'object',
       title: 'list_jobsArguments',
-      type: 'object',
-    },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
       properties: {
-        ok: {
-          type: 'boolean',
-        },
+        limit: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+        kind: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
-      additionalProperties: true,
     },
+    outputSchema: okOutput,
   },
   {
     name: 'list_models',
     description:
-      '查询百炼官方模型目录（包括视频等全模态），按名称过滤，最多max_pages页。\n返回模型ID及能力、快照、上下文、价格等官方字段；complete标记是否取完分页。\n目录存在不等于当前API Key拥有调用权限，account_verified固定false；权限需单独核实。\n',
+      '查询百炼官方模型目录（包括视频等全模态），按名称过滤，最多max_pages页。\n' +
+      '返回模型ID及能力、快照、上下文、价格等官方字段；complete标记是否取完分页。\n' +
+      '目录存在不等于当前API Key拥有调用权限，account_verified固定false；权限需单独核实。\n',
     inputSchema: {
-      properties: {
-        keyword: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Keyword',
-        },
-        max_pages: {
-          default: 20,
-          maximum: 100,
-          minimum: 1,
-          title: 'Max Pages',
-          type: 'integer',
-        },
-      },
+      type: 'object',
       title: 'list_modelsArguments',
-      type: 'object',
-    },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
       properties: {
-        ok: {
-          type: 'boolean',
-        },
+        keyword: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        max_pages: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
       },
-      additionalProperties: true,
     },
+    outputSchema: okOutput,
   },
   {
     name: 'list_voices',
     description:
-      '分页查询 voice-enrollment（Qwen-Audio-TTS/CosyVoice）下的全部自定义音色，复刻和设计音色在同一列表。\nkind 旧值 clone/design/cosyvoice 仍可传，均等价于 enrollment（已下线的 Qwen 复刻/设计音色无法再用于合成）。\npage_index 从 0 起，page_size=1–100，prefix 按音色名前缀过滤。返回 voice_id、status、创建时间等官方字段。不会创建或删除音色。\n',
+      '分页查询 voice-enrollment 下的全部自定义音色，复刻和设计音色在同一列表。\n' +
+      'kind 旧值 clone/design/cosyvoice 仍可传，均等价于 enrollment（已下线的 Qwen 复刻/设计音色无法再用于合成）。\n' +
+      'page_index 从 0 起，page_size=1–100，prefix 按音色名前缀过滤。返回 voice_id、status、创建时间等官方字段。不会创建或删除音色。\n',
     inputSchema: {
-      properties: {
-        kind: {
-          default: 'enrollment',
-          title: 'Kind',
-          type: 'string',
-        },
-        page_index: {
-          default: 0,
-          minimum: 0,
-          title: 'Page Index',
-          type: 'integer',
-        },
-        page_size: {
-          default: 20,
-          maximum: 100,
-          minimum: 1,
-          title: 'Page Size',
-          type: 'integer',
-        },
-        prefix: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Prefix',
-        },
-      },
+      type: 'object',
       title: 'list_voicesArguments',
-      type: 'object',
-    },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
       properties: {
-        ok: {
-          type: 'boolean',
-        },
+        kind: { type: 'string', default: 'enrollment' },
+        page_index: { type: 'integer', default: 0, minimum: 0 },
+        page_size: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+        prefix: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
-      additionalProperties: true,
     },
+    outputSchema: okOutput,
   },
   {
     name: 'recover_job',
     description:
-      '修复交付或续做（正常查进度用 get_job）：视频查原task_id；图片/设计音色试听只补下载、不重建音色；TTS跳过已合成分段并继续尚未提交的分段（这些分段仍会计费）。\n状态未知的同步请求不自动重试。校验完整文件后跳过；wait=0视频查一次，最多90秒。临时结果过期可能无法恢复。\n',
+      '修复交付或续做（正常查进度用 get_job）：视频查原task_id；图片/设计音色试听只补下载、不重建音色；TTS跳过已合成分段并继续尚未提交的分段（这些分段仍会计费）。\n' +
+      '状态未知的同步请求不自动重试。校验完整文件后跳过；wait=0视频查一次，最多90秒。临时结果过期可能无法恢复。\n',
     inputSchema: {
+      type: 'object',
+      title: 'recover_jobArguments',
       properties: {
-        job_id: {
-          title: 'Job Id',
-          type: 'string',
-        },
-        wait: {
-          default: 0,
-          maximum: 90,
-          minimum: 0,
-          title: 'Wait',
-          type: 'integer',
-        },
+        job_id: { type: 'string' },
+        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
         include_response: {
+          type: 'boolean',
           default: false,
           description: '返回原始响应，默认false',
-          title: 'Include Response',
-          type: 'boolean',
         },
       },
       required: ['job_id'],
-      title: 'recover_jobArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'rerank',
     description:
-      '对候选文档按与query的相关性排序，返回原索引和relevance_score；top_n控制数量，return_documents返回原文。\n所有模型（含qwen3-rerank）统一走原生text-rerank接口。\n分数用于本次请求内比较。按输入计费，模型及地域权限以服务端为准。\n',
+      '对候选文档按与query的相关性排序，返回原索引和relevance_score；top_n控制数量，return_documents返回原文。\n' +
+      '所有模型统一走原生text-rerank接口。分数用于本次请求内比较。按输入计费，模型及地域权限以服务端为准。\n',
+    capability: 'text.embed',
     inputSchema: {
+      type: 'object',
+      title: 'rerankArguments',
       properties: {
-        query: {
-          title: 'Query',
-          type: 'string',
-        },
-        documents: {
-          items: {
-            type: 'string',
-          },
-          title: 'Documents',
-          type: 'array',
-        },
-        model: {
-          default: 'qwen3.7-text-rerank',
-          title: 'Model',
-          type: 'string',
-        },
-        top_n: {
-          anyOf: [
-            {
-              type: 'integer',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Top N',
-        },
-        return_documents: {
-          default: false,
-          title: 'Return Documents',
-          type: 'boolean',
-        },
+        query: { type: 'string' },
+        documents: { type: 'array', items: { type: 'string' } },
+        model: { type: 'string' },
+        top_n: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        return_documents: { type: 'boolean', default: false },
         include_response: {
+          type: 'boolean',
           default: false,
           description: '返回原始响应，默认false',
-          title: 'Include Response',
-          type: 'boolean',
         },
       },
       required: ['query', 'documents'],
-      title: 'rerankArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'speech_to_text',
     description:
-      '用千问 ASR 把一段音频转成文字，同时返回识别出的语种和情绪。超过 10MB / 5 分钟、需要说话人分离或热词时用 doubao-speech 的 speech_to_text。\n\n- audio：本地绝对路径或 URL。本地文件支持 mp3、wav、m4a、aac、flac、ogg、opus、amr、webm，不超过 10MB，\n  时长不超过 5 分钟。更长的音频先切段再分别识别。\n- context：背景文字，提高专有名词、人名、术语的识别准确率，如「这是一段关于 Kubernetes 和 Istio 的技术分享」。\n- language：已知语种时指定（zh、en、ja、ko、yue 等），能提高准确率；不传自动识别。\n- itn：是否把口语数字转成阿拉伯数字（如「二零二六年」→「2026年」），默认不转。\n- model：只支持 qwen3-asr-flash。其日期快照（如 qwen3-asr-flash-2026-02-10）已于 2026-10-10 下线，本地直接拒绝；\n  filetrans/realtime、Qwen-Audio-ASR 及 Fun-ASR 使用不同协议。\n- parameters：官方请求体里本工具没单独列出的字段（OpenAI 兼容接口顶层），深度合并，不能覆盖 model/messages/stream。\n\nQwen3-ASR-Flash 的 OpenAI 兼容接口不返回时间戳；情感识别固定开启，无需额外开关。\n按音频时长计费。返回 ok、model、text、language、emotion、usage、error。\n',
+      '用千问 ASR 把一段音频转成文字，同时返回识别出的语种和情绪。超过 10MB / 5 分钟、需要说话人分离或热词时用 doubao-speech 的 speech_to_text。\n' +
+      '\n- audio：本地绝对路径或 URL。本地文件支持 mp3、wav、m4a、aac、flac、ogg、opus、amr、webm，不超过 10MB，时长不超过 5 分钟。更长的音频先切段再分别识别。\n' +
+      '- context：背景文字，提高专有名词、人名、术语的识别准确率，如「这是一段关于 Kubernetes 和 Istio 的技术分享」。\n' +
+      '- language：已知语种时指定（zh、en、ja、ko、yue 等），能提高准确率；不传自动识别。\n' +
+      '- itn：是否把口语数字转成阿拉伯数字（如「二零二六年」→「2026年」），默认不转。\n' +
+      '- parameters：官方请求体里本工具没单独列出的字段（OpenAI 兼容接口顶层），深度合并，不能覆盖 model/messages/stream。\n' +
+      '\nQwen3-ASR-Flash 的 OpenAI 兼容接口不返回时间戳；情感识别固定开启，无需额外开关。\n' +
+      '按音频时长计费。返回 ok、model、text、language、emotion、usage、error。\n',
+    capability: 'audio.transcribe',
     inputSchema: {
+      type: 'object',
+      title: 'speech_to_textArguments',
       properties: {
-        audio: {
-          title: 'Audio',
-          type: 'string',
-        },
-        context: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Context',
-        },
-        language: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Language',
-        },
-        itn: {
-          default: false,
-          title: 'Itn',
-          type: 'boolean',
-        },
-        model: {
-          default: 'qwen3-asr-flash',
-          title: 'Model',
-          type: 'string',
-        },
+        audio: { type: 'string' },
+        context: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        language: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        itn: { type: 'boolean', default: false },
+        model: { type: 'string' },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
       },
       required: ['audio'],
-      title: 'speech_to_textArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
   {
     name: 'text_to_speech',
     description:
-      '用百炼非实时 TTS 把文字合成语音，保存为 wav（24kHz 单声道），返回文件路径。按模型名自动选择协议。\n中文系统音色、方言、SRT 字幕、超长文本也可用 doubao-speech 的 text_to_speech。\n\n- model（别名或完整 ID）：\n  - 不传：voice 是 clone_voice/design_voice 生成的自定义音色 ID（以 {target_model}- 开头）时自动用该 target_model，\n    否则用 "flash" → qwen3-tts-flash（multimodal-generation 协议，系统音色，不支持指令）。\n  - "audio" → qwen-audio-3.0-tts-flash，"audio-plus" → qwen-audio-3.0-tts-plus，也可传 qwen-audio-3.1-tts-plus / qwen-audio-3.1-tts-flash；\n    "cosyvoice" → cosyvoice-v3.5-plus，也可传 cosyvoice-v3.5-flash / v3-plus / v3-flash / v2。\n    这些走 SpeechSynthesizer 协议，支持系统音色、自定义音色（须与创建时的 target_model 一致）和 instructions。\n- text：要朗读的文字。长文本自动按句切成 250 字以内的段合成再拼接（url 交付方式下不拼接，需自己分段）。\n- voice：qwen3-tts-flash 默认 Cherry，可选 Serena、Ethan、Chelsie、Momo、Vivian、Moon、Neil、Arthur 等系统音色。\n  Qwen-Audio-TTS/CosyVoice 必须指定：对应模型的系统音色（如 longanhuan_v3.6，见官方音色列表，不能跨模型混用；\n  cosyvoice-v3.5 系列没有系统音色）或自定义音色 ID。\n- instructions：语气/情感/方言指令（官方字段 instruction），如「用温柔的语气，语速稍慢」「请用河南话表达」。\n  Qwen-Audio-TTS：系统音色按官方音色列表选择；支持方言指令的系统音色及复刻音色可用 instructions="请讲上海话。"，设计音色暂不支持方言。\n  CosyVoice 不超过 100 字符（汉字按 2 计）；Qwen-Audio-TTS 官方未公布同一上限，交服务端校验。仅 Qwen-Audio-TTS 与 cosyvoice-v3.5/v3 系列支持；cosyvoice-v3-plus/v3-flash 的\n  系统音色须用官方音色列表规定的固定指令，cosyvoice-v3-plus 的自定义音色不支持；qwen3-tts-flash 不支持。\n- language：qwen3-tts-flash 写 Chinese、English、Japanese 等；Qwen-Audio-TTS/CosyVoice 写语种代码（zh、en、ja…，\n  对应 language_hints）。qwen-audio-3.1-tts-flash 可用 other 合成其他官方支持语种，建议在 instructions 中说明语种，且与文本一致。不传自动识别。\n- out_dir：输出目录，默认 BAILIAN_OUT_DIR 下按时间戳新建。\n- parameters：qwen3-tts-flash 合并进官方 parameters 对象；Qwen-Audio-TTS/CosyVoice 合并进官方 input 对象\n  （如 rate、pitch、volume、seed、hot_fix），不能覆盖 text/voice/model，local 交付时 format 只能是 wav。\n\n按字符（qwen-audio-3.1-tts-flash 按 token）计费。返回 job_id、job_state、artifacts、request_id、ok、model、files、\nchunks（分了几段）、usage、error。url 交付方式下 files 是 24 小时内有效的链接。\n',
+      '用百炼非实时 TTS 把文字合成语音，保存为 wav（24kHz 单声道），返回文件路径。按模型名自动选择协议。\n' +
+      '中文系统音色、方言、SRT 字幕、超长文本也可用 doubao-speech 的 text_to_speech。\n' +
+      '\n- model（别名或完整 ID）：不传时按音色 ID 前缀（{target_model}- 开头）自动推断；' +
+      'voice 是复刻/设计生成的自定义音色 ID 时用该 target_model；其余情况见下面的模型清单与默认说明。\n' +
+      '- text：要朗读的文字。长文本自动按句切成 250 字以内的段合成再拼接（url 交付方式下不拼接，需自己分段）。\n' +
+      '- voice：系统音色或自定义音色 ID；各模型可选的系统音色见官方音色列表，不能跨模型混用。\n' +
+      '- instructions：语气/情感/方言指令（官方字段 instruction），如「用温柔的语气，语速稍慢」「请讲上海话。」。\n' +
+      '  CosyVoice 不超过 100 字符（汉字按 2 计）；Qwen-Audio-TTS 官方未公布同一上限，交服务端校验。\n' +
+      '- language：qwen3-tts-flash 写 Chinese、English、Japanese 等；Qwen-Audio-TTS/CosyVoice 写语种代码（zh、en、ja…，对应 language_hints）。不传自动识别。\n' +
+      '- out_dir：输出目录，默认 BAILIAN_OUT_DIR 下按时间戳新建。\n' +
+      '- parameters：qwen3-tts-flash 合并进官方 parameters 对象；Qwen-Audio-TTS/CosyVoice 合并进官方 input 对象' +
+      '  （如 rate、pitch、volume、seed、hot_fix），不能覆盖 text/voice/model，local 交付时 format 只能是 wav。\n' +
+      '\n按字符计费。返回 job_id、job_state、artifacts、request_id、ok、model、files、chunks（分了几段）、usage、error。url 交付方式下 files 是 24 小时内有效的链接。\n',
+    capability: 'audio.speech',
     inputSchema: {
+      type: 'object',
+      title: 'text_to_speechArguments',
       properties: {
-        text: {
-          title: 'Text',
-          type: 'string',
-        },
-        voice: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Voice',
-        },
-        instructions: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Instructions',
-        },
-        language: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Language',
-        },
-        model: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Model',
-        },
-        out_dir: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          title: 'Out Dir',
-        },
+        text: { type: 'string' },
+        voice: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        instructions: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        language: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        model: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
-          anyOf: [
-            {
-              additionalProperties: true,
-              type: 'object',
-            },
-            {
-              type: 'null',
-            },
-          ],
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-          title: 'Parameters',
         },
       },
       required: ['text'],
-      title: 'text_to_speechArguments',
-      type: 'object',
     },
-    outputSchema: {
-      type: 'object',
-      required: ['ok'],
-      properties: {
-        ok: {
-          type: 'boolean',
-        },
-      },
-      additionalProperties: true,
-    },
+    outputSchema: okOutput,
   },
-]
+] satisfies CatalogEntry[]

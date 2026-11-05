@@ -105,12 +105,26 @@ G2 的「不缩水」按**全量能力**核对（测试中启用全部组），�
 
 ## inputSchema 的模型参数部分如何派生
 
-- 平台特有字段来自 `src/catalog/*.ts`（由 `scripts/gen-catalog.mjs` 从基线 JSON 生成）。
-- `model` 字段的默认值与说明由 `src/derive.ts` 从 `ModelDeclaration` +
-  `capabilityInputSchema()` / `declarationJsonSchema()` / `selectDefaultModel()` / `lifecycleNotice()`
-  派生：保留基线字段的形状（`type: string` 或 `anyOf`），只替换硬编码默认值与说明；
-  声明 `optionsSchema` 带来的上下限 / 默认值只增不覆盖地并入。
-- 生成器代码不含任何模型 ID、上下限数值、默认值或生命周期字符串字面量（AGENTS.md 硬规则）。
+MCP 工具的 schema 分两层：
+
+- **平台特有部分**写在 `packages/mcp/src/catalog/*.ts`。这些是手写源码，只描述字段形状、
+  平台开关和参数含义（例如 `web_search`、`out_dir`、`previous_response_id`）。
+  目录里**不出现模型 ID、上下限数值、默认值或生命周期字符串**。
+- **与模型有关的部分**在运行时由 `packages/mcp/src/derive.ts` 从 `ModelDeclaration` 派生：
+  - `model` 字段的可选 ID 清单、说明与默认值（`selectUsableDefaultModel()` 选，只允许 `active`）；
+  - 随模型变化的参数范围（时长、分辨率、画幅、张数、种子、语速、字数上限等），
+    由 `core` 的 `deriveModelParam()` 从 `ModelLimits` / `MediaRequirements` 翻译成 JSON Schema 约束；
+  - 工具说明里的「可用模型」清单，逐模型列出它的上限与生命周期提示（`lifecycleNotice()`）；
+  - 声明 `optionsSchema` 带来的上下限 / 默认值，只增不覆盖地并入。
+
+改一份声明，MCP 工具的 schema 与说明就跟着变——`packages/mcp/test/declaration-driven.test.ts`
+在内存里改声明并断言生成结果随之变化。
+
+各平台的参数与能力的对应关系写在目录条目的 `capability` 与 `modelParams` 上：
+`capability` 说明这个工具用哪项归一化能力挑模型，`modelParams` 说明哪些参数随模型变化
+（`duration` / `resolution` / `aspectRatio` / `count` / `seed` / `speed` / `promptLength` / `references`）。
+
+生成器代码不含任何模型 ID、上下限数值、默认值或生命周期字符串字面量（AGENTS.md 硬规则）。
 
 ## `voice.list` 语义与工具名说明
 
@@ -132,8 +146,8 @@ vp test run packages/mcp
 # 单包类型检查（根 tsconfig.base.json 已配 paths / allowImportingTsExtensions，无需先 build）
 pnpm --filter @modelbay/mcp typecheck
 
-# 重新生成工具目录（改了 docs/inventory/mcp-*.json 后；源码用无后缀相对导入）
-node scripts/gen-catalog.mjs && vp check --fix packages/mcp/src/catalog
+# 目录是手写源码，改完直接格式化
+vp check --fix packages/mcp/src/catalog
 
 # 覆盖率（pnpm test:coverage 全量跑时 packages/mcp 行覆盖不低于 80% 门槛）
 ```

@@ -1,4 +1,10 @@
-/** 工具目录加载器。数据由 scripts/gen-catalog.mjs 从 docs/inventory/mcp-*.json 生成。 */
+/**
+ * 工具目录加载器。
+ *
+ * 目录文件（`ark.ts` / `minimax.ts` / `bailian.ts` / `doubao-speech.ts`）是手写源码：
+ * 只描述与模型无关的平台特有部分。与模型有关的部分由 `src/derive.ts` 在运行时
+ * 从 `ModelDeclaration` 派生，见 `derive.ts` 的注释。
+ */
 import ark from './ark'
 import minimax from './minimax'
 import bailian from './bailian'

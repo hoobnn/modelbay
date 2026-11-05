@@ -1,7 +1,7 @@
 /** 从 ModelDeclaration + 适配器 + 工具目录生成 MCP 工具集合。 */
 import type { ModelDeclaration, PlatformAdapter } from '@modelbay/core'
 import { cloneCatalog } from './catalog/index'
-import { deriveAnnotations, deriveInputSchema } from './derive'
+import { deriveAnnotations, deriveInputSchema, deriveToolDescription } from './derive'
 import { deriveMeta, EXTRA_TOOL_NAMES } from './tool-meta'
 import type {
   CatalogEntry,
@@ -74,7 +74,8 @@ function buildTool(
   nodeOnly: Set<string>,
 ): GeneratedTool[] {
   const meta = deriveMeta(platform, entry.name)
-  const capability = meta.capability ?? defaultCapability
+  // 目录里写的能力优先；没写就用工具元数据映射的能力。
+  const capability = entry.capability ?? meta.capability ?? defaultCapability
   const route = buildRoute(meta, capability)
 
   // nodeOnly 是适配器声明的可选 node: 子路径能力，强制归入可选组。
@@ -82,10 +83,12 @@ function buildTool(
 
   const inputSchema = deriveInputSchema(entry, models, capability)
   const annotations = deriveAnnotations(meta.nature)
+  // 工具说明里的模型清单与各模型上限由声明派生，改声明这段文字就跟着变。
+  const description = deriveToolDescription(entry.description, models, capability)
 
   const tool: GeneratedTool = {
     name: entry.name,
-    description: entry.description,
+    description,
     inputSchema,
     ...(entry.outputSchema ? { outputSchema: structuredClone(entry.outputSchema) } : {}),
     annotations,
@@ -98,7 +101,7 @@ function buildTool(
     result.push({
       ...structuredClone(tool),
       name: alias,
-      description: `${entry.description}\n（${entry.name} 的跨平台统一命名别名，保留兼容）`,
+      description: `${description}\n（${entry.name} 的跨平台统一命名别名，保留兼容）`,
       aliasOf: entry.name,
     })
   }

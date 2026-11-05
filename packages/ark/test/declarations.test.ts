@@ -5,7 +5,7 @@ import {
   type ModelDeclaration,
   type ModelSource,
 } from '@modelbay/core'
-import { all } from '../src/declarations'
+import { allModels as all } from '../src/declarations'
 import { synthesizePlanSpeech } from '../src/speech'
 import { fakeContext, jsonResponse } from './helpers'
 
@@ -57,7 +57,7 @@ describe('默认模型只能选 active', () => {
 })
 
 describe('声明加载', () => {
-  it('all 是声明数组；生成前为空数组兜底，生成后每项都有 canonicalId', () => {
+  it('all 是声明数组，每项都有 canonicalId', () => {
     expect(Array.isArray(all)).toBe(true)
     for (const item of all) expect(item.canonicalId).toContain('/')
   })

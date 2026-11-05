@@ -19,7 +19,7 @@ import {
   type PlatformAdapter,
   type SubmitResult,
 } from '@modelbay/core'
-import { all } from './declarations'
+import { allModels as all } from './declarations'
 import { chatCompletion } from './chat'
 import { asJson, request, type Json, type TransportMessages } from './http'
 import { normalizedBase } from './config'
@@ -32,7 +32,7 @@ type Kind = 'openai' | 'compatible'
 
 /** Channels covered by this package. */
 export const channels: string[] = ['openai', 'openai-compatible']
-/** All declared models (empty until the declarations task lands). */
+/** OpenAI 与 OpenAI 兼容渠道的全部模型声明。 */
 export const models = all
 
 function label(kind: Kind): string {

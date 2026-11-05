@@ -113,10 +113,11 @@ describe('deriveInputSchema 合并', () => {
   const entry = loadCatalog('ark').find((item) => item.name === 'chat')!
   const schema = deriveInputSchema(entry, fakeModels, 'text.chat')
 
-  it('覆盖基线里硬编码的 model 默认值，改用声明派生', () => {
+  it('目录里不写死模型默认值，改用声明派生', () => {
     expect(schema.properties?.model?.type).toBe('string')
     expect(schema.properties?.model?.default).toBe('ark:chat-pro')
-    expect(entry.inputSchema.properties?.model?.default).toBe('pro') // 基线里是硬编码占位
+    // 目录是手写的平台特有定义，model 的默认值不在里面
+    expect(entry.inputSchema.properties?.model?.default).toBeUndefined()
     expect(String(schema.properties?.model?.description)).toContain('fake/chat-pro')
   })
 

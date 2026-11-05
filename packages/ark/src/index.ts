@@ -20,7 +20,7 @@ import {
   type PlatformAdapter,
   type SubmitResult,
 } from '@modelbay/core'
-import { all } from './declarations'
+import { allModels as all } from './declarations'
 import { chatCompletion } from './chat'
 import {
   cancelVideo,
@@ -47,7 +47,7 @@ type Plane = 'api' | 'plan'
 
 /** Channels covered by this package. */
 export const channels: string[] = ['ark', 'ark-plan']
-/** All declared models (empty until the declarations task lands). */
+/** 方舟两个渠道（按量 / 套餐）的全部模型声明。 */
 export const models = all
 
 function planeBase(plane: Plane): string {

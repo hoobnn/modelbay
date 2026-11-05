@@ -19,6 +19,7 @@ export * from './reference-tokens'
 // 0003 能力划分、声明格式、运行时契约（G1/G4/G5）
 export * from './capabilities'
 export * from './declarations'
+export * from './model-limits'
 export * from './schema'
 export * from './runtime'
 export * from './adapter'

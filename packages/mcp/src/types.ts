@@ -50,13 +50,11 @@ export interface MCPTool {
   annotations: ToolAnnotations
 }
 
-/** 目录条目：基线清单的纯数据投影（无 annotations）。 */
-export interface CatalogEntry {
-  name: string
-  description: string
-  inputSchema: JsonSchema
-  outputSchema?: JsonSchema
-}
+/**
+ * 目录条目：手写的平台特有工具定义。
+ * 形状见 `src/catalog/types.ts`（那里还有 `modelParams` 等模型映射字段）。
+ */
+export type { CatalogEntry } from './catalog/types'
 
 /** tools/call 的路由描述。 */
 export type ToolRoute =
