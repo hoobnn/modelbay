@@ -64,12 +64,12 @@ describe('arkPlanAdapter：套餐数据面', () => {
     const { ctx, fetch } = fakeContext([jsonResponse(recorded.response.body)], {
       secret: { ARK_AGENT_PLAN_API_KEY: 'sk-recorded-key' },
     })
-    await arkPlanAdapter.submit(request('text.chat', 'ark-plan:doubao-seedream-5-0-pro'), ctx)
+    await arkPlanAdapter.submit(request('text.chat', 'ark-plan:doubao-seedream-5.0-pro'), ctx)
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions')
     const body = JSON.parse(String(init.body))
-    // 套餐概览页上写的是短横线的 doubao-seedream-5-0-pro。
-    expect(body.model).toBe('doubao-seedream-5-0-pro')
+    // 套餐模型目录接口返回的是点号的 doubao-seedream-5.0-pro。
+    expect(body.model).toBe('doubao-seedream-5.0-pro')
   })
 
   it('按量 ID 传进套餐渠道时也换成套餐页上的模型名', async () => {
@@ -82,7 +82,7 @@ describe('arkPlanAdapter：套餐数据面', () => {
       ctx,
     )
     const [, init] = fetch.mock.calls[0] as [string, RequestInit]
-    expect(JSON.parse(String(init.body)).model).toBe('doubao-seedream-5-0-pro')
+    expect(JSON.parse(String(init.body)).model).toBe('doubao-seedream-5.0-pro')
   })
 
   it('套餐 TTS 经 @modelbay/doubao-speech 真正复用', async () => {

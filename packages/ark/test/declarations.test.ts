@@ -7,7 +7,7 @@ import {
 } from '@modelbay/core'
 import { allModels as all } from '../src/declarations'
 import { synthesizePlanSpeech } from '../src/speech'
-import { fakeContext, jsonResponse } from './helpers'
+import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
 
 const source: ModelSource = { url: 'https://example.test/docs', checkedAt: '2026-11-04' }
 
@@ -64,25 +64,30 @@ describe('声明加载', () => {
 })
 
 describe('方舟套餐渠道的 ID', () => {
-  // 官方「套餐概览」页（2026-11-05 核对）上的写法：点号 / 短横线照抄。
-  const PLAN_IDS: Record<string, string> = {
-    'volc/doubao-seedream-5-0-pro-260628': 'doubao-seedream-5-0-pro',
-    'volc/doubao-seedream-5-0-flash-260915': 'doubao-seedream-5.0-flash',
-    'volc/doubao-seedance-2-0-260128': 'doubao-seedance-2.0',
-    'volc/doubao-seedance-2-0-fast-260128': 'doubao-seedance-2.0-fast',
-    'volc/doubao-seedance-2-0-mini-260615': 'doubao-seedance-2.0-mini',
-    'volc/doubao-seedance-2-5-260628': 'doubao-seedance-2.5',
-    'volc/doubao-embedding-vision': 'doubao-embedding-vision',
-    'volc/doubao-seed-evolving': 'doubao-seed-evolving',
+  // 套餐概览页（2026-11-05 核对）上的写法：点号 / 短横线照抄；
+  // Seedream Pro 以套餐模型目录接口为准（接口返回点号写法）。
+  const OVERVIEW = 'agent-plan-personal-plan-overview'
+  const PLAN_IDS: Record<string, { id: string; source: string }> = {
+    'volc/doubao-seedream-5-0-pro-260628': {
+      id: 'doubao-seedream-5.0-pro',
+      source: 'list-ark-agent-plan-model-api',
+    },
+    'volc/doubao-seedream-5-0-flash-260915': { id: 'doubao-seedream-5.0-flash', source: OVERVIEW },
+    'volc/doubao-seedance-2-0-260128': { id: 'doubao-seedance-2.0', source: OVERVIEW },
+    'volc/doubao-seedance-2-0-fast-260128': { id: 'doubao-seedance-2.0-fast', source: OVERVIEW },
+    'volc/doubao-seedance-2-0-mini-260615': { id: 'doubao-seedance-2.0-mini', source: OVERVIEW },
+    'volc/doubao-seedance-2-5-260628': { id: 'doubao-seedance-2.5', source: OVERVIEW },
+    'volc/doubao-embedding-vision': { id: 'doubao-embedding-vision', source: OVERVIEW },
+    'volc/doubao-seed-evolving': { id: 'doubao-seed-evolving', source: OVERVIEW },
   }
 
   it('渠道内 ID 与套餐概览页一致，并带渠道级来源', () => {
-    for (const [canonicalId, planId] of Object.entries(PLAN_IDS)) {
+    for (const [canonicalId, expected] of Object.entries(PLAN_IDS)) {
       const found = all.find((item) => item.canonicalId === canonicalId)
       expect(found, canonicalId).toBeDefined()
       const channel = found?.channels.find((item) => item.channel === 'ark-plan')
-      expect(channel?.id, canonicalId).toBe(planId)
-      expect(channel?.source?.url, canonicalId).toContain('agent-plan-personal-plan-overview')
+      expect(channel?.id, canonicalId).toBe(expected.id)
+      expect(channel?.source?.url, canonicalId).toContain(expected.source)
       expect(channel?.source?.checkedAt, canonicalId).toBe('2026-11-05')
     }
   })
@@ -95,6 +100,20 @@ describe('方舟套餐渠道的 ID', () => {
     const video = selectDefaultModel(all, 'video.generate', 'ark')
     expect(video?.channel.channel).toBe('ark')
     expect(video?.declaration.canonicalId).toBe('volc/doubao-seedance-2-5-260628')
+  })
+
+  it('套餐模型目录接口返回的 ID 都能在声明的 ark-plan 渠道里找到', () => {
+    // 接口返回的 ID 才是套餐接口真正接受的写法；声明必须与它一致。
+    const recorded = fixture<RecordedCall>('plan-directory')
+    const body = recorded.response.body as {
+      Result?: { Datas?: Array<{ ModelID?: string }> }
+    }
+    const planIds = new Set(
+      all.flatMap((item) => item.channels.filter((c) => c.channel === 'ark-plan').map((c) => c.id)),
+    )
+    const ids = (body.Result?.Datas ?? []).map((item) => item.ModelID ?? '')
+    expect(ids.length).toBeGreaterThan(0)
+    for (const id of ids) expect(planIds.has(id), id).toBe(true)
   })
 })
 

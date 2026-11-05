@@ -46,9 +46,12 @@ export default {
     { channel: 'ark', id: 'doubao-seedream-5-0-pro-260628' },
     {
       channel: 'ark-plan',
-      id: 'doubao-seedream-5-0-pro',
+      // 套餐概览页的表格写的是短横线的 doubao-seedream-5-0-pro，与接口不一致；
+      // 套餐模型目录接口实际返回、也实际接受的是点号的 doubao-seedream-5.0-pro，
+      // 以接口为准。
+      id: 'doubao-seedream-5.0-pro',
       source: {
-        url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
+        url: 'https://docs.volcengine.com/docs/ark/list-ark-agent-plan-model-api?lang=zh',
         checkedAt: '2026-11-05',
       },
     },

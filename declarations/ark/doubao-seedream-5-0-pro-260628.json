@@ -56,9 +56,9 @@
     },
     {
       "channel": "ark-plan",
-      "id": "doubao-seedream-5-0-pro",
+      "id": "doubao-seedream-5.0-pro",
       "source": {
-        "url": "https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview",
+        "url": "https://docs.volcengine.com/docs/ark/list-ark-agent-plan-model-api?lang=zh",
         "checkedAt": "2026-11-05"
       }
     }

@@ -277,9 +277,9 @@
 | doubao-seedance-2-0-mini-260615  | `doubao-seedance-2-0-mini-260615`  | `doubao-seedance-2.0-mini`  | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
 | doubao-seedance-2-5-260628       | `doubao-seedance-2-5-260628`       | `doubao-seedance-2.5`       | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
 | doubao-seedream-5-0-flash-260915 | `doubao-seedream-5-0-flash-260915` | `doubao-seedream-5.0-flash` | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
-| doubao-seedream-5-0-pro-260628   | `doubao-seedream-5-0-pro-260628`   | `doubao-seedream-5-0-pro`   | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+| doubao-seedream-5-0-pro-260628   | `doubao-seedream-5-0-pro-260628`   | `doubao-seedream-5.0-pro`   | [https://docs.volcengine.com/docs/ark/list-ark-agent-plan-model-api?lang=zh](https://docs.volcengine.com/docs/ark/list-ark-agent-plan-model-api?lang=zh)（核对 2026-11-05）                                   |
 
-说明：套餐渠道的 ID 照官方「套餐概览」页原样写（点号 / 短横线与按量渠道不同就照抄），不按按量渠道的 ID 推断；因此同一模型在两条渠道的渠道内 ID 可能不同，渠道级 `source` 记录套餐 ID 核对的那一页。
+说明：套餐渠道的 ID 照官方页面原样写（点号 / 短横线与按量渠道不同就照抄），不按按量渠道的 ID 推断；因此同一模型在两条渠道的渠道内 ID 可能不同，渠道级 `source` 记录套餐 ID 核对的那一页。Seedream 5.0 Pro 以套餐模型目录接口（ListArkAgentPlanModel）为准：套餐概览页的表格写的是短横线，与接口返回、接口接受的不一致。
 
 其中 3 个模型在两渠道间字段取值不同，逐条列出（声明统一取主来源值）：
 
