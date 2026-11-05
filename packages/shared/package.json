@@ -1,0 +1,34 @@
+{
+  "name": "@modelbay/shared",
+  "version": "0.1.0",
+  "description": "Runtime-agnostic code shared by platform adapters: transport, OpenAI-compatible chat (Vercel AI SDK), model lists, video reference validation, voice preview and size math",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "build": "vp pack"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.106",
+    "@ai-sdk/openai-compatible": "3.0.81",
+    "@modelbay/core": "workspace:*",
+    "ai": "7.0.157"
+  },
+  "peerDependencies": {
+    "zod": "^4.6"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "zod": "catalog:"
+  }
+}

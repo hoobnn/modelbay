@@ -91,6 +91,7 @@ export const arkAdapter: PlatformAdapter = defineAdapter({
 - 请求构造、响应解析、错误码映射必须有录制夹具测试，夹具是 JSON，`Authorization`、签名、key、账号 ID 一律 `<redacted>`。
 - Node 专属代码（TOS 上传、`node:zlib`、`sharp` 等）放到 `src/node/` 并从包的可选子路径导出，不要放进根入口。
 - `@modelbay/doubao-speech` 需要导出 `speechSettings`、`synthesizeSpeech`、`TTS_VOICES`（方舟套餐的 TTS 复用它）；这是唯一允许的跨适配器依赖，方向 ark → doubao-speech。
+- 传输底座、OpenAI 兼容对话（Vercel AI SDK）、模型列表解析、多模态参考校验、音色试听下载与尺寸换算在 `@modelbay/shared`，适配器包允许依赖它（方向 `<平台> → shared`），plein 侧也从同一份实现引用。
 - 平台包行覆盖率门槛 80%，`packages/core` 90%。
 
 ## MCP 工具生成（M4）

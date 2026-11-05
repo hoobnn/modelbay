@@ -26,7 +26,15 @@ for (const [file, data] of Object.entries(summary)) {
 }
 
 // 工程规范：core >= 90%，平台包 >= 80%；汇总入口 / CLI / MCP 用仓库全局基线
-const PLATFORM_PACKAGES = new Set(['ark', 'bailian', 'minimax', 'doubao-speech', 'openai', 'mcp'])
+const PLATFORM_PACKAGES = new Set([
+  'ark',
+  'bailian',
+  'minimax',
+  'doubao-speech',
+  'openai',
+  'shared',
+  'mcp',
+])
 const thresholdOf = (name) => (name === 'core' ? 90 : PLATFORM_PACKAGES.has(name) ? 80 : 50)
 
 const problems = []

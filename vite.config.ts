@@ -87,6 +87,7 @@ export default defineConfig({
         'packages/minimax/src/**': { lines: 80 },
         'packages/doubao-speech/src/**': { lines: 80 },
         'packages/openai/src/**': { lines: 80 },
+        'packages/shared/src/**': { lines: 80 },
         'packages/mcp/src/**': { lines: 80 },
       },
     },

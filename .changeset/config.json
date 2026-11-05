@@ -10,6 +10,7 @@
       "@modelbay/minimax",
       "@modelbay/doubao-speech",
       "@modelbay/openai",
+      "@modelbay/shared",
       "@modelbay/mcp",
       "@modelbay/cli",
       "modelbay"
