@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { ProviderError, type AdapterRequest, type ModelDeclaration } from '@modelbay/core'
 import { createMinimaxAdapter, defaultModel, fromHex } from '../src/adapter'
+import { all } from '../src/models/index'
 import { nativeOperationSchemas } from '../src/native'
 import { fakeContext, fixture } from './helpers'
 
@@ -61,7 +62,7 @@ describe('fromHex', () => {
 })
 
 describe('submit (recorded fixtures)', () => {
-  const adapter = createMinimaxAdapter(models)
+  const adapter = createMinimaxAdapter(all)
   it('text.chat', async () => {
     const f = fixture('chat-success')
     const { ctx, calls } = fakeContext([f.response.body])
@@ -258,7 +259,7 @@ describe('submit (recorded fixtures)', () => {
 })
 
 describe('poll / cancel (async task polling)', () => {
-  const adapter = createMinimaxAdapter(models)
+  const adapter = createMinimaxAdapter(all)
   it('PENDING / RUNNING -> pending', async () => {
     for (const status of ['queued', 'running']) {
       const { ctx } = fakeContext([

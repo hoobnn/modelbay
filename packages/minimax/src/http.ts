@@ -2,8 +2,9 @@
  * MiniMax HTTP transport: fetch, retry rules, redaction and `base_resp` / `error` mapping.
  * Only `ctx.fetch` and `ctx.secret` are used; raw upstream details go into `cause`.
  */
-import { ProviderError, redact, type ProviderErrorCode } from '@modelbay/core'
+import { ProviderError, type ProviderErrorCode } from '@modelbay/core'
 import type { AdapterContext } from '@modelbay/core'
+import { redact } from '@modelbay/shared'
 
 export type Json = Record<string, unknown>
 export type Method = 'GET' | 'POST' | 'DELETE'
@@ -18,12 +19,9 @@ export function arr(value: unknown): unknown[] {
   return Array.isArray(value) ? value : []
 }
 
+/** 脱敏：已知密钥换成占位符，再把 Bearer / sk- 形态的令牌一并抹掉。 */
 export function scrub(text: string, secrets: Array<string | undefined>): string {
-  let out = text
-  const known = secrets.filter((value): value is string => Boolean(value))
-  known.sort((a, b) => b.length - a.length)
-  for (const secret of known) out = out.split(secret).join('<redacted>')
-  return redact(out)
+  return redact(text, secrets, { mask: '<redacted>', tokens: true })
 }
 
 export interface TransportMessages {
@@ -133,15 +131,25 @@ export async function readJson(
 export const CN_BASE_URL = 'https://api.minimax.cn'
 export const GLOBAL_BASE_URL = 'https://api.minimax.io'
 
+/**
+ * 地域：宿主给了 `ctx.settings.region` 就以它为准（与 plein 同名同义）；
+ * 没有 settings 的 MCP 场景回退到原来的 `MINIMAX_REGION` / `MINIMAX_BASE_URL`。
+ */
+export function region(ctx: Pick<AdapterContext, 'settings' | 'secret'>): 'cn' | 'global' {
+  const configured = ctx.settings?.region
+  if (configured === 'cn' || configured === 'global') return configured
+  return ctx.secret('MINIMAX_REGION') === 'global' ? 'global' : 'cn'
+}
+
 export function baseUrl(ctx: AdapterContext): string {
   const override = ctx.secret('MINIMAX_BASE_URL')?.trim()
   if (override) return override
-  return ctx.secret('MINIMAX_REGION') === 'global' ? GLOBAL_BASE_URL : CN_BASE_URL
+  return region(ctx) === 'global' ? GLOBAL_BASE_URL : CN_BASE_URL
 }
 
 export function apiKey(ctx: AdapterContext): string {
   const value = ctx.secret('MINIMAX_API_KEY')?.trim()
-  if (!value) throw new ProviderError('auth', 'Missing MINIMAX_API_KEY')
+  if (!value) throw new ProviderError('auth', '请填写 MiniMax API Key')
   return value
 }
 
@@ -162,12 +170,15 @@ export function errorCode(code: number | string): ProviderErrorCode {
   return 'unknown'
 }
 
+/** 与 plein 一致：不单设 timeout 文案，超时按网络失败 / 取消归类。 */
 export function requestMessages(method: Method): TransportMessages {
-  const failed =
-    method === 'GET'
-      ? 'MiniMax request interrupted or network unavailable'
-      : 'MiniMax submission outcome unknown; do not auto-retry'
-  return { cancelled: failed, network: failed, timeout: failed }
+  return {
+    cancelled: 'MiniMax 请求已取消',
+    network:
+      method === 'GET'
+        ? 'MiniMax 网络请求失败'
+        : 'MiniMax 网络请求失败；生成提交状态可能未知，请勿自动重试',
+  }
 }
 
 export interface RequestOptions {
@@ -211,7 +222,7 @@ export async function requestJson(
   if (parsed === null || !isJson(parsed)) {
     const code = res.ok ? 'unknown' : errorCode(res.status)
     throw withRetry(
-      new ProviderError(code, `MiniMax returned an invalid response (HTTP ${res.status})`),
+      new ProviderError(code, `MiniMax 返回无效响应（HTTP ${res.status}）`),
       method,
       res.status,
     )
@@ -225,13 +236,13 @@ export async function requestJson(
       typeof businessError.type === 'string' && businessError.type
         ? businessError.type
         : statusCode || res.status
-    const message = scrub(
+    const message = redact(
       String(businessError.message ?? baseResp.status_msg ?? `HTTP ${res.status}`),
-      [ctx.secret('MINIMAX_API_KEY')],
+      [ctx.secret('MINIMAX_API_KEY')?.trim()],
     )
     const normalized = errorCode(rawCode) === 'unknown' ? errorCode(res.status) : errorCode(rawCode)
     throw withRetry(
-      new ProviderError(normalized, `MiniMax: ${message}`, {
+      new ProviderError(normalized, `MiniMax：${message}`, {
         cause: { status: res.status, code: rawCode, message },
       }),
       method,

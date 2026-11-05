@@ -3,8 +3,21 @@
  */
 import { ProviderError, toBase64 } from '@modelbay/core'
 import { selectDefaultModel } from '@modelbay/core'
-import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
-import { asJson, arr, requestJson, type Json } from './http'
+import type { AdapterContext, ModelDeclaration, RemoteModel } from '@modelbay/core'
+import { minimaxModelList, redact } from '@modelbay/shared'
+import {
+  apiKey,
+  asJson,
+  arr,
+  baseUrl,
+  errorCode,
+  readJson,
+  requestJson,
+  requestMessages,
+  send,
+  withRetry,
+  type Json,
+} from './http'
 
 export const CONTEXT_IR_PATH = '/v2/h3_context_ir'
 export const RERENDER_PATH = '/v2/video_regeneration'
@@ -21,6 +34,7 @@ export const MINIMAX_NATIVE_OPERATIONS = [
   'upload-file',
   'list-video-tasks',
   'raw-request',
+  'listModels',
 ] as const
 
 export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
@@ -80,6 +94,7 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
       task_type: { type: 'string' },
     },
   },
+  listModels: { type: 'object', properties: {} },
   'raw-request': {
     type: 'object',
     required: ['path'],
@@ -299,6 +314,47 @@ export async function listVideoTasks(ctx: AdapterContext, params: Json): Promise
   return data
 }
 
+/**
+ * 远端模型列表（GET /v1/models）：条目键 `model` / `id` 都接受；
+ * HTTP 200 里的业务错误（base_resp / error）不能当成空列表。对话模型统一补 structured 特性。
+ */
+export async function listModels(ctx: AdapterContext): Promise<RemoteModel[]> {
+  const key = apiKey(ctx)
+  const messages = requestMessages('GET')
+  const res = await send(
+    ctx,
+    `${baseUrl(ctx)}/v1/models`,
+    { method: 'GET', headers: { Authorization: `Bearer ${key}` } },
+    messages,
+  )
+  const body = await readJson(ctx, res, 'GET', messages)
+  if (!res.ok)
+    throw withRetry(
+      new ProviderError(errorCode(res.status), `MiniMax 拉取模型列表失败（HTTP ${res.status}）`),
+      'GET',
+      res.status,
+    )
+  const data = asJson(body)
+  const baseResp = asJson(data.base_resp)
+  const statusCode = Number(baseResp.status_code ?? 0)
+  const businessError = asJson(data.error)
+  if (businessError.type || statusCode !== 0) {
+    const code: string | number =
+      typeof businessError.type === 'string' && businessError.type
+        ? businessError.type
+        : statusCode || res.status
+    const message = redact(
+      String(businessError.message ?? baseResp.status_msg ?? `HTTP ${res.status}`),
+      [key],
+    )
+    throw new ProviderError(errorCode(code), `MiniMax：${message}`)
+  }
+  return minimaxModelList(data).map((model) => ({
+    ...model,
+    features: [...(model.features ?? []), 'structured' as const],
+  }))
+}
+
 /** Dispatch a native operation. */
 export async function runMinimaxNative(
   op: string,
@@ -320,6 +376,8 @@ export async function runMinimaxNative(
       return uploadFile(ctx, p)
     case 'list-video-tasks':
       return listVideoTasks(ctx, p)
+    case 'listModels':
+      return listModels(ctx)
     case 'raw-request': {
       const path = asString(p.path)
       if (!path.startsWith('/'))
@@ -333,7 +391,7 @@ export async function runMinimaxNative(
       })
     }
     default:
-      throw new ProviderError('invalid_input', `Unknown MiniMax native operation: ${op}`)
+      throw new ProviderError('invalid_input', `未知的 MiniMax native 操作：${op}`)
   }
 }
 

@@ -19,6 +19,7 @@ export {
   requestJson,
   readJson,
   readText,
+  region,
   send,
   scrub,
   asJson,
@@ -42,6 +43,14 @@ export {
   voiceClone,
   voiceDesign,
   listVideoTasks,
+  listModels,
   assetDataUrl,
   runMinimaxNative,
 } from './native'
+export {
+  cloneVoice,
+  designVoice,
+  minimaxVoiceClone,
+  minimaxVoiceDesign,
+  VOICE_PREVIEW_MODEL,
+} from './voice'
