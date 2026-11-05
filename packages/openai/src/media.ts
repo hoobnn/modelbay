@@ -1,7 +1,8 @@
 /**
  * OpenAI image request construction / response parsing and the `/models`
  * parser. Everything is JSON-based and uses only `ctx.fetch`; the sharp mask
- * inversion for `image.edit` is a documented Node-subpath TODO.
+ * inversion for `image.edit` lives in the optional `@modelbay/openai/node`
+ * subpath.
  */
 import {
   ProviderError,
@@ -100,6 +101,26 @@ export async function buildImageBody(
   return { body, format, edit: false }
 }
 
+/** The `/images/edits` body, shared by the root path and the Node subpath. */
+export function editRequestBody(opts: {
+  model: string
+  prompt: string
+  count: number
+  /** Original image data URL. */
+  source: string
+  /** Mask data URL (RGBA PNG for OpenAI). */
+  mask: string
+}): Json {
+  return {
+    model: opts.model,
+    prompt: opts.prompt,
+    n: opts.count,
+    output_format: 'png',
+    images: [{ image_url: opts.source }],
+    mask: { image_url: opts.mask },
+  }
+}
+
 /** Build an `/images/edits` body from the original image and mask data URLs. */
 export async function buildEditBody(
   model: string,
@@ -114,14 +135,13 @@ export async function buildEditBody(
     imageDataUrl(ctx, input.mask, label),
   ])
   return {
-    body: {
+    body: editRequestBody({
       model,
       prompt: input.prompt ?? '',
-      n: input.count ?? 1,
-      output_format: format,
-      images: [{ image_url: source }],
-      mask: { image_url: mask },
-    },
+      count: input.count ?? 1,
+      source,
+      mask,
+    }),
     format,
     edit: true,
   }

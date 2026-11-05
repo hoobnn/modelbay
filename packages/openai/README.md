@@ -79,12 +79,19 @@ may not support strict schemas. `401` is mapped to `auth`, `429` to
 parts and is never imported by the root entry:
 
 - `assertSameSize()` — validates that an edit mask matches the source image.
-- `prepareEditMask()` — **TODO (M3)**: the white=repaint → RGBA alpha mask
-  inversion requires `sharp` (a Node-only dependency for the integrator to
-  install). It currently throws a clear `ProviderError('unavailable')`.
+- `prepareEditMask(source, mask)` — converts the repo-wide "white = repaint"
+  mask into the RGBA alpha mask OpenAI expects: the source is rotated upright
+  and re-encoded as PNG, the mask is greyscaled and its brightness is inverted
+  into the alpha channel (white → transparent = repaint, black → opaque =
+  keep). Sizes must match, otherwise `invalid_input` is thrown. Needs `sharp`
+  (Apache-2.0, optional peer dependency the integrator installs).
+- `prepareImageEditRequest(ctx, opts)` — the whole flow: load the original and
+  the mask from `ctx.assets`, convert the mask, and return the `/images/edits`
+  request body. The model defaults to the `image.edit` default declared in
+  `src/models/`.
 
 The root `image.edit` path constructs `/images/edits` with `images` / `mask`
-data URLs from `ctx.assets`; the proper alpha inversion should be applied via
+data URLs from `ctx.assets`; hosts that want the alpha inversion should use
 this subpath before submission. It is listed in `nodeOnly` and not exposed to
 MCP by default.
 
