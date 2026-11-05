@@ -12,9 +12,20 @@
     "promptMaxLength": 9999
   },
   "optionsSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
       "emotion": {
+        "title": "情绪",
+        "labels": {
+          "happy": "高兴",
+          "sad": "悲伤",
+          "angry": "愤怒",
+          "fearful": "害怕",
+          "disgusted": "厌恶",
+          "surprised": "惊讶",
+          "calm": "平静"
+        },
         "type": "string",
         "enum": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm"]
       }

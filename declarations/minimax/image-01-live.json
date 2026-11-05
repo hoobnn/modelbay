@@ -17,20 +17,28 @@
     "promptMaxLength": 1500
   },
   "optionsSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
       "prompt_optimizer": {
+        "title": "提示词优化",
         "type": "boolean"
       },
       "aigc_watermark": {
+        "title": "水印",
         "type": "boolean"
       },
       "style_type": {
+        "title": "画风",
         "type": "string",
         "enum": ["漫画", "元气", "中世纪", "水彩"]
       },
       "style_weight": {
-        "type": "number"
+        "title": "画风权重",
+        "description": "大于 0 且不超过 1，默认 0.8；选择画风后生效",
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "maximum": 1
       }
     }
   },

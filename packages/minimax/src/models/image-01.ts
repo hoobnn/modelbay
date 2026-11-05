@@ -16,8 +16,12 @@ export default {
     promptMaxLength: 1500,
   },
   optionsSchema: {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
     type: 'object',
-    properties: { prompt_optimizer: { type: 'boolean' }, aigc_watermark: { type: 'boolean' } },
+    properties: {
+      prompt_optimizer: { title: '提示词优化', type: 'boolean' },
+      aigc_watermark: { title: '水印', type: 'boolean' },
+    },
   },
   default: true,
   channels: [{ channel: 'minimax', id: 'image-01' }],
