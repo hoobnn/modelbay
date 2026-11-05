@@ -37,10 +37,21 @@ export default {
     },
   },
   optionsSchema: {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
     type: 'object',
     properties: {
-      watermark: { type: 'boolean', default: false },
-      output_format: { type: 'string', enum: ['jpeg', 'png'] },
+      watermark: {
+        default: false,
+        title: '水印',
+        description: '在右下角加 AI 生成水印',
+        type: 'boolean',
+      },
+      output_format: {
+        title: '输出格式',
+        labels: { jpeg: 'JPEG', png: 'PNG' },
+        type: 'string',
+        enum: ['jpeg', 'png'],
+      },
     },
   },
   default: true,

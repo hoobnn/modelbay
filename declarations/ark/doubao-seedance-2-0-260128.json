@@ -84,19 +84,31 @@
     }
   },
   "optionsSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
       "adaptive_duration": {
+        "title": "自动时长",
+        "description": "由模型决定输出时长；编辑任务自动保持原视频时长",
         "type": "boolean"
       },
       "return_last_frame": {
+        "title": "返回尾帧",
+        "description": "输出最后一帧图片，可连到下一个镜头的首帧",
         "type": "boolean"
       },
       "service_tier": {
+        "title": "服务等级",
+        "description": "离线模式价格更低，排队时间更长",
+        "labels": {
+          "default": "在线",
+          "flex": "离线（低价）"
+        },
         "type": "string",
         "enum": ["default", "flex"]
       },
       "watermark": {
+        "title": "水印",
         "type": "boolean"
       }
     }
