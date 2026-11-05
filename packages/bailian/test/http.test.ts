@@ -163,6 +163,10 @@ describe('apiKey / baseUrl / requestMessages', () => {
       'https://alias',
     )
   })
+  it('baseUrl ignores an override that is not an http(s) address', () => {
+    const ctx = fakeContext([], { secrets: { BAILIAN_BASE_URL: 'sk-test' } }).ctx
+    expect(baseUrl(ctx)).toBe(DEFAULT_BASE_URL)
+  })
   it('requestMessages differ for GET and POST', () => {
     expect(requestMessages('GET').network).not.toBe(requestMessages('POST').network)
   })

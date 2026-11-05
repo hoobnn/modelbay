@@ -160,10 +160,9 @@ export const prepareImageEditRequest: ImageEditPreparer = async (ctx, opts) => {
     { data: base.data, mime: base.mime || opts.image.mime || 'image/png' },
     { data: rawMask.data, mime: rawMask.mime || opts.mask.mime || 'image/png' },
   )
-  const [baseUrl, maskUrl] = await Promise.all([
-    uploadAsset(ctx, opts.image, model, undefined, base),
-    uploadMask(ctx, opts.mask, prepared, model),
-  ])
+  // 先原图后蒙版依次上传：请求顺序固定，宿主的网络日志与按序回放的测试夹具都能对上
+  const baseUrl = await uploadAsset(ctx, opts.image, model, undefined, base)
+  const maskUrl = await uploadMask(ctx, opts.mask, prepared, model)
   return buildImageEditRequest({
     model,
     prompt: opts.prompt,

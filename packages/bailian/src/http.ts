@@ -181,7 +181,8 @@ const REGION_HOSTS: Record<string, string> = {
 export function baseUrl(ctx: AdapterContext): string {
   const override =
     ctx.secret('BAILIAN_BASE_URL')?.trim() || ctx.secret('DASHSCOPE_BASE_URL')?.trim()
-  if (override) return override
+  // 只认完整的 http(s) 地址；其余（宿主把任意密钥名都映射成同一个值时）按未设置处理
+  if (override && /^https?:\/\/\S+$/i.test(override)) return override
   const settings = bailianSettings(ctx)
   const region =
     typeof settings.region === 'string' && settings.region ? settings.region : 'cn-beijing'
