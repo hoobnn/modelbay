@@ -138,6 +138,15 @@ for (const file of tsFiles) {
   if (!/checkedAt:\s*'\d{4}-\d{2}-\d{2}'/.test(text)) {
     problems.push(`${rel}: 缺少合法格式（YYYY-MM-DD）的 checkedAt`)
   }
+  // 每一处 source（模型级、生命周期级、渠道级）都要有 url 与合法 checkedAt
+  for (const [index, block] of [...text.matchAll(/source:\s*\{([^}]*)\}/gs)].entries()) {
+    if (!/url:\s*'https:\/\//.test(block[1])) {
+      problems.push(`${rel}: 第 ${index + 1} 处 source 缺少 https 的 url`)
+    }
+    if (!/checkedAt:\s*'\d{4}-\d{2}-\d{2}'/.test(block[1])) {
+      problems.push(`${rel}: 第 ${index + 1} 处 source 缺少合法格式的 checkedAt`)
+    }
+  }
   const status = /status:\s*'([a-z-]+)'/.exec(text)
   if (status && !STATUSES.has(status[1])) problems.push(`${rel}: 未知生命周期状态 ${status[1]}`)
   // 仅检查顶层（2 空格缩进）的默认标记，避免 optionsSchema 内的 default 干扰
@@ -209,6 +218,14 @@ for (const file of jsonFiles) {
   } else {
     for (const channel of decl.channels) {
       if (!channel.channel || !channel.id) problems.push(`${rel}: 渠道缺少 channel 或 id`)
+      if (channel.source !== undefined) {
+        if (!channel.source?.url?.startsWith('https://')) {
+          problems.push(`${rel}: 渠道 ${channel.channel} 的 source.url 缺失或不是 https 链接`)
+        }
+        if (!DATE.test(channel.source?.checkedAt ?? '')) {
+          problems.push(`${rel}: 渠道 ${channel.channel} 的 source.checkedAt 应为 YYYY-MM-DD`)
+        }
+      }
     }
   }
 

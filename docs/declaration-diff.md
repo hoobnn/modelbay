@@ -264,6 +264,23 @@
 | doubao-seed-evolving             | volc/ark-plan、volc/ark | ark、ark-plan   | volc/ark |
 | custom-chat                      | volc/ark-plan、volc/ark | ark、ark-plan   | volc/ark |
 
+两条渠道的渠道内 ID 各自来自各自的官方页面，逐条列出：
+
+| 模型 id                          | ark（按量）ID                      | ark-plan（套餐）ID          | 套餐 ID 的来源                                                                                                                                                                                                |
+| -------------------------------- | ---------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| custom-chat                      | `custom-chat`                      | `custom-chat`               | （与模型级来源相同）                                                                                                                                                                                          |
+| custom-image                     | `custom-image`                     | `custom-image`              | （与模型级来源相同）                                                                                                                                                                                          |
+| custom-video                     | `custom-video`                     | `custom-video`              | （与模型级来源相同）                                                                                                                                                                                          |
+| doubao-seed-evolving             | `doubao-seed-evolving`             | `doubao-seed-evolving`      | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+| doubao-seedance-2-0-260128       | `doubao-seedance-2-0-260128`       | `doubao-seedance-2.0`       | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+| doubao-seedance-2-0-fast-260128  | `doubao-seedance-2-0-fast-260128`  | `doubao-seedance-2.0-fast`  | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+| doubao-seedance-2-0-mini-260615  | `doubao-seedance-2-0-mini-260615`  | `doubao-seedance-2.0-mini`  | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+| doubao-seedance-2-5-260628       | `doubao-seedance-2-5-260628`       | `doubao-seedance-2.5`       | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+| doubao-seedream-5-0-flash-260915 | `doubao-seedream-5-0-flash-260915` | `doubao-seedream-5.0-flash` | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+| doubao-seedream-5-0-pro-260628   | `doubao-seedream-5-0-pro-260628`   | `doubao-seedream-5-0-pro`   | [https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview](https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview)（核对 2026-11-05） |
+
+说明：套餐渠道的 ID 照官方「套餐概览」页原样写（点号 / 短横线与按量渠道不同就照抄），不按按量渠道的 ID 推断；因此同一模型在两条渠道的渠道内 ID 可能不同，渠道级 `source` 记录套餐 ID 核对的那一页。
+
 其中 3 个模型在两渠道间字段取值不同，逐条列出（声明统一取主来源值）：
 
 | 模型 id                    | 字段          | 主来源(volc/ark)值                           | 另一渠道值                                                                         |

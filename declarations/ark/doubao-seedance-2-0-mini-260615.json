@@ -108,7 +108,11 @@
     },
     {
       "channel": "ark-plan",
-      "id": "doubao-seedance-2-0-mini-260615"
+      "id": "doubao-seedance-2.0-mini",
+      "source": {
+        "url": "https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview",
+        "checkedAt": "2026-11-05"
+      }
     }
   ],
   "aliases": {

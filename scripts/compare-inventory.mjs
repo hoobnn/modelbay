@@ -493,6 +493,35 @@ function buildDiff() {
     for (const m of meta.merged)
       h(`| ${m.id} | ${m.sources.join('、')} | ${m.channels.join('、')} | ${m.primary} |`)
     h('')
+    // 套餐渠道的 ID 单独核对：官方「套餐概览」页的写法与按量渠道可能不同（点号 / 短横线）。
+    const planChannels = decls
+      .filter((d) => d.platform === 'ark')
+      .map((d) => {
+        const ark = (d.channels ?? []).find((c) => c.channel === 'ark')
+        const plan = (d.channels ?? []).find((c) => c.channel === 'ark-plan')
+        return ark && plan ? { id: d.id, ark: ark.id, plan: plan.id, source: plan.source } : null
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    if (planChannels.length) {
+      h('两条渠道的渠道内 ID 各自来自各自的官方页面，逐条列出：')
+      h('')
+      h('| 模型 id | ark（按量）ID | ark-plan（套餐）ID | 套餐 ID 的来源 |')
+      h('| --- | --- | --- | --- |')
+      for (const c of planChannels) {
+        const source = c.source?.url
+          ? `[${c.source.url}](${c.source.url})（核对 ${c.source.checkedAt}）`
+          : '（与模型级来源相同）'
+        h(`| ${c.id} | \`${c.ark}\` | \`${c.plan}\` | ${source} |`)
+      }
+      h('')
+      h(
+        '说明：套餐渠道的 ID 照官方「套餐概览」页原样写（点号 / 短横线与按量渠道不同就照抄），' +
+          '不按按量渠道的 ID 推断；因此同一模型在两条渠道的渠道内 ID 可能不同，' +
+          '渠道级 `source` 记录套餐 ID 核对的那一页。',
+      )
+      h('')
+    }
     const mergedDiffs = meta.merged.filter((m) => m.fieldDiffs.length > 0)
     h(`其中 ${mergedDiffs.length} 个模型在两渠道间字段取值不同，逐条列出（声明统一取主来源值）：`)
     h('')

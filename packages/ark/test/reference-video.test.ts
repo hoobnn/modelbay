@@ -84,7 +84,7 @@ describe('方舟参考视频：注入后走通', () => {
     await adapter.submit(
       {
         capability: 'video.generate',
-        model: 'ark-plan:doubao-seedance-2-0-260128',
+        model: 'ark-plan:doubao-seedance-2.0',
         input: { prompt: '运镜', references: [video] },
       },
       ctx,

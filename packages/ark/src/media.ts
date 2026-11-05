@@ -40,9 +40,17 @@ export function tierEdge(tier: string): number | undefined {
   return match ? Math.round(Number(match[1]) * 1024) : undefined
 }
 
-/** Plan channel uses its own model names for the image / video endpoints. */
+/**
+ * Plan channel uses its own model names for the image / video endpoints.
+ *
+ * The names are the ones the official Agent Plan overview lists
+ * (`doubao-seedream-5-0-pro` uses dashes, `doubao-seedream-5.0-flash` dots —
+ * copied as written). Declarations already carry the same id in their
+ * `ark-plan` channel; this map is the fallback for callers that pass the
+ * pay-as-you-go id.
+ */
 export const PLAN_MODELS: Record<string, string> = {
-  'doubao-seedream-5-0-pro-260628': 'doubao-seedream-5.0-pro',
+  'doubao-seedream-5-0-pro-260628': 'doubao-seedream-5-0-pro',
   'doubao-seedream-5-0-flash-260915': 'doubao-seedream-5.0-flash',
   'doubao-seedance-2-5-260628': 'doubao-seedance-2.5',
   'doubao-seedance-2-0-260128': 'doubao-seedance-2.0',

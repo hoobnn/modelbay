@@ -63,6 +63,41 @@ describe('声明加载', () => {
   })
 })
 
+describe('方舟套餐渠道的 ID', () => {
+  // 官方「套餐概览」页（2026-11-05 核对）上的写法：点号 / 短横线照抄。
+  const PLAN_IDS: Record<string, string> = {
+    'volc/doubao-seedream-5-0-pro-260628': 'doubao-seedream-5-0-pro',
+    'volc/doubao-seedream-5-0-flash-260915': 'doubao-seedream-5.0-flash',
+    'volc/doubao-seedance-2-0-260128': 'doubao-seedance-2.0',
+    'volc/doubao-seedance-2-0-fast-260128': 'doubao-seedance-2.0-fast',
+    'volc/doubao-seedance-2-0-mini-260615': 'doubao-seedance-2.0-mini',
+    'volc/doubao-seedance-2-5-260628': 'doubao-seedance-2.5',
+    'volc/doubao-embedding-vision': 'doubao-embedding-vision',
+    'volc/doubao-seed-evolving': 'doubao-seed-evolving',
+  }
+
+  it('渠道内 ID 与套餐概览页一致，并带渠道级来源', () => {
+    for (const [canonicalId, planId] of Object.entries(PLAN_IDS)) {
+      const found = all.find((item) => item.canonicalId === canonicalId)
+      expect(found, canonicalId).toBeDefined()
+      const channel = found?.channels.find((item) => item.channel === 'ark-plan')
+      expect(channel?.id, canonicalId).toBe(planId)
+      expect(channel?.source?.url, canonicalId).toContain('agent-plan-personal-plan-overview')
+      expect(channel?.source?.checkedAt, canonicalId).toBe('2026-11-05')
+    }
+  })
+
+  it('默认模型仍按量渠道选，套餐条目不单独标记默认', () => {
+    // 声明的 default 是模型级标记；MCP 的默认从按量渠道（primaryChannel）里选。
+    const image = selectDefaultModel(all, 'image.generate', 'ark')
+    expect(image?.channel.channel).toBe('ark')
+    expect(image?.declaration.canonicalId).toBe('volc/doubao-seedream-5-0-pro-260628')
+    const video = selectDefaultModel(all, 'video.generate', 'ark')
+    expect(video?.channel.channel).toBe('ark')
+    expect(video?.declaration.canonicalId).toBe('volc/doubao-seedance-2-5-260628')
+  })
+})
+
 describe('方舟套餐 TTS 的跨包复用', () => {
   // 豆包分块响应：一段音频 + 合成结束标记（code 20000000）
   const stream = '{"code":0,"data":"AQID"}{"code":20000000,"data":""}'

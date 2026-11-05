@@ -44,7 +44,14 @@ export default {
   default: true,
   channels: [
     { channel: 'ark', id: 'doubao-seedream-5-0-pro-260628' },
-    { channel: 'ark-plan', id: 'doubao-seedream-5-0-pro-260628' },
+    {
+      channel: 'ark-plan',
+      id: 'doubao-seedream-5-0-pro',
+      source: {
+        url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
+        checkedAt: '2026-11-05',
+      },
+    },
   ],
   aliases: { official: [], short: ['seedream-pro'] },
   lifecycle: {

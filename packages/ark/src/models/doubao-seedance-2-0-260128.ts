@@ -87,7 +87,14 @@ export default {
   },
   channels: [
     { channel: 'ark', id: 'doubao-seedance-2-0-260128' },
-    { channel: 'ark-plan', id: 'doubao-seedance-2-0-260128' },
+    {
+      channel: 'ark-plan',
+      id: 'doubao-seedance-2.0',
+      source: {
+        url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
+        checkedAt: '2026-11-05',
+      },
+    },
   ],
   aliases: { official: [], short: [] },
   lifecycle: {

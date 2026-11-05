@@ -36,6 +36,13 @@ export interface ChannelRef {
   id: string
   endpoint?: string
   limits?: ModelLimits
+  /**
+   * 这个渠道内 ID 的官方来源。
+   *
+   * 同一模型在不同渠道的 ID 可能来自不同的官方页面（例如方舟按量渠道在模型列表页，
+   * 套餐渠道在套餐概览页），渠道级来源让每个 ID 都能指回自己核对过的那一页。
+   */
+  source?: ModelSource
 }
 
 /** 官方别名（同模型的多个官方 ID）与简称（pro / flash / wan） */
