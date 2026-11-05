@@ -252,6 +252,30 @@ for (const file of jsonFiles) {
     problems.push(`${rel}: 非 active 模型不能当默认模型`)
   }
 
+  // version / price / promptGuide：可选，但一旦写了就要能原样交给 plein。
+  // plein 用 version 进缓存键、用 price 估算花费、用 promptGuide 显示创作参考。
+  if (decl.version !== undefined && (typeof decl.version !== 'string' || decl.version === '')) {
+    problems.push(`${rel}: version 应为非空字符串`)
+  }
+  if (decl.price !== undefined) {
+    const { amount, currency } = decl.price ?? {}
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0) {
+      problems.push(`${rel}: price.amount 应为非负数字`)
+    }
+    if (typeof currency !== 'string' || currency === '') {
+      problems.push(`${rel}: price.currency 应为非空字符串`)
+    }
+  }
+  if (decl.promptGuide !== undefined) {
+    const { version, text } = decl.promptGuide ?? {}
+    if (typeof version !== 'string' || version === '') {
+      problems.push(`${rel}: promptGuide.version 应为非空字符串`)
+    }
+    if (typeof text !== 'string' || text === '') {
+      problems.push(`${rel}: promptGuide.text 应为非空字符串`)
+    }
+  }
+
   // optionsSchema：必须是简单 object schema，且不含 zod 内部字段
   if (decl.optionsSchema !== undefined) {
     const schema = decl.optionsSchema
@@ -261,6 +285,30 @@ for (const file of jsonFiles) {
       for (const [name, prop] of Object.entries(schema.properties)) {
         if (!prop || typeof prop !== 'object' || !prop.type) {
           problems.push(`${rel}: optionsSchema.${name} 缺少 type`)
+        }
+        // 参数元信息：plein 用 `.meta().title` 给用户报错、生成设置表单，标题不能丢。
+        // 例外：openai 的元信息由另一个任务补齐（本任务不动 packages/openai/** 与
+        // declarations/openai/**），该任务完成后删掉这段例外。
+        if (!rel.startsWith('declarations/openai/') && typeof prop?.title !== 'string') {
+          problems.push(`${rel}: optionsSchema.${name} 缺少 title（plein 的表单与报错要用）`)
+        }
+        if (prop?.title !== undefined && typeof prop.title !== 'string') {
+          problems.push(`${rel}: optionsSchema.${name}.title 应为字符串`)
+        }
+        for (const metaKey of ['description', 'placeholder']) {
+          if (prop?.[metaKey] !== undefined && typeof prop[metaKey] !== 'string') {
+            problems.push(`${rel}: optionsSchema.${name}.${metaKey} 应为字符串`)
+          }
+        }
+        if (prop?.labels !== undefined) {
+          const labels = prop.labels
+          const valid =
+            labels &&
+            typeof labels === 'object' &&
+            !Array.isArray(labels) &&
+            Object.values(labels).every((value) => typeof value === 'string')
+          if (!valid)
+            problems.push(`${rel}: optionsSchema.${name}.labels 应为「值 → 文案」字符串映射`)
         }
       }
     }
