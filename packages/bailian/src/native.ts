@@ -6,7 +6,7 @@
  * 与模型有关的取值（可用的 TTS 模型、复刻/设计的目标模型）从声明派生。
  */
 import { ProviderError, selectDefaultModel, selectNativeModel } from '@modelbay/core'
-import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
+import type { AdapterContext, AssetRef, ModelDeclaration } from '@modelbay/core'
 import { openAiModelList } from '@modelbay/shared'
 import { asJson, arr, bailianSettings, requestJson, type Json } from './http'
 import { asrModels, buildAsrRequest, parseAsrResponse, resolveAudio } from './asr'
@@ -175,6 +175,17 @@ export function nativeOperationSchemas(
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback
 }
+/** 音频来源：字符串（URL / Data URI）或宿主素材引用（MCP 把本地路径换成它）。 */
+function audioSource(value: unknown): string | AssetRef {
+  const ref = asJson(value)
+  if (typeof ref.assetId === 'string' && ref.assetId)
+    return {
+      assetId: ref.assetId,
+      kind: 'audio',
+      ...(typeof ref.mime === 'string' ? { mime: ref.mime } : {}),
+    }
+  return asString(value)
+}
 function asRecord(value: unknown): Json {
   return asJson(value)
 }
@@ -340,7 +351,7 @@ export async function runBailianNative(
       return parseTtsResponse(await requestJson(ctx, path, body))
     }
     case 'asr': {
-      const audioData = await resolveAudio(asString(p.audio), ctx)
+      const audioData = await resolveAudio(audioSource(p.audio), ctx)
       const { path, body } = buildAsrRequest(
         {
           audio: audioData,
@@ -356,7 +367,7 @@ export async function runBailianNative(
       return parseAsrResponse(await requestJson(ctx, path, body))
     }
     case 'voice-clone': {
-      const audio = await cloneAudio(asString(p.audio), ctx)
+      const audio = await cloneAudio(audioSource(p.audio), ctx)
       const body = buildCloneRequest(
         {
           audio,

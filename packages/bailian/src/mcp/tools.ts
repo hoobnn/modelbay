@@ -6,6 +6,15 @@
  * 由 `@modelbay/mcp` 在运行时从 `ModelDeclaration` 派生，改声明就跟着变。
  */
 import type { ToolSpec } from '@modelbay/core'
+import {
+  mapChatArguments,
+  mapCloneArguments,
+  mapDesignArguments,
+  mapEmbedArguments,
+  mapPortraitArguments,
+  mapRerankArguments,
+  mapTranscribeArguments,
+} from './arguments'
 
 const okOutput = {
   type: 'object',
@@ -18,11 +27,11 @@ export const bailianTools: ToolSpec[] = [
   {
     name: 'animate_portrait',
     native: 'digital-human-lipsync',
+    mapArguments: mapPortraitArguments,
     description:
-      '数字人对口型：图片+人声驱动人物口型、表情、动作。输入本地文件或公开URL。\n' +
-      '图片jpg/png/webp等，音频wav/mp3，音频须小于15MB且小于20秒。\n' +
-      '本地素材上传百炼临时存储。parameters合并进官方parameters对象。按输出秒数计费；wait=0默认只提交，最多90秒，之后用get_job查进度。\n' +
-      '返回task_id/job_id。北京地域能力。\n',
+      '数字人对口型：图片+人声驱动人物口型、表情、动作。image、audio须为公网URL，不上传本地文件。\n' +
+      '图片jpg/png/webp等，音频wav/mp3，音频须小于15MB且小于20秒；resolution=480P/720P，默认720P。\n' +
+      'parameters合并进官方parameters对象。按输出秒数计费；只提交任务，返回taskId，之后用get_job（task_id）查进度。北京地域能力。\n',
     inputSchema: {
       type: 'object',
       title: 'animate_portraitArguments',
@@ -30,8 +39,6 @@ export const bailianTools: ToolSpec[] = [
         image: { type: 'string' },
         audio: { type: 'string' },
         resolution: { type: 'string' },
-        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
-        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
@@ -46,9 +53,10 @@ export const bailianTools: ToolSpec[] = [
     description:
       '调用百炼语言或视觉模型（千问及 DeepSeek、Kimi、GLM 等第三方）；豆包 Seed 模型用 volcengine-ark 的 chat。' +
       '不确定ID用list_models。history为OpenAI消息列表，不含本轮prompt；images支持本地路径或URL，模型须支持视觉。' +
-      'thinking/thinking_budget控制思考，max_tokens限制回答，json_mode需提示词明确JSON，web_search联网计费。' +
-      '返回content、reasoning、usage、finish_reason；断流保留partial文本并标记失败。未列出的官方字段放parameters。完整用法见get_tool_help。\n',
+      'thinking（enable_thinking）/thinking_budget控制思考，max_tokens限制回答，json_mode要求输出JSON，web_search（enable_search）联网计费，部分模型不支持。' +
+      '返回content、usage；未列出的官方字段放parameters。完整用法见get_tool_help。\n',
     capability: 'text.chat',
+    mapArguments: mapChatArguments,
     inputSchema: {
       type: 'object',
       title: 'chatArguments',
@@ -77,11 +85,6 @@ export const bailianTools: ToolSpec[] = [
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
         },
-        include_response: {
-          type: 'boolean',
-          default: false,
-          description: '返回原始响应，默认false',
-        },
       },
       required: ['prompt'],
     },
@@ -100,7 +103,8 @@ export const bailianTools: ToolSpec[] = [
       '- enable_preprocess（降噪增强）、max_prompt_audio_length（3–30 秒）：部分模型不支持。\n' +
       '音色需审核：用 get_voice 确认 status=OK 后，再 text_to_speech(voice=音色ID) 合成。响应缺少音色 ID 时不自动重建。\n' +
       '每个账号复刻/设计合计最多1000个音色。使用同地域API Key和workspace根域名；模型列出不代表账号授权。Qwen-Audio-Realtime协议尚未接入。\n',
-    capability: 'voice.clone',
+    native: 'voice-clone',
+    mapArguments: mapCloneArguments,
     inputSchema: {
       type: 'object',
       title: 'clone_voiceArguments',
@@ -125,9 +129,9 @@ export const bailianTools: ToolSpec[] = [
       '- target_model：合成时用的模型；可选范围见下面的模型清单。音色只能用于该模型。\n' +
       '- prefix：1–10 位字母或数字；音色 ID 形如 {target_model}-vd-{prefix}-{唯一标识}。\n' +
       '- language：zh 或 en，须与 preview_text 语种一致。sample_rate=16000/24000/48000，response_format=wav/mp3/pcm。\n' +
-      '音色 ID 先于试听文件记入本地任务；试听下载失败可用 recover_job 补交付，不会重新创建。设计带随机性，可多次生成择优。\n' +
-      '返回 job_id、job_state、artifacts、files、voice、target_model、error。北京地域能力。\n',
-    capability: 'voice.design',
+      '设计带随机性，可多次生成择优。返回 voiceId、targetModel、previewUrl 或 previewData（试听音频，不落盘）。北京地域能力。\n',
+    native: 'voice-design',
+    mapArguments: mapDesignArguments,
     inputSchema: {
       type: 'object',
       title: 'design_voiceArguments',
@@ -139,53 +143,21 @@ export const bailianTools: ToolSpec[] = [
         language: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         sample_rate: { type: 'integer', default: 24000 },
         response_format: { type: 'string', default: 'wav' },
-        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
       required: ['voice_prompt', 'preview_text'],
     },
     outputSchema: okOutput,
   },
   {
-    name: 'edit_video',
-    capability: 'video.generate',
-    description:
-      'HappyHorse视频指令编辑：修改风格/元素，video为本地文件或公开URL，reference_images为本地图片/URL。\n' +
-      '输入视频3–60秒，输出最多15秒，超15秒只取前15秒；详细文件限制见官方接口。\n' +
-      'audio_setting=origin保留原音轨、auto由模型决定。\n' +
-      'parameters合并进官方parameters对象。异步计费任务，wait=0默认只提交，最多90秒；之后用get_job查进度，返回task_id/job_id。\n',
-    inputSchema: {
-      type: 'object',
-      title: 'edit_videoArguments',
-      properties: {
-        video: { type: 'string' },
-        prompt: { type: 'string' },
-        reference_images: {
-          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
-          default: null,
-        },
-        resolution: { type: 'string' },
-        audio_setting: { type: 'string', default: 'auto' },
-        watermark: { type: 'boolean', default: false },
-        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
-        wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
-        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        parameters: {
-          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
-          default: null,
-        },
-      },
-      required: ['video', 'prompt'],
-    },
-    outputSchema: okOutput,
-  },
-  {
     name: 'embed',
     description:
-      '百炼文本/多模态向量化。texts为文本列表；contents用[{"text":"猫"},{"image":"/absolute/cat.png"}]等官方结构。方舟 Doubao 向量模型用 volcengine-ark 的 embed。\n' +
-      '必须且只能选一项。多模态请显式指定对应模型；图片支持本地路径，视频需公开URL。\n' +
-      'dimensions设置维度；parameters透传模型支持的参数，如enable_fusion。返回向量、usage；include_response=true可取完整response。\n' +
+      '百炼文本/多模态向量化。texts为文本列表；contents用[{"text":"猫"},{"image":"https://example.com/cat.png"}]等官方结构。方舟 Doubao 向量模型用 volcengine-ark 的 embed。\n' +
+      '必须且只能选一项。多模态请显式指定对应模型；图片、视频用公网URL或Data URI，不读本地路径。\n' +
+      'dimensions设置维度；parameters透传模型支持的参数，如enable_fusion。返回向量、usage。\n' +
       '按输入计费，不自动建索引或知识库。\n',
     capability: 'text.embed',
+    native: 'text-embed',
+    mapArguments: mapEmbedArguments,
     inputSchema: {
       type: 'object',
       title: 'embedArguments',
@@ -206,11 +178,6 @@ export const bailianTools: ToolSpec[] = [
         parameters: {
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,
-        },
-        include_response: {
-          type: 'boolean',
-          default: false,
-          description: '返回原始响应，默认false',
         },
       },
     },
@@ -236,7 +203,6 @@ export const bailianTools: ToolSpec[] = [
         },
         size: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         n: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
-        group: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         negative_prompt: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         prompt_extend: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
         seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
@@ -256,7 +222,7 @@ export const bailianTools: ToolSpec[] = [
     name: 'generate_video',
     description:
       '生成视频，本地参考视频/音频会自动上传（volcengine-ark 的 Seedance 需公网 URL）。' +
-      '支持文生、首帧、首尾帧、图片/视频/音频参考及file文档或link网页；file/link二选一且需prompt_extend，参考素材与首尾帧互斥。' +
+      '支持文生、首帧、首尾帧、图片/视频/音频参考，参考素材与首尾帧互斥。' +
       '素材可用本地路径或URL，本地文件自动上传临时存储。wait默认0只提交，最多90秒轮询。' +
       '返回task_id/job_id，之后用get_job查进度并自动下载。按输出秒数计费。参考数量与完整模型参数见get_tool_help。\n',
     capability: 'video.generate',
@@ -286,8 +252,6 @@ export const bailianTools: ToolSpec[] = [
           anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
           default: null,
         },
-        file: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        link: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         resolution: { type: 'string' },
         ratio: { type: 'string' },
         duration: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
@@ -309,7 +273,7 @@ export const bailianTools: ToolSpec[] = [
     name: 'get_job',
     description:
       '查任务进度和结果，job_id 或 task_id 二选一（都给时须属于同一任务）。\n' +
-      '视频类任务（generate_video/edit_video/animate_portrait）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n' +
+      '视频类任务（generate_video/animate_portrait）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n' +
       '完成即下载到原输出目录；已结束的任务只读本地记录。只给 task_id 且本地没有记录时，新建本地记录再查询。\n' +
       '不会重新提交生成。返回 job_state、completed、files、usage；ok=false 表示查询或交付失败。\n',
     inputSchema: {
@@ -319,11 +283,6 @@ export const bailianTools: ToolSpec[] = [
         job_id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         task_id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
-        include_response: {
-          type: 'boolean',
-          default: false,
-          description: '返回原始响应，默认false',
-        },
       },
     },
     outputSchema: okOutput,
@@ -422,11 +381,6 @@ export const bailianTools: ToolSpec[] = [
       properties: {
         job_id: { type: 'string' },
         wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
-        include_response: {
-          type: 'boolean',
-          default: false,
-          description: '返回原始响应，默认false',
-        },
       },
       required: ['job_id'],
     },
@@ -440,6 +394,7 @@ export const bailianTools: ToolSpec[] = [
       '对候选文档按与query的相关性排序，返回原索引和relevance_score；top_n控制数量，return_documents返回原文。\n' +
       '所有模型统一走原生text-rerank接口。分数用于本次请求内比较。按输入计费，模型及地域权限以服务端为准。\n',
     capability: 'text.embed',
+    mapArguments: mapRerankArguments,
     inputSchema: {
       type: 'object',
       title: 'rerankArguments',
@@ -449,11 +404,6 @@ export const bailianTools: ToolSpec[] = [
         model: { type: 'string' },
         top_n: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         return_documents: { type: 'boolean', default: false },
-        include_response: {
-          type: 'boolean',
-          default: false,
-          description: '返回原始响应，默认false',
-        },
       },
       required: ['query', 'documents'],
     },
@@ -470,7 +420,8 @@ export const bailianTools: ToolSpec[] = [
       '- parameters：官方请求体里本工具没单独列出的字段（OpenAI 兼容接口顶层），深度合并，不能覆盖 model/messages/stream。\n' +
       '\nQwen3-ASR-Flash 的 OpenAI 兼容接口不返回时间戳；情感识别固定开启，无需额外开关。\n' +
       '按音频时长计费。返回 ok、model、text、language、emotion、usage、error。\n',
-    capability: 'audio.transcribe',
+    native: 'asr',
+    mapArguments: mapTranscribeArguments,
     inputSchema: {
       type: 'object',
       title: 'speech_to_textArguments',
@@ -492,7 +443,7 @@ export const bailianTools: ToolSpec[] = [
   {
     name: 'text_to_speech',
     description:
-      '用百炼非实时 TTS 把文字合成语音，返回音频文件的 24 小时有效链接（不下载到本地）。按模型名自动选择协议。\n' +
+      '用百炼非实时 TTS 把文字合成语音，返回音频文件的 24 小时有效链接。按模型名自动选择协议。\n' +
       '中文系统音色、方言、SRT 字幕、超长文本也可用 doubao-speech 的 text_to_speech。\n' +
       '\n- model（别名或完整 ID）：不传用默认模型 qwen-audio-3.1-tts-flash；用复刻/设计生成的自定义音色时，' +
       '须同时传生成该音色的 target_model，音色只能用于该模型。其余情况见下面的模型清单。\n' +
@@ -506,10 +457,10 @@ export const bailianTools: ToolSpec[] = [
       'Qwen-Audio-TTS 官方未公布同一上限，交服务端校验。\n' +
       '- language：仅对 qwen3-tts-flash 生效，写 Chinese、English、Japanese 等，不传自动识别；' +
       'CosyVoice / Qwen-Audio-TTS 请把语种代码放进 parameters.language_hints（如 ["zh"]）。\n' +
-      '- out_dir：本工具不下载音频，此参数无效果。\n' +
+      '- out_dir：给了就把音频下载到该目录；不给只返回24小时有效链接。\n' +
       '- parameters：合并进官方 input 对象（如 Qwen-Audio-TTS/CosyVoice 的 rate、pitch、volume、seed、hot_fix、language_hints），' +
       '不能覆盖 text/voice/model；不会写入官方顶层 parameters。\n' +
-      '\n按字符计费。返回 job_id、job_state、artifacts、request_id、ok、model、files、usage、error。\n',
+      '\n按字符计费。返回 job_state、files、usage。\n',
     capability: 'audio.speech',
     inputSchema: {
       type: 'object',

@@ -17,25 +17,6 @@
           "title": "Resolution",
           "type": "string"
         },
-        "wait": {
-          "default": 0,
-          "maximum": 90,
-          "minimum": 0,
-          "title": "Wait",
-          "type": "integer"
-        },
-        "out_dir": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Out Dir"
-        },
         "parameters": {
           "anyOf": [
             {
@@ -198,12 +179,6 @@
           ],
           "default": null,
           "title": "Parameters"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
         }
       },
       "required": ["prompt"],
@@ -367,131 +342,10 @@
           "default": "wav",
           "title": "Response Format",
           "type": "string"
-        },
-        "out_dir": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Out Dir"
         }
       },
       "required": ["voice_prompt", "preview_text"],
       "title": "design_voiceArguments",
-      "type": "object"
-    },
-    "outputSchema": {
-      "type": "object",
-      "required": ["ok"],
-      "properties": {
-        "ok": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": true
-    },
-    "annotations": {
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": true
-    }
-  },
-  {
-    "name": "edit_video",
-    "description": "HappyHorse视频指令编辑：修改风格/元素，video为本地文件或公开URL，reference_images最多5张本地图片/URL。\n输入视频3–60秒，输出最多15秒，超15秒只取前15秒；详细文件限制见官方接口。\nresolution=720P/1080P；audio_setting=origin保留原音轨、auto由模型决定。\nparameters合并进官方parameters对象。异步计费任务，wait=0默认只提交，最多90秒；之后用get_job查进度，返回task_id/job_id。\n",
-    "inputSchema": {
-      "properties": {
-        "video": {
-          "title": "Video",
-          "type": "string"
-        },
-        "prompt": {
-          "title": "Prompt",
-          "type": "string"
-        },
-        "reference_images": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Reference Images"
-        },
-        "resolution": {
-          "default": "720P",
-          "title": "Resolution",
-          "type": "string"
-        },
-        "audio_setting": {
-          "default": "auto",
-          "title": "Audio Setting",
-          "type": "string"
-        },
-        "watermark": {
-          "default": false,
-          "title": "Watermark",
-          "type": "boolean"
-        },
-        "seed": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Seed"
-        },
-        "wait": {
-          "default": 0,
-          "maximum": 90,
-          "minimum": 0,
-          "title": "Wait",
-          "type": "integer"
-        },
-        "out_dir": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Out Dir"
-        },
-        "parameters": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Parameters"
-        }
-      },
-      "required": ["video", "prompt"],
-      "title": "edit_videoArguments",
       "type": "object"
     },
     "outputSchema": {
@@ -576,12 +430,6 @@
           ],
           "default": null,
           "title": "Parameters"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
         }
       },
       "title": "embedArguments",
@@ -656,18 +504,6 @@
           ],
           "default": null,
           "title": "N"
-        },
-        "group": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Group"
         },
         "negative_prompt": {
           "anyOf": [
@@ -853,30 +689,6 @@
           "default": null,
           "title": "Reference Audios"
         },
-        "file": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "File"
-        },
-        "link": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Link"
-        },
         "resolution": {
           "default": "1080P",
           "title": "Resolution",
@@ -1021,12 +833,6 @@
           "minimum": 0,
           "title": "Wait",
           "type": "integer"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
         }
       },
       "title": "get_jobArguments",
@@ -1316,12 +1122,6 @@
           "minimum": 0,
           "title": "Wait",
           "type": "integer"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
-          "type": "boolean"
         }
       },
       "required": ["job_id"],
@@ -1381,12 +1181,6 @@
         "return_documents": {
           "default": false,
           "title": "Return Documents",
-          "type": "boolean"
-        },
-        "include_response": {
-          "default": false,
-          "description": "返回原始响应，默认false",
-          "title": "Include Response",
           "type": "boolean"
         }
       },
