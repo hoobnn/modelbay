@@ -1,4 +1,4 @@
-// 覆盖率门槛：core 行覆盖不低于 90%，平台包 / mcp 不低于 80%。
+// 按包行覆盖率门槛：core 不低于 90%，其余每个包不低于 80%。
 // 数据来自 `vp test run --coverage` 产出的 coverage/coverage-summary.json。
 import { existsSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
@@ -25,17 +25,7 @@ for (const [file, data] of Object.entries(summary)) {
   groups.set(name, entry)
 }
 
-// 工程规范：core >= 90%，平台包 >= 80%；汇总入口 / CLI / MCP 用仓库全局基线
-const PLATFORM_PACKAGES = new Set([
-  'ark',
-  'bailian',
-  'minimax',
-  'doubao-speech',
-  'openai',
-  'shared',
-  'mcp',
-])
-const thresholdOf = (name) => (name === 'core' ? 90 : PLATFORM_PACKAGES.has(name) ? 80 : 50)
+const thresholdOf = (name) => (name === 'core' ? 90 : 80)
 
 const problems = []
 const rows = []
