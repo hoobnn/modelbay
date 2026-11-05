@@ -5,7 +5,8 @@
  * preserved in `ProviderError.cause` (with credentials scrubbed).
  */
 import { ProviderError, redact, type ProviderErrorCode } from '@modelbay/core'
-import type { AdapterContext } from '@modelbay/core'
+import type { AdapterContext, AssetRef, LoadedFile } from '@modelbay/core'
+import { redact as maskSecrets } from '@modelbay/shared'
 
 export type Json = Record<string, unknown>
 export type Method = 'GET' | 'POST' | 'DELETE'
@@ -159,13 +160,57 @@ export function apiKeySecrets(ctx: AdapterContext): Array<string | undefined> {
   return API_KEY_NAMES.map((name) => ctx.secret(name))
 }
 
-/** Host may override the endpoint through `BAILIAN_BASE_URL` / `DASHSCOPE_BASE_URL`. */
+/** 宿主的百炼设置（与 plein bailian provider 的 settings 同名同义）；没有这层配置时为空对象。 */
+export function bailianSettings(ctx: Pick<AdapterContext, 'settings'>): Json {
+  return asJson(ctx.settings)
+}
+
+const REGION_HOSTS: Record<string, string> = {
+  'cn-beijing': DEFAULT_BASE_URL,
+  'ap-southeast-1': 'https://dashscope-intl.aliyuncs.com',
+  'us-east-1': 'https://dashscope-us.aliyuncs.com',
+}
+
+/**
+ * 请求域名。优先级：
+ * 1. MCP / CLI 的 `BAILIAN_BASE_URL` / `DASHSCOPE_BASE_URL`（整体换域名）；
+ * 2. 宿主 `settings.workspaceId` + `settings.region`：`https://{workspaceId}.{region}.maas.aliyuncs.com`；
+ * 3. 宿主 `settings.region` 对应的 DashScope 兼容端点；
+ * 4. 北京地域默认域名。
+ */
 export function baseUrl(ctx: AdapterContext): string {
-  return (
-    ctx.secret('BAILIAN_BASE_URL')?.trim() ||
-    ctx.secret('DASHSCOPE_BASE_URL')?.trim() ||
-    DEFAULT_BASE_URL
-  )
+  const override =
+    ctx.secret('BAILIAN_BASE_URL')?.trim() || ctx.secret('DASHSCOPE_BASE_URL')?.trim()
+  if (override) return override
+  const settings = bailianSettings(ctx)
+  const region =
+    typeof settings.region === 'string' && settings.region ? settings.region : 'cn-beijing'
+  const workspaceId = typeof settings.workspaceId === 'string' ? settings.workspaceId.trim() : ''
+  if (workspaceId) {
+    if (!/^[a-zA-Z0-9-]+$/.test(workspaceId) || !/^[a-z0-9-]+$/.test(region))
+      throw new ProviderError('invalid_input', '业务空间 ID 或地域格式无效')
+    return `https://${workspaceId}.${region}.maas.aliyuncs.com`
+  }
+  return REGION_HOSTS[region] ?? DEFAULT_BASE_URL
+}
+
+/** 任务轮询间隔：宿主设置优先，其次 MCP 的环境变量，默认 10 秒。 */
+export function pollAfter(ctx: AdapterContext): number {
+  const fromSettings = bailianSettings(ctx).pollIntervalMs
+  const value =
+    typeof fromSettings === 'number'
+      ? fromSettings
+      : Number(ctx.secret('BAILIAN_POLL_INTERVAL_MS') ?? ctx.secret('DASHSCOPE_POLL_INTERVAL_MS'))
+  return Number.isFinite(value) && value >= 1000 ? value : 10_000
+}
+
+/** 读素材：优先宿主的 `files.read`（带媒体元数据），回退到 `assets.load`。 */
+export async function readAsset(ctx: AdapterContext, ref: AssetRef): Promise<LoadedFile> {
+  if (ctx.files) return ctx.files.read(ref)
+  if (!ctx.assets)
+    throw new ProviderError('invalid_input', 'An assets source is required to read references')
+  const loaded = await ctx.assets.load(ref.assetId)
+  return { data: loaded.data, mime: (loaded.mime || ref.mime || '').toLowerCase() }
 }
 
 export function apiKey(ctx: AdapterContext): string {
@@ -189,8 +234,8 @@ export function remoteError(status: number, value: unknown, ctx: AdapterContext)
   const data = asJson(value)
   const error = asJson(data.error)
   const code = String(error.code ?? data.code ?? '').toLowerCase()
-  const raw = String(error.message ?? data.message ?? `Bailian HTTP ${status}`)
-  const message = scrub(raw, apiKeySecrets(ctx))
+  const raw = String(error.message ?? data.message ?? `百炼 HTTP ${status}`)
+  const message = maskSecrets(raw, apiKeySecrets(ctx), { mask: '[REDACTED]', tokens: true })
   const normalized: ProviderErrorCode =
     status === 401 || status === 403 || /apikey|accessdenied|unauthorized/.test(code)
       ? 'auth'
@@ -207,7 +252,7 @@ export function remoteError(status: number, value: unknown, ctx: AdapterContext)
                 : status >= 400 || /invalid|unsupported/.test(code)
                   ? 'invalid_input'
                   : 'unknown'
-  return new ProviderError(normalized, `Bailian: ${message}`, {
+  return new ProviderError(normalized, message, {
     cause: { status, code: String(error.code ?? data.code ?? ''), message },
   })
 }
@@ -221,13 +266,13 @@ export interface RequestOptions {
   extraHeaders?: Record<string, string>
 }
 
-/** Send a JSON request and return the parsed business object; throws a mapped ProviderError. */
-export async function requestJson(
+/** Send a request and return the raw response; HTTP errors are mapped to a ProviderError. */
+export async function requestResponse(
   ctx: AdapterContext,
   path: string,
   body?: Json,
   opts: RequestOptions = {},
-): Promise<Json> {
+): Promise<Response> {
   const method: Method = opts.method ?? (body === undefined ? 'GET' : 'POST')
   const messages = requestMessages(method)
   const headers: Record<string, string> = {
@@ -251,7 +296,19 @@ export async function requestJson(
     const data = await readJson(ctx, res, method, messages)
     throw withRetry(remoteError(res.status, data, ctx), method, res.status)
   }
-  const value = await readJson(ctx, res, method, messages)
+  return res
+}
+
+/** Send a JSON request and return the parsed business object; throws a mapped ProviderError. */
+export async function requestJson(
+  ctx: AdapterContext,
+  path: string,
+  body?: Json,
+  opts: RequestOptions = {},
+): Promise<Json> {
+  const method: Method = opts.method ?? (body === undefined ? 'GET' : 'POST')
+  const res = await requestResponse(ctx, path, body, opts)
+  const value = await readJson(ctx, res, method, requestMessages(method))
   if (value === null)
     throw new ProviderError('unknown', 'Bailian returned invalid JSON', { retryable: false })
   const data = asJson(value)

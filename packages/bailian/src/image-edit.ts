@@ -5,7 +5,7 @@
  * 所以真正的实现在 Node 子路径 `@modelbay/bailian/image-edit` 里；
  * 根入口只声明注入点、校验参数、发请求。
  */
-import type { AdapterContext, AssetRef } from '@modelbay/core'
+import type { AdapterContext, AssetRef, LoadedFile } from '@modelbay/core'
 import type { Json } from './http'
 
 /** 局部重绘（`image.edit`）的请求体构造。 */
@@ -37,6 +37,8 @@ export type ImageProcessPreparer = (
     scale?: number
     /** 扩图各边的比例。 */
     expansion?: { top: number; bottom: number; left: number; right: number }
+    /** 适配器已读过的原图（带媒体元数据），上传时不再重复读取。 */
+    source?: LoadedFile
     extra?: Json
   },
 ) => Promise<Json>

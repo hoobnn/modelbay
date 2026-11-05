@@ -6,14 +6,18 @@
  */
 import {
   defineAdapter,
+  imageModelProblem,
+  mediaBatchProblems,
+  mediaRequirementProblems,
   ProviderError,
   resolveModel,
-  toBase64,
   selectDefaultModel,
+  toModelInfo,
   type AdapterContext,
   type AdapterRequest,
   type AssetRef,
   type CapabilityInput,
+  type LoadedFile,
   type ModelDeclaration,
   type ModelLimits,
   type NormalizedCapability,
@@ -22,7 +26,28 @@ import {
   type ProviderOutput,
   type SubmitResult,
 } from '@modelbay/core'
-import { asJson, arr, requestJson, send, type Json } from './http'
+import {
+  chatCompletion,
+  imageDataUrl,
+  requireSseDone,
+  sizeByArea,
+  tierEdge,
+} from '@modelbay/shared'
+import {
+  asJson,
+  arr,
+  bailianSettings,
+  baseUrl,
+  pollAfter,
+  readAsset,
+  remoteError,
+  requestJson,
+  requestResponse,
+  withRetry,
+  type Json,
+} from './http'
+import { liftMcpArguments } from './mcp-args'
+import { optionsProblem, optionKeys } from './options'
 import type { ImageEditPreparer, ImageProcessPreparer } from './image-edit'
 import {
   audioFile,
@@ -73,23 +98,23 @@ export async function uploadAsset(
   ctx: AdapterContext,
   ref: AssetRef,
   model: string,
-  /** 覆盖要上传的字节（Node 子路径用来上传处理后的蒙版）。 */
+  /** 覆盖要上传的字节（Node 子路径用来上传处理后的蒙版）；此时 ref.mime 为准。 */
   data?: Uint8Array,
+  /** 已经读过的素材，避免重复读取。 */
+  loaded?: LoadedFile,
 ): Promise<string> {
-  if (!ctx.assets)
-    throw new ProviderError('invalid_input', 'An assets source is required to upload references')
-  const source = await ctx.assets.load(ref.assetId)
-  const mime = (source.mime || ref.mime || '').toLowerCase()
+  const source = data ? undefined : (loaded ?? (await readAsset(ctx, ref)))
+  const mime = (data ? ref.mime || 'image/png' : source!.mime || ref.mime || '').toLowerCase()
   const ext = FILE_EXT[mime]
-  if (!ext) throw new ProviderError('invalid_input', `Unsupported reference MIME: ${mime}`)
+  if (!ext) throw new ProviderError('invalid_input', `万相参考素材格式不支持：${mime}`)
   const maxBytes = mime.startsWith('image/')
     ? 20 * 1024 * 1024
     : mime.startsWith('audio/')
       ? 15 * 1024 * 1024
       : 100 * 1024 * 1024
-  const payload = data ?? source.data
+  const payload = data ?? source!.data
   if (!payload.length || payload.length > maxBytes)
-    throw new ProviderError('invalid_input', 'Reference asset is empty or exceeds the size limit')
+    throw new ProviderError('invalid_input', '万相参考素材为空或超过大小限制')
   const policy = asJson(
     (await requestJson(ctx, `/api/v1/uploads?action=getPolicy&model=${encodeURIComponent(model)}`))
       .data,
@@ -97,7 +122,7 @@ export async function uploadAsset(
   const host = policy.upload_host
   const dir = policy.upload_dir
   if (typeof host !== 'string' || typeof dir !== 'string')
-    throw new ProviderError('unknown', 'Bailian upload policy is missing host/dir')
+    throw new ProviderError('unknown', '百炼上传凭证缺少地址')
   const name = `${crypto.randomUUID()}.${ext}`
   const objectKey = `${dir}/${name}`
   const form = new FormData()
@@ -110,109 +135,33 @@ export async function uploadAsset(
   }
   for (const [field, sourceKey] of Object.entries(fields)) {
     const value = policy[sourceKey]
-    if (typeof value !== 'string')
-      throw new ProviderError('unknown', 'Bailian upload policy is incomplete')
+    if (typeof value !== 'string') throw new ProviderError('unknown', '百炼上传凭证不完整')
     form.append(field, value)
   }
   form.append('key', objectKey)
   form.append('success_action_status', '200')
   form.append('file', new Blob([new Uint8Array(payload)], { type: mime }), name)
-  const messages = {
-    cancelled: 'Bailian upload cancelled',
-    network: 'Bailian upload failed; submission outcome unknown',
-  }
   let res: Response
   try {
-    res = await send(ctx, host, { method: 'POST', body: form }, messages)
+    res = await ctx.fetch(host, { method: 'POST', body: form, signal: ctx.signal })
   } catch (cause) {
-    throw new ProviderError('unavailable', 'Bailian reference upload failed', {
+    throw new ProviderError(ctx.signal.aborted ? 'cancelled' : 'unavailable', '参考素材上传失败', {
       cause,
-      outcome: 'unknown',
     })
   }
-  if (!res.ok)
-    throw new ProviderError('unknown', `Bailian reference upload failed: HTTP ${res.status}`)
+  if (!res.ok) throw remoteError(res.status, {}, ctx)
   return `oss://${objectKey}`
 }
 
 /** Encode an image AssetRef as a data URL for `text.chat` / `image.generate`. */
-export async function inlineImage(ctx: AdapterContext, ref: AssetRef): Promise<string> {
-  if (!ctx.assets)
-    throw new ProviderError('invalid_input', 'An assets source is required for image references')
-  const source = await ctx.assets.load(ref.assetId)
-  const mime = (source.mime || ref.mime || '').toLowerCase()
-  if (!mime.startsWith('image/'))
-    throw new ProviderError('invalid_input', 'Reference asset must be an image')
-  if (!source.data.length || source.data.length > 10 * 1024 * 1024)
-    throw new ProviderError('invalid_input', 'Reference image is empty or exceeds 10 MB')
-  return `data:${mime};base64,${toBase64(source.data)}`
-}
-
-async function chatMessages(
-  ctx: AdapterContext,
-  input: CapabilityInput<'text.chat'>,
-): Promise<Json[]> {
-  const result: Json[] = []
-  for (const message of input.messages) {
-    const content =
-      typeof message.content === 'string'
-        ? message.content
-        : await Promise.all(
-            message.content.map(async (part) =>
-              part.type === 'text'
-                ? { type: 'text', text: part.text }
-                : { type: 'image_url', image_url: { url: await inlineImage(ctx, part.image) } },
-            ),
-          )
-    const item: Json = { role: message.role, content }
-    if (message.toolCalls) item.tool_calls = message.toolCalls
-    if (message.toolCallId) item.tool_call_id = message.toolCallId
-    if (message.toolName) item.name = message.toolName
-    result.push(item)
-  }
-  return result
-}
-
-function chatBody(input: CapabilityInput<'text.chat'>, model: string, messages: Json[]): Json {
-  const body: Json = { model, messages, stream: false }
-  if (input.temperature !== undefined) body.temperature = input.temperature
-  if (input.maxTokens !== undefined) body.max_tokens = input.maxTokens
-  if (input.tools?.length) body.tools = input.tools
-  if (input.toolChoice) body.tool_choice = input.toolChoice
-  if (input.jsonSchema) body.response_format = { type: 'json_object' }
-  // 平台特有字段原样透传（0001）：extra 直接合并进请求体，不改写键名。
-  Object.assign(body, input.extra ?? {})
-  return body
-}
-
-function parseChat(data: Json): ProviderOutput[] {
-  const choice = asJson(arr(data.choices)[0])
-  const message = asJson(choice.message)
-  const outputs: ProviderOutput[] = []
-  if (Array.isArray(message.tool_calls) && message.tool_calls.length) {
-    outputs.push({
-      type: 'tool_calls',
-      calls: arr(message.tool_calls).map((call) => {
-        const c = asJson(call)
-        const fn = asJson(c.function)
-        return {
-          id: String(c.id ?? ''),
-          name: String(fn.name ?? c.name ?? ''),
-          arguments: asJson(fn.arguments ?? c.arguments ?? {}),
-        }
-      }),
-    })
-  }
-  if (typeof message.content === 'string' && message.content)
-    outputs.push({ type: 'text', text: message.content })
-  if (!outputs.length) throw new ProviderError('unknown', 'Bailian chat response has no content')
-  return outputs
-}
-
-function pollAfter(ctx: AdapterContext): number {
-  const value = ctx.secret('BAILIAN_POLL_INTERVAL_MS') ?? ctx.secret('DASHSCOPE_POLL_INTERVAL_MS')
-  const parsed = value ? Number(value) : 10_000
-  return Number.isFinite(parsed) && parsed >= 1000 ? parsed : 10_000
+export function inlineImage(ctx: AdapterContext, ref: AssetRef): Promise<string> {
+  return imageDataUrl({ files: { read: (r) => readAsset(ctx, r) } }, ref, {
+    accept: (mime) => mime.startsWith('image/'),
+    badMime: '参考资产必须是图片',
+    maxBytes: 10 * 1024 * 1024,
+    tooLarge: '参考图片超过 10 MB',
+    allowEmpty: true,
+  })
 }
 
 /** Select the default model via core (only `active` declarations are eligible). */
@@ -238,7 +187,295 @@ async function submitImageTask(ctx: AdapterContext, body: Json): Promise<SubmitR
   const data = await requestJson(ctx, IMAGE_EDIT_PATH, body, { asyncTask: true, oss: true })
   const taskId = asJson(data.output).task_id
   if (typeof taskId !== 'string' || !taskId)
-    throw new ProviderError('unknown', 'Bailian did not return task_id; do not resubmit the task')
+    throw new ProviderError('unknown', '百炼未返回 task_id；请勿重新提交任务')
+  return { state: 'pending', remoteId: taskId, pollAfterMs: pollAfter(ctx) }
+}
+
+/**
+ * 精修的默认请求体构造（不需要 sharp）：上传原图 → 拼请求体。
+ * AI 放大走 `super_resolution`，扩图走 `expand`，同一个 image-synthesis 端点。
+ */
+export const prepareProcessRequest: ImageProcessPreparer = async (ctx, opts) => {
+  const baseImageUrl = await uploadAsset(ctx, opts.image, opts.model, undefined, opts.source)
+  const parameters: Json = { n: 1, ...opts.extra }
+  if (opts.operation === 'upscale') {
+    if (opts.scale === undefined) throw new ProviderError('invalid_input', '缺少 AI 放大倍数')
+    parameters.upscale_factor = opts.scale
+  } else {
+    const expansion = opts.expansion
+    if (!expansion) throw new ProviderError('invalid_input', '缺少扩图比例')
+    parameters.top_scale = expansion.top
+    parameters.bottom_scale = expansion.bottom
+    parameters.left_scale = expansion.left
+    parameters.right_scale = expansion.right
+  }
+  return {
+    model: opts.model,
+    input: {
+      function: opts.operation === 'upscale' ? 'super_resolution' : 'expand',
+      prompt: opts.prompt ?? '',
+      base_image_url: baseImageUrl,
+    },
+    parameters,
+  }
+}
+
+type Resolved = NonNullable<ReturnType<typeof resolveModel>>
+
+/** 图片：aspectRatio 换算成官方 size，组合与种子在联网前按声明预检。 */
+async function generateImage(
+  request: AdapterRequest,
+  ctx: AdapterContext,
+  resolved: Resolved,
+): Promise<SubmitResult> {
+  const { model } = request
+  const input = request.input as CapabilityInput<'image.generate'>
+  if (!input.prompt.trim()) throw new ProviderError('invalid_input', '图片提示词不能为空')
+  const spec = toModelInfo(resolved.declaration, resolved.channel)
+  const qwen = model.startsWith('qwen-image-3.0')
+  if ((input.width === undefined) !== (input.height === undefined))
+    throw new ProviderError('invalid_input', '图片宽高须一起填写')
+  if (optionsProblem(spec.optionsSchema, input.extra ?? {}))
+    throw new ProviderError('invalid_input', '百炼图片专属参数无效')
+  const allowed = new Set([
+    'size',
+    'n',
+    'seed',
+    'watermark',
+    'negative_prompt',
+    'prompt_extend',
+    ...(qwen ? ['prompt_extend_mode', 'enable_thinking'] : ['enable_sequential', 'thinking_mode']),
+  ])
+  const extra = Object.fromEntries(
+    Object.entries(input.extra ?? {}).filter(([k]) => allowed.has(k)),
+  ) as Json
+  const n = (input.count ?? extra.n ?? 1) as number
+  const refs = input.references?.length ?? 0
+  if (!qwen && input.prompt.length > (spec.limits?.promptMaxLength ?? 5000))
+    throw new ProviderError('invalid_input', '万相图片提示词最多 5000 字符')
+  const aspect = typeof input.extra?.aspectRatio === 'string' ? input.extra.aspectRatio : '16:9'
+  const combination = imageModelProblem(
+    spec,
+    {
+      count: n,
+      resolution: input.resolution,
+      aspectRatio: aspect,
+      // 预检与提交用同一个最终 seed：顶层优先，没填才看专属参数
+      seed: input.seed ?? extra.seed,
+      options: {
+        ...extra,
+        ...(input.width !== undefined && !extra.size
+          ? { size: `${input.width}*${input.height}` }
+          : {}),
+      },
+    },
+    refs,
+  )
+  if (combination) throw new ProviderError('invalid_input', combination)
+  let size = (extra.size ||
+    (input.width !== undefined ? `${input.width}*${input.height}` : undefined)) as
+    | string
+    | undefined
+  if (size === '1K' || size === '2K' || size === '4K') {
+    if (qwen) throw new ProviderError('invalid_input', 'Qwen 原生 size 需要像素尺寸，不接受 K 档位')
+    if (
+      !spec.limits?.resolutions?.includes(size) ||
+      (size === '4K' && (refs || extra.enable_sequential === true))
+    )
+      throw new ProviderError('invalid_input', '万相当前模式不支持该分辨率')
+  } else if (!size && input.resolution) {
+    const edge = tierEdge(input.resolution)
+    if (!edge || !spec.limits?.resolutions?.includes(input.resolution))
+      throw new ProviderError('invalid_input', '所选百炼图片模型不支持该分辨率')
+    if (aspect === 'auto' && !qwen) size = input.resolution
+    else {
+      const { width, height } = sizeByArea(aspect, edge * edge)
+      size = `${width}*${height}`
+    }
+  } else if (!size && aspect !== 'auto') {
+    const ratios: Record<string, string> = {
+      '16:9': '1664*936',
+      '9:16': '936*1664',
+      '1:1': '1024*1024',
+      '4:3': '1536*1152',
+      '3:4': '1152*1536',
+      '21:9': '1904*816',
+      '3:2': '1536*1024',
+      '2:3': '1024*1536',
+    }
+    size = ratios[aspect]
+  }
+  const issue = imageModelProblem(
+    spec,
+    {
+      count: n,
+      resolution: input.resolution,
+      aspectRatio: aspect,
+      seed: input.seed ?? extra.seed,
+      options: { ...extra, size },
+    },
+    refs,
+  )
+  if (issue) throw new ProviderError('invalid_input', issue)
+  // DashScope 的智能尺寸通过省略 size 表达；Qwen 不接受 K 字符串。
+  if (extra.size && size !== 'auto' && !/^(?:1K|2K|4K|[1-9]\d*[x*][1-9]\d*)$/.test(String(size)))
+    throw new ProviderError('invalid_input', '自定义尺寸格式无效')
+  if (typeof size === 'string') size = size.replace('x', '*')
+  if (size === 'auto') size = undefined
+  // 种子范围以模型声明为准
+  const seed = input.seed ?? (extra.seed as number | undefined)
+  if (seed !== undefined) {
+    const range = typeof spec.limits?.seed === 'object' ? spec.limits.seed : undefined
+    if (!range) throw new ProviderError('invalid_input', '所选百炼图片模型不支持 seed')
+    if (!Number.isInteger(seed) || Number(seed) < range.min || Number(seed) > range.max)
+      throw new ProviderError(
+        'invalid_input',
+        `百炼图片 seed 须为 ${range.min}–${range.max} 的整数`,
+      )
+  }
+  const content: Json[] = [{ text: input.prompt }]
+  for (const ref of input.references ?? []) content.push({ image: await inlineImage(ctx, ref) })
+  const data = await requestJson(ctx, GENERATION, {
+    model,
+    input: { messages: [{ role: 'user', content }] },
+    parameters: {
+      watermark: false,
+      ...extra,
+      size,
+      n,
+      ...(seed !== undefined ? { seed } : {}),
+      ...(input.negativePrompt ? { negative_prompt: input.negativePrompt } : {}),
+    },
+  })
+  const urls = choiceContents(data)
+    .filter((part) => part.image)
+    .map((part) => part.image)
+  if (!urls.length) throw new ProviderError('unknown', '百炼没有返回生成图片')
+  return {
+    state: 'succeeded',
+    outputs: urls.map((url) => fileOutput('image', url)),
+    usage: parseUsage(data),
+  }
+}
+
+/** 视频：时长 / 分辨率 / 画幅 / 素材数量与总时长在上传之前按声明检查。 */
+async function generateVideo(
+  request: AdapterRequest,
+  ctx: AdapterContext,
+  resolved: Resolved,
+): Promise<SubmitResult> {
+  const { model } = request
+  const input = request.input as CapabilityInput<'video.generate'>
+  const spec = toModelInfo(resolved.declaration, resolved.channel)
+  const limits = spec.limits ?? {}
+  if (!input.prompt.trim() && !input.firstFrame && !input.references?.length)
+    throw new ProviderError('invalid_input', '视频需要提示词或参考素材')
+  if (input.lastFrame && !input.firstFrame)
+    throw new ProviderError('invalid_input', '尾帧须与首帧一起填写')
+  if ((input.firstFrame || input.lastFrame) && input.references?.length)
+    throw new ProviderError('invalid_input', '首尾帧不能与参考素材混用')
+  if (
+    (input.firstFrame && input.firstFrame.kind !== 'image') ||
+    (input.lastFrame && input.lastFrame.kind !== 'image')
+  )
+    throw new ProviderError('invalid_input', '首尾帧须为图片资产')
+  if (
+    input.duration !== undefined &&
+    input.duration !== -1 &&
+    (!Number.isInteger(input.duration) || input.duration < 2 || input.duration > 30)
+  )
+    throw new ProviderError('invalid_input', '万相视频时长须为 -1 或 2–30 秒整数')
+  for (const [kind, max] of [
+    ['image', 10],
+    ['audio', 5],
+    ['video', 5],
+  ] as const) {
+    if ((input.references ?? []).filter((ref) => ref.kind === kind).length > max)
+      throw new ProviderError('invalid_input', `万相 ${kind} 参考数量超过 ${max}`)
+  }
+  const resolution = input.resolution ?? limits.defaultResolution ?? '720P'
+  const ratio = input.aspectRatio === 'auto' ? 'adaptive' : (input.aspectRatio ?? '16:9')
+  if (limits.resolutions && !limits.resolutions.includes(resolution))
+    throw new ProviderError('invalid_input', '万相不支持该视频分辨率')
+  if (ratio !== 'adaptive' && limits.aspectRatios && !limits.aspectRatios.includes(ratio))
+    throw new ProviderError('invalid_input', '万相不支持该视频画幅')
+  if (optionsProblem(spec.optionsSchema, input.extra ?? {}))
+    throw new ProviderError('invalid_input', '万相视频专属参数无效')
+  // 有专属参数声明的模型只收声明内的键；没有声明的模型原样收下，但不能覆盖通用参数
+  const optionNames = optionKeys(spec.optionsSchema)
+  const picked = Object.fromEntries(
+    Object.entries(input.extra ?? {}).filter(
+      ([key]) => !spec.optionsSchema || optionNames.includes(key),
+    ),
+  ) as Json
+  const { adaptive_duration: adaptive, ...extra } = picked
+  const sources = new Map<string, LoadedFile>()
+  for (const ref of input.references ?? []) {
+    if (ref.kind !== 'image' && ref.kind !== 'audio' && ref.kind !== 'video')
+      throw new ProviderError('invalid_input', '视频参考素材须为图片、音频或视频')
+    sources.set(ref.assetId, await readAsset(ctx, ref))
+  }
+  for (const kind of ['image', 'video', 'audio'] as const) {
+    const samples = (input.references ?? [])
+      .filter((ref) => ref.kind === kind)
+      .map((ref) => {
+        const source = sources.get(ref.assetId)
+        return {
+          sample: { mime: source?.mime, size: source?.data.length, duration: source?.duration },
+        }
+      })
+    const problems = mediaBatchProblems({
+      requirement: limits.media?.[kind],
+      samples,
+      title: spec.title,
+      label: kind === 'video' ? '参考视频' : kind === 'audio' ? '参考音频' : '参考图片',
+      // 宿主给出媒体元数据（files）时缺项也拒绝
+      strict: Boolean(ctx.files),
+      // 自适应时长与 -1 由模型决定输出时长，这时不与输出时长相加
+      ...(kind === 'video'
+        ? {
+            outputDuration: input.duration,
+            outputDurationByModel: adaptive === true || input.duration === -1,
+          }
+        : {}),
+    })
+    if (problems.length) throw new ProviderError('invalid_input', problems[0]!)
+  }
+  const media: Json[] = []
+  if (input.firstFrame)
+    media.push({ type: 'first_frame', url: await uploadAsset(ctx, input.firstFrame, model) })
+  if (input.lastFrame)
+    media.push({ type: 'last_frame', url: await uploadAsset(ctx, input.lastFrame, model) })
+  for (const ref of input.references ?? [])
+    media.push({
+      type: `reference_${ref.kind}`,
+      url: await uploadAsset(ctx, ref, model, undefined, sources.get(ref.assetId)),
+    })
+  const data = await requestJson(
+    ctx,
+    VIDEO_SYNTHESIS,
+    {
+      model,
+      input: { prompt: input.prompt, ...(media.length ? { media } : {}) },
+      parameters: {
+        watermark: false,
+        ...extra,
+        resolution,
+        ratio,
+        audio: input.audio ?? true,
+        ...(adaptive === true
+          ? { duration: -1 }
+          : input.duration !== undefined
+            ? { duration: input.duration }
+            : {}),
+        ...(input.seed !== undefined ? { seed: input.seed } : {}),
+      },
+    },
+    { asyncTask: true, oss: media.length > 0 },
+  )
+  const taskId = asJson(data.output).task_id
+  if (typeof taskId !== 'string' || !taskId)
+    throw new ProviderError('unknown', '百炼未返回 task_id；请勿重新提交任务')
   return { state: 'pending', remoteId: taskId, pollAfterMs: pollAfter(ctx) }
 }
 
@@ -271,47 +508,48 @@ export function createBailianAdapter(
     nodeOnly: ['image-edit'],
     docsUrl: options.docsUrl ?? 'https://help.aliyun.com/zh/model-studio/',
 
-    async submit(request: AdapterRequest, ctx: AdapterContext): Promise<SubmitResult> {
+    async submit(raw: AdapterRequest, ctx: AdapterContext): Promise<SubmitResult> {
+      const request = {
+        ...raw,
+        input: liftMcpArguments(raw.capability, raw.model, raw.input as Record<string, unknown>),
+      } as AdapterRequest
       const { capability, model } = request
+      if (model === 'qwen3-tts-instruct-flash')
+        throw new ProviderError(
+          'invalid_input',
+          'qwen3-tts-instruct-flash 已下线；请选择 qwen3-tts-flash，语气指令请使用豆包语音',
+        )
+      // 远端模型列表里的对话模型没有静态声明，放行；其余必须是声明过的百炼模型
+      const resolved = resolveModel(models, model)
+      if (
+        !resolved?.declaration.capabilities.includes(capability) &&
+        !(request.remoteOnly && capability === 'text.chat')
+      )
+        throw new ProviderError('invalid_input', `百炼模型 ${model} 不支持 ${capability}`)
       switch (capability) {
-        case 'text.chat': {
-          const input = request.input as CapabilityInput<'text.chat'>
-          const messages = await chatMessages(ctx, input)
-          const data = await requestJson(
+        case 'text.chat':
+          return chatCompletion({
             ctx,
-            '/compatible-mode/v1/chat/completions',
-            chatBody(input, model, messages),
-          )
-          return { state: 'succeeded', outputs: parseChat(data), usage: parseUsage(data) }
-        }
-        case 'image.generate': {
-          const input = request.input as CapabilityInput<'image.generate'>
-          if (!input.prompt.trim())
-            throw new ProviderError('invalid_input', 'Image prompt is required')
-          const content: Json[] = [{ text: input.prompt }]
-          for (const ref of input.references ?? [])
-            content.push({ image: await inlineImage(ctx, ref) })
-          const parameters: Json = { watermark: false, n: input.count ?? 1 }
-          if (input.seed !== undefined) parameters.seed = input.seed
-          if (input.negativePrompt) parameters.negative_prompt = input.negativePrompt
-          if (input.width !== undefined && input.height !== undefined)
-            parameters.size = `${input.width}*${input.height}`
-          Object.assign(parameters, input.extra ?? {})
-          const data = await requestJson(ctx, GENERATION, {
+            label: '百炼',
+            baseURL: `${baseUrl(ctx)}/compatible-mode/v1`,
+            // 鉴权、传输失败和 HTTP 错误码归类沿用 requestResponse；流必须以 [DONE] 结束
+            fetch: async (url, init) => {
+              const path = String(url).slice(baseUrl(ctx).length)
+              const body = JSON.parse(String(init?.body)) as Json
+              return requireSseDone(
+                await requestResponse(ctx, path, body),
+                () =>
+                  new ProviderError('unknown', '百炼回答不完整或未收到 [DONE]；请勿自动重新提交'),
+              )
+            },
             model,
-            input: { messages: [{ role: 'user', content }] },
-            parameters,
+            input: request.input as CapabilityInput<'text.chat'>,
+            image: (ref) => inlineImage(ctx, ref),
+            structured: 'json_object',
+            streamError: (error) => withRetry(remoteError(200, { error }, ctx), 'POST'),
           })
-          const urls = choiceContents(data)
-            .filter((part) => part.image)
-            .map((part) => part.image)
-          if (!urls.length) throw new ProviderError('unknown', 'Bailian did not return any image')
-          return {
-            state: 'succeeded',
-            outputs: urls.map((url) => fileOutput('image', url)),
-            usage: parseUsage(data),
-          }
-        }
+        case 'image.generate':
+          return generateImage(request, ctx, resolved!)
         case 'audio.speech': {
           const input = request.input as CapabilityInput<'audio.speech'>
           const tts = ttsModels(models)
@@ -330,55 +568,51 @@ export function createBailianAdapter(
             )
             return { state: 'succeeded', outputs: [fileOutput('audio', result.url)] }
           }
+          const limits = modelLimits(models, model)
+          // 平台按 Unicode 码点计字数
+          // oxlint-disable-next-line typescript/no-misused-spread -- 平台按 Unicode 码点计字数
+          const length = [...input.text].length
+          const maxText = limits.promptMaxLength ?? 600
+          if (!input.text.trim() || length > maxText)
+            throw new ProviderError('invalid_input', `千问语音文本须为 1–${maxText} 字符`)
+          if (
+            limits.instruction === false &&
+            (input.instruction ||
+              ['instruction', 'instructions', 'optimize_instructions'].some(
+                (field) => input.extra?.[field] !== undefined,
+              ))
+          )
+            throw new ProviderError(
+              'invalid_input',
+              'qwen3-tts-flash 不支持语气指令，请使用豆包语音',
+            )
+          if (limits.speed === false && input.speed !== undefined && input.speed !== 1)
+            throw new ProviderError(
+              'invalid_input',
+              '千问 TTS 不支持 speed 参数；可使用 instruct 模型描述语速',
+            )
+          const settings = bailianSettings(ctx)
+          const voice =
+            input.voice ||
+            (typeof settings.voice === 'string' && settings.voice) ||
+            defaultVoiceFor(tts, model, true) ||
+            ''
           const data = await requestJson(ctx, known?.endpoint ?? QWEN_TTS_PATH, {
             model,
             input: {
               ...input.extra,
               text: input.text,
-              voice: input.voice ?? defaultVoiceFor(tts, model, true) ?? '',
-              language_type: 'Auto',
+              voice,
+              language_type:
+                (typeof (input as Json).language === 'string' && (input as Json).language) ||
+                (typeof settings.language === 'string' && settings.language) ||
+                'Auto',
             },
           })
           return { state: 'succeeded', outputs: [audioFile(data)], usage: parseUsage(data) }
         }
-        case 'video.generate': {
-          const input = request.input as CapabilityInput<'video.generate'>
-          if (!input.prompt.trim() && !input.firstFrame && !input.references?.length)
-            throw new ProviderError('invalid_input', 'Video needs a prompt or reference media')
-          const media: Json[] = []
-          if (input.firstFrame)
-            media.push({
-              type: 'first_frame',
-              url: await uploadAsset(ctx, input.firstFrame, model),
-            })
-          if (input.lastFrame)
-            media.push({ type: 'last_frame', url: await uploadAsset(ctx, input.lastFrame, model) })
-          for (const ref of input.references ?? [])
-            media.push({ type: `reference_${ref.kind}`, url: await uploadAsset(ctx, ref, model) })
-          const parameters: Json = {
-            resolution: input.resolution ?? '720P',
-            ratio: input.aspectRatio ?? '16:9',
-            watermark: false,
-            audio: input.audio ?? true,
-          }
-          if (input.duration !== undefined) parameters.duration = input.duration
-          if (input.seed !== undefined) parameters.seed = input.seed
-          Object.assign(parameters, input.extra ?? {})
-          const data = await requestJson(
-            ctx,
-            VIDEO_SYNTHESIS,
-            {
-              model,
-              input: { prompt: input.prompt, ...(media.length ? { media } : {}) },
-              parameters,
-            },
-            { asyncTask: true, oss: media.length > 0 },
-          )
-          const taskId = asJson(data.output).task_id
-          if (typeof taskId !== 'string' || !taskId)
-            throw new ProviderError('unknown', 'Bailian video submission is missing task_id')
-          return { state: 'pending', remoteId: taskId, pollAfterMs: pollAfter(ctx) }
-        }
+        case 'video.generate':
+          return generateVideo(request, ctx, resolved!)
         case 'image.edit': {
           const input = request.input as CapabilityInput<'image.edit'>
           const prompt = typeof input.prompt === 'string' ? input.prompt : ''
@@ -401,6 +635,7 @@ export function createBailianAdapter(
             mask: input.mask,
             count,
             ...(input.seed !== undefined ? { seed: input.seed } : {}),
+            ...(input.extra ? { extra: input.extra } : {}),
           })
           return submitImageTask(ctx, body)
         }
@@ -448,14 +683,29 @@ export function createBailianAdapter(
                 )
             }
           }
-          if (!options.process)
-            throw new ProviderError(
-              'invalid_input',
-              '万相精修需要原图上传到临时 OSS：请从 @modelbay/bailian/image-edit 引入 prepareImageProcessRequest，再用 createBailianAdapter(models, { process: prepareImageProcessRequest }) 注入',
-            )
-          const body = await options.process(ctx, {
+          const source = await readAsset(ctx, input.image)
+          if (!source.data.length)
+            throw new ProviderError('invalid_input', '万相精修原图不能是空文件')
+          // 原图的格式要求以模型声明为准；宿主给出媒体元数据（files）时缺项也拒绝
+          const problems = mediaRequirementProblems(
+            limits.media?.process,
+            {
+              mime: source.mime,
+              size: source.data.length,
+              width: source.width,
+              height: source.height,
+            },
+            {
+              title: resolved!.declaration.title,
+              label: '万相精修原图',
+              strict: Boolean(ctx.files),
+            },
+          )
+          if (problems.length) throw new ProviderError('invalid_input', problems[0]!)
+          const body = await (options.process ?? prepareProcessRequest)(ctx, {
             model,
             image: input.image,
+            source,
             operation: input.operation as 'upscale' | 'outpaint',
             ...(input.prompt !== undefined ? { prompt: input.prompt } : {}),
             ...(scale !== undefined ? { scale } : {}),
@@ -464,7 +714,7 @@ export function createBailianAdapter(
           return submitImageTask(ctx, body)
         }
         default:
-          throw new ProviderError('invalid_input', `Bailian does not support ${capability}`)
+          throw new ProviderError('invalid_input', `百炼暂不支持 ${capability}`)
       }
     },
 
@@ -484,8 +734,7 @@ export function createBailianAdapter(
             .map(asJson)
             .filter((result) => typeof result.url === 'string')
             .map((result) => result.url)
-          if (!urls.length)
-            throw new ProviderError('unknown', 'Bailian did not return edited images')
+          if (!urls.length) throw new ProviderError('unknown', '百炼没有返回编辑后的图片')
           return {
             state: 'succeeded',
             outputs: urls.map((url) => fileOutput('image', url)),
@@ -499,25 +748,18 @@ export function createBailianAdapter(
         }
       }
       if (status === 'CANCELED' || status === 'CANCELLED')
-        return {
-          state: 'failed',
-          error: { code: 'cancelled', message: 'Bailian task was cancelled' },
-        }
+        return { state: 'failed', error: { code: 'cancelled', message: '百炼任务已取消' } }
+      // 查询异常不等于远端生成失败；抛错让宿主保留任务 ID，避免恢复时再次付费提交。
       if (status !== 'FAILED')
-        throw new ProviderError(
-          'unknown',
-          'Bailian returned an unknown task status; keep the task ID',
-        )
-      const mapped = new ProviderError(
-        'unknown',
-        String(output.message ?? `Bailian task ${status}`),
-        {
-          cause: output,
-        },
-      )
+        throw new ProviderError('unknown', '百炼返回未知任务状态，请保留原任务并恢复查询')
+      const mapped = remoteError(200, output, ctx)
       return {
         state: 'failed',
-        error: { code: mapped.code, message: mapped.message, retryable: false },
+        error: {
+          code: mapped.code,
+          message: output.message ? mapped.message : `百炼任务状态：${String(status)}`,
+          retryable: mapped.retryable,
+        },
       }
     },
 
@@ -528,7 +770,7 @@ export function createBailianAdapter(
         output.code ||
         (output.task_status && !['CANCELED', 'CANCELLED'].includes(String(output.task_status)))
       )
-        throw new ProviderError('unknown', 'Bailian cancel was not accepted', { cause: output })
+        throw remoteError(400, output, ctx)
     },
 
     async native(

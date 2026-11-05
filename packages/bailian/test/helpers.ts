@@ -32,6 +32,15 @@ export interface FakeOptions {
   mime?: string
   data?: Uint8Array
   signal?: AbortSignal
+  /** 宿主设置（与 plein bailian provider 的 settings 同名）。 */
+  settings?: Record<string, unknown>
+  /** 注入 plein 形状的 files.read（带媒体元数据）；缺省只给 assets.load。 */
+  files?: { width?: number; height?: number; duration?: number }
+}
+
+/** text/event-stream 响应 */
+export function sse(text: string): Response {
+  return new Response(text, { headers: { 'Content-Type': 'text/event-stream' } })
 }
 
 /** A fake `AdapterContext` whose fetch returns queued replies in order. */
@@ -49,6 +58,18 @@ export function fakeContext(replies: Reply[] = [], opts: FakeOptions = {}) {
     secret: (name) => secrets[name],
     signal: opts.signal ?? new AbortController().signal,
     log: vi.fn(),
+    ...(opts.settings ? { settings: opts.settings } : {}),
+    ...(opts.files
+      ? {
+          files: {
+            read: vi.fn(async () => ({
+              data: opts.data ?? new Uint8Array([1, 2, 3]),
+              mime: opts.mime ?? 'image/png',
+              ...opts.files,
+            })),
+          },
+        }
+      : {}),
     assets: {
       load: vi.fn(async () => ({
         data: opts.data ?? new Uint8Array([1, 2, 3]),
@@ -66,7 +87,8 @@ export function fakeContext(replies: Reply[] = [], opts: FakeOptions = {}) {
           ? JSON.parse((init as RequestInit).body as string)
           : undefined,
     }))
-  return { ctx, fetch: fetchImpl, calls }
+  const body = (index = 0) => calls()[index]?.body as Record<string, any> // oxlint-disable-line typescript/no-explicit-any -- 测试里按路径取值
+  return { ctx, fetch: fetchImpl, calls, body }
 }
 
 /** A Response with an explicit HTTP status. */

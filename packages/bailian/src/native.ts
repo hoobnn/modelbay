@@ -7,7 +7,8 @@
  */
 import { ProviderError, selectDefaultModel, selectNativeModel } from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
-import { asJson, arr, requestJson, type Json } from './http'
+import { openAiModelList } from '@modelbay/shared'
+import { asJson, arr, bailianSettings, requestJson, type Json } from './http'
 import { asrModels, buildAsrRequest, parseAsrResponse, resolveAudio } from './asr'
 import {
   buildCloneRequest,
@@ -35,6 +36,7 @@ export const EMBED_MULTIMODAL_PATH =
 export const PORTRAIT_PATH = '/api/v1/services/aigc/image2video/video-synthesis'
 
 export const BAILIAN_NATIVE_OPERATIONS = [
+  'listModels',
   'rerank',
   'text-embed',
   'qwen-audio-tts',
@@ -62,6 +64,7 @@ export function nativeOperationSchemas(
   const rerankModel = selectNativeModel(models, 'rerank', 'bailian')?.channel.id
   const embedModel = selectDefaultModel(models, 'text.embed', 'bailian')?.channel.id
   return {
+    listModels: { type: 'object', properties: {} },
     rerank: {
       type: 'object',
       required: ['query', 'documents'],
@@ -284,6 +287,22 @@ export async function digitalHumanLipsync(
   return { taskId, requestId: data.request_id }
 }
 
+/**
+ * 远端模型列表：DashScope 兼容模式 `/compatible-mode/v1/models`。
+ * 业务空间域名的列表接口未经官方确证，暂不支持。
+ */
+export async function listModels(ctx: AdapterContext) {
+  if (bailianSettings(ctx).workspaceId)
+    throw new ProviderError(
+      'invalid_input',
+      '业务空间模式暂不支持拉取远端模型列表；可清空业务空间 ID 后使用 DashScope 兼容端点拉取',
+    )
+  return openAiModelList(await requestJson(ctx, '/compatible-mode/v1/models')).map((model) => ({
+    ...model,
+    features: ['structured' as const],
+  }))
+}
+
 /** Dispatch a native operation; unknown ops are rejected with a clear ProviderError. */
 export async function runBailianNative(
   op: string,
@@ -295,6 +314,8 @@ export async function runBailianNative(
   const tts = ttsModels(models)
   const targets = voiceTargets(models)
   switch (op) {
+    case 'listModels':
+      return listModels(ctx)
     case 'rerank':
       return rerank(p, ctx, models)
     case 'text-embed':

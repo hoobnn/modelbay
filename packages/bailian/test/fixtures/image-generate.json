@@ -10,7 +10,7 @@
     "body": {
       "model": "qwen-image-3.0",
       "input": { "messages": [{ "role": "user", "content": [{ "text": "一只猫" }] }] },
-      "parameters": { "watermark": false, "n": 1 }
+      "parameters": { "watermark": false, "n": 1, "size": "1664*936" }
     }
   },
   "response": {

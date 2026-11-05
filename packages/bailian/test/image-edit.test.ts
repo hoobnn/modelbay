@@ -244,23 +244,20 @@ describe('百炼精修：注入后走通', () => {
     })
   })
 
-  it('没注入时报 invalid_input，并写清子路径与注入方式', async () => {
+  it('精修不需要 sharp：没注入预处理实现时用内置的上传与请求体', async () => {
     const adapter = createBailianAdapter(bailianModels)
-    const { ctx, fetch } = fakeCtx()
-    const error = await adapter
-      .submit(
-        {
-          capability: 'image.process',
-          model: MODEL,
-          input: { image: { assetId: 'img', kind: 'image' }, operation: 'upscale', scale: 2 },
-        },
-        ctx,
-      )
-      .catch((cause: unknown) => cause)
-    expect(error).toMatchObject({ code: 'invalid_input' })
-    expect((error as Error).message).toContain('@modelbay/bailian/image-edit')
-    expect((error as Error).message).toContain('prepareImageProcessRequest')
-    expect(fetch).not.toHaveBeenCalled()
+    const { ctx, fetch } = fakeCtx({ taskId: 'edit/1' })
+    const result = await adapter.submit(
+      {
+        capability: 'image.process',
+        model: MODEL,
+        input: { image: { assetId: 'img', kind: 'image' }, operation: 'upscale', scale: 2 },
+      },
+      ctx,
+    )
+    expect(result).toMatchObject({ state: 'pending', remoteId: 'edit/1' })
+    const submitted = call(fetch, fetch.mock.calls.length - 1)
+    expect(submitted.body.parameters).toMatchObject({ n: 1, upscale_factor: 2 })
   })
 
   it('超出声明范围的倍数与比例在联网前拒绝', async () => {

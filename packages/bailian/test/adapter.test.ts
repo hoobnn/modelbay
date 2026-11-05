@@ -9,7 +9,7 @@ import {
 } from '../src/adapter'
 import { nativeOperationSchemas } from '../src/native'
 import { all as bailianModels } from '../src/models/index'
-import { fakeContext, fixture } from './helpers'
+import { fakeContext, fixture, sse } from './helpers'
 
 function declaration(
   id: string,
@@ -67,17 +67,27 @@ describe('default model (only active)', () => {
 })
 
 describe('submit: request construction and response parsing (fixtures)', () => {
-  it('text.chat', async () => {
+  it('text.chat streams through the OpenAI-compatible endpoint and normalizes usage', async () => {
     const f = fixture('chat-success')
-    const { ctx, calls } = fakeContext([f.response.body])
+    const { ctx, calls } = fakeContext([
+      sse(
+        'data: {"choices":[{"delta":{"content":"你好！"},"finish_reason":"stop"}]}\n\ndata: {"choices":[],"usage":{"prompt_tokens":5,"completion_tokens":3}}\n\ndata: [DONE]\n\n',
+      ),
+    ])
+    const deltas: string[] = []
+    ctx.stream = (delta) => deltas.push(delta.text)
     const request: AdapterRequest = {
       capability: 'text.chat',
       model: 'qwen3.8-max',
       input: { messages: [{ role: 'user', content: '你好' }] },
     }
-    const result = await createBailianAdapter(models).submit(request, ctx)
+    const result = await createBailianAdapter(bailianModels).submit(request, ctx)
     expect(calls()[0]?.url).toBe(f.request.url)
-    expect(calls()[0]?.body).toEqual(f.request.body)
+    expect(calls()[0]?.body).toMatchObject({
+      model: 'qwen3.8-max',
+      messages: [{ role: 'user', content: '你好' }],
+      stream: true,
+    })
     expect(result).toMatchObject({ state: 'succeeded' })
     expect(result.state === 'succeeded' && result.outputs[0]).toEqual({
       type: 'text',
@@ -87,47 +97,51 @@ describe('submit: request construction and response parsing (fixtures)', () => {
       inputTokens: 5,
       outputTokens: 3,
     })
+    expect(deltas).toEqual(['你好！'])
   })
   it('text.chat passes platform-specific extra fields and tools through', async () => {
-    const { ctx, calls } = fakeContext([{ choices: [{ message: { content: 'ok' } }] }])
-    await createBailianAdapter(models).submit(
+    const { ctx, calls } = fakeContext([
+      sse(
+        'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+      ),
+    ])
+    await createBailianAdapter(bailianModels).submit(
       {
         capability: 'text.chat',
         model: 'qwen3.8-max',
         input: {
           messages: [{ role: 'user', content: 'hi' }],
           tools: [{ name: 'f', description: 'd', parameters: {} }],
-          jsonSchema: { type: 'object' },
           temperature: 0.5,
           maxTokens: 100,
-          extra: { top_p: 0.9, enable_thinking: true },
+          extra: { top_p: 0.9, enable_thinking: true, model: 'evil', stream: false },
         },
       },
       ctx,
     )
     expect(calls()[0]?.body).toMatchObject({
-      tools: [{ name: 'f' }],
-      response_format: { type: 'json_object' },
+      model: 'qwen3.8-max',
+      stream: true,
+      tools: [{ function: { name: 'f' } }],
       temperature: 0.5,
       max_tokens: 100,
       top_p: 0.9,
       enable_thinking: true,
     })
   })
-  it('text.chat parses tool_calls', async () => {
+  it('text.chat returns streamed tool_calls', async () => {
+    const call = {
+      index: 0,
+      id: 'c1',
+      type: 'function',
+      function: { name: 'f', arguments: '{"a":1}' },
+    }
     const { ctx } = fakeContext([
-      {
-        choices: [
-          {
-            message: {
-              content: null,
-              tool_calls: [{ id: 'c1', function: { name: 'f', arguments: { a: 1 } } }],
-            },
-          },
-        ],
-      },
+      sse(
+        `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [call] }, finish_reason: 'tool_calls' }] })}\n\ndata: [DONE]\n\n`,
+      ),
     ])
-    const result = await createBailianAdapter(models).submit(
+    const result = await createBailianAdapter(bailianModels).submit(
       {
         capability: 'text.chat',
         model: 'qwen3.8-max',
@@ -143,7 +157,7 @@ describe('submit: request construction and response parsing (fixtures)', () => {
   it('image.generate', async () => {
     const f = fixture('image-generate')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await createBailianAdapter(models).submit(
+    const result = await createBailianAdapter(bailianModels).submit(
       { capability: 'image.generate', model: 'qwen-image-3.0', input: { prompt: '一只猫' } },
       ctx,
     )
@@ -158,7 +172,7 @@ describe('submit: request construction and response parsing (fixtures)', () => {
   it('image.generate rejects an empty prompt', async () => {
     const { ctx } = fakeContext([])
     await expect(
-      createBailianAdapter(models).submit(
+      createBailianAdapter(bailianModels).submit(
         { capability: 'image.generate', model: 'qwen-image-3.0', input: { prompt: '' } },
         ctx,
       ),
@@ -167,7 +181,7 @@ describe('submit: request construction and response parsing (fixtures)', () => {
   it('audio.speech via qwen3-tts-flash', async () => {
     const f = fixture('tts-qwen')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await createBailianAdapter(models).submit(
+    const result = await createBailianAdapter(bailianModels).submit(
       {
         capability: 'audio.speech',
         model: 'qwen3-tts-flash',
@@ -205,7 +219,7 @@ describe('submit: request construction and response parsing (fixtures)', () => {
   it('video.generate returns a pending async task', async () => {
     const f = fixture('video-task')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await createBailianAdapter(models).submit(
+    const result = await createBailianAdapter(bailianModels).submit(
       { capability: 'video.generate', model: 'wan3.0-video', input: { prompt: '海浪' } },
       ctx,
     )
@@ -217,14 +231,14 @@ describe('submit: request construction and response parsing (fixtures)', () => {
   it('video.generate rejects an empty request and a missing task_id', async () => {
     const a = fakeContext([])
     await expect(
-      createBailianAdapter(models).submit(
+      createBailianAdapter(bailianModels).submit(
         { capability: 'video.generate', model: 'wan3.0-video', input: { prompt: '' } },
         a.ctx,
       ),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     const b = fakeContext([{ output: {} }])
     await expect(
-      createBailianAdapter(models).submit(
+      createBailianAdapter(bailianModels).submit(
         { capability: 'video.generate', model: 'wan3.0-video', input: { prompt: '海浪' } },
         b.ctx,
       ),
@@ -251,23 +265,32 @@ describe('submit: request construction and response parsing (fixtures)', () => {
       .catch((cause: unknown) => cause)
     expect(edit).toMatchObject({ code: 'invalid_input' })
     expect((edit as Error).message).toContain('@modelbay/bailian/image-edit')
-    const process = await adapter
-      .submit(
+    // 精修不需要 sharp：没注入预处理实现时用内置的上传 + 拼请求体
+    const policy = fixture('upload-policy')
+    const run = fakeContext([
+      policy.response.body,
+      new Response('', { status: 200 }),
+      { output: { task_id: 'edit-1' } },
+    ])
+    expect(
+      await adapter.submit(
         {
           capability: 'image.process',
           model: 'wanx2.1-imageedit',
           input: { image: { assetId: 'a', kind: 'image' }, operation: 'upscale', scale: 2 },
         },
-        ctx,
-      )
-      .catch((cause: unknown) => cause)
-    expect(process).toMatchObject({ code: 'invalid_input' })
-    expect((process as Error).message).toContain('@modelbay/bailian/image-edit')
+        run.ctx,
+      ),
+    ).toMatchObject({ state: 'pending', remoteId: 'edit-1' })
+    expect(run.body(2)).toMatchObject({
+      input: { function: 'super_resolution' },
+      parameters: { n: 1, upscale_factor: 2 },
+    })
   })
   it('rejects an unsupported capability', async () => {
     const { ctx } = fakeContext([])
     await expect(
-      createBailianAdapter(models).submit(
+      createBailianAdapter(bailianModels).submit(
         { capability: 'audio.music', model: 'x', input: { prompt: 'x' } },
         ctx,
       ),
@@ -276,7 +299,7 @@ describe('submit: request construction and response parsing (fixtures)', () => {
 })
 
 describe('poll / cancel (async task polling)', () => {
-  const adapter = createBailianAdapter(models)
+  const adapter = createBailianAdapter(bailianModels)
   it('PENDING / RUNNING -> pending with queued/running', async () => {
     const a = fakeContext([{ output: { task_status: 'PENDING' } }])
     expect(await adapter.poll!('task-1', a.ctx)).toMatchObject({
@@ -317,7 +340,7 @@ describe('poll / cancel (async task polling)', () => {
     const { ctx } = fakeContext([{ output: { task_status: 'CANCELED' } }])
     expect(await adapter.poll!('task-1', ctx)).toEqual({
       state: 'failed',
-      error: { code: 'cancelled', message: 'Bailian task was cancelled' },
+      error: { code: 'cancelled', message: '百炼任务已取消' },
     })
   })
   it('unknown status throws so the host keeps the task id', async () => {

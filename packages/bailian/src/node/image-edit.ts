@@ -13,9 +13,9 @@
  * - 格式支持 JPG / JPEG / PNG / BMP / TIFF / WEBP，大小不超过 10MB。
  */
 import { ProviderError, type AdapterContext, type AssetRef } from '@modelbay/core'
-import { IMAGE_EDIT_PATH, uploadAsset } from '../adapter'
+import { IMAGE_EDIT_PATH, prepareProcessRequest, uploadAsset } from '../adapter'
 import type { ImageEditPreparer, ImageProcessPreparer } from '../image-edit'
-import type { Json } from '../http'
+import { readAsset, type Json } from '../http'
 
 export { IMAGE_EDIT_PATH }
 /** 官方要求的蒙版边长下限与上限（像素）。 */
@@ -153,20 +153,15 @@ export interface ImageEditAssetsOptions {
  * 宿主这样注入：`createBailianAdapter(models, { edit: prepareImageEditRequest })`。
  */
 export const prepareImageEditRequest: ImageEditPreparer = async (ctx, opts) => {
-  if (!ctx.assets)
-    throw new ProviderError('invalid_input', 'An assets source is required for image editing')
   const model = opts.model ?? 'wanx2.1-imageedit'
-  const [base, rawMask] = await Promise.all([
-    ctx.assets.load(opts.image.assetId),
-    ctx.assets.load(opts.mask.assetId),
-  ])
+  const [base, rawMask] = await Promise.all([readAsset(ctx, opts.image), readAsset(ctx, opts.mask)])
   if (!base.data.length) throw new ProviderError('invalid_input', '基准图内容为空')
   const prepared = await prepareEditMask(
     { data: base.data, mime: base.mime || opts.image.mime || 'image/png' },
     { data: rawMask.data, mime: rawMask.mime || opts.mask.mime || 'image/png' },
   )
   const [baseUrl, maskUrl] = await Promise.all([
-    uploadAsset(ctx, opts.image, model),
+    uploadAsset(ctx, opts.image, model, undefined, base),
     uploadMask(ctx, opts.mask, prepared, model),
   ])
   return buildImageEditRequest({
@@ -189,34 +184,7 @@ export const prepareImageEditRequest: ImageEditPreparer = async (ctx, opts) => {
  * 这里不再自带默认值。
  * 宿主这样注入：`createBailianAdapter(models, { process: prepareImageProcessRequest })`。
  */
-export const prepareImageProcessRequest: ImageProcessPreparer = async (ctx, opts) => {
-  if (!ctx.assets)
-    throw new ProviderError('invalid_input', 'An assets source is required for image processing')
-  const source = await ctx.assets.load(opts.image.assetId)
-  if (!source.data.length) throw new ProviderError('invalid_input', '万相精修原图不能是空文件')
-  const baseImageUrl = await uploadAsset(ctx, opts.image, opts.model)
-  const parameters: Json = { n: 1, ...opts.extra }
-  if (opts.operation === 'upscale') {
-    if (opts.scale === undefined) throw new ProviderError('invalid_input', '缺少 AI 放大倍数')
-    parameters.upscale_factor = opts.scale
-  } else {
-    const expansion = opts.expansion
-    if (!expansion) throw new ProviderError('invalid_input', '缺少扩图比例')
-    parameters.top_scale = expansion.top
-    parameters.bottom_scale = expansion.bottom
-    parameters.left_scale = expansion.left
-    parameters.right_scale = expansion.right
-  }
-  return {
-    model: opts.model,
-    input: {
-      function: opts.operation === 'upscale' ? 'super_resolution' : 'expand',
-      prompt: opts.prompt ?? '',
-      base_image_url: baseImageUrl,
-    },
-    parameters,
-  }
-}
+export const prepareImageProcessRequest: ImageProcessPreparer = prepareProcessRequest
 
 /** 把处理后的蒙版上传到百炼的临时 OSS 存储。 */
 function uploadMask(
