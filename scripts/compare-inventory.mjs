@@ -20,6 +20,12 @@ const COMPARE_FIELDS = [
   'features',
   'description',
   'agentOnly',
+  // plein ModelSpec 的另外三个字段：模型版本、费用、提示词指南。
+  // 基准快照是 2026-11-05 从 plein 的 describeProvider 抽的，快照里这三个字段全为空
+  // （plein 的 provider 当时一处都没填），声明同样不填；保留比对是为了将来 plein 补上数据时能发现漏项。
+  'version',
+  'price',
+  'promptGuide',
 ]
 
 /**
@@ -89,6 +95,92 @@ function fieldDiff(a, b, field) {
   return { kind: 'value' }
 }
 
+// ── optionsSchema 比对 ─────────────────────────────────────────────────
+// 基准快照里的 options 是 zod 内部结构（def.shape）；声明里是 JSON Schema。
+// 两边抽成同一份「字段名 → { type, enum, default }」，只比结构和取值。
+// 基准快照抽取时没有保留 `.meta()`，所以 title/description/labels/placeholder
+// 这类只在声明侧存在的 UI 元信息单独统计，不参与逐字段比对（见 6.4）。
+function zodOptionFields(options) {
+  const shape = options?.def?.shape ?? options?.shape
+  if (!shape || typeof shape !== 'object') return null
+  const fields = {}
+  for (const [key, raw] of Object.entries(shape)) {
+    const field = raw?.def ?? raw
+    const inner = field?.innerType ?? raw?.innerType
+    const innerDef = inner?.def ?? inner
+    const type = innerDef?.type
+    const schema = {}
+    if (type === 'boolean' || type === 'number' || type === 'string') schema.type = type
+    else if (type === 'enum') {
+      const entries = innerDef?.entries ?? inner?.enum
+      const values = entries ? Object.keys(entries) : (inner?.options ?? [])
+      if (values.length === 0) continue
+      schema.type = 'string'
+      schema.enum = values
+    } else continue
+    if (field?.defaultValue !== undefined) schema.default = field.defaultValue
+    fields[key] = schema
+  }
+  return fields
+}
+function jsonSchemaOptionFields(schema) {
+  const properties = schema?.properties
+  if (!properties || typeof properties !== 'object') return null
+  const fields = {}
+  for (const [key, prop] of Object.entries(properties)) {
+    const field = {}
+    if (prop?.type !== undefined) field.type = prop.type
+    if (Array.isArray(prop?.enum)) field.enum = prop.enum
+    if (prop && 'default' in prop) field.default = prop.default
+    fields[key] = field
+  }
+  return fields
+}
+function optionsSchemaDiffs(baselineOptions, declSchema) {
+  const before = zodOptionFields(baselineOptions)
+  const after = jsonSchemaOptionFields(declSchema)
+  if (!before) return []
+  if (!after) return [{ kind: 'missing', baseline: '有 options', actual: '（无 optionsSchema）' }]
+  const diffs = []
+  for (const key of Object.keys(before)) {
+    if (!(key in after)) {
+      diffs.push({ kind: 'missing-field', key, baseline: `有字段 ${key}`, actual: '（无）' })
+      continue
+    }
+    for (const prop of ['type', 'enum', 'default']) {
+      if (JSON.stringify(before[key][prop]) !== JSON.stringify(after[key][prop])) {
+        diffs.push({
+          kind: 'value',
+          key,
+          prop,
+          baseline: `${key}.${prop} = ${JSON.stringify(before[key][prop])}`,
+          actual: `${key}.${prop} = ${JSON.stringify(after[key][prop])}`,
+        })
+      }
+    }
+  }
+  for (const key of Object.keys(after)) {
+    if (!(key in before)) {
+      diffs.push({ kind: 'extra-field', key, baseline: '（无）', actual: `多出字段 ${key}` })
+    }
+  }
+  return diffs
+}
+// 参数元信息统计：声明里有多少属性带了 plein `.meta()` 的四个键
+function optionsMetadataStats(decls, filter = () => true) {
+  const stats = { properties: 0, title: 0, description: 0, labels: 0, placeholder: 0 }
+  for (const decl of decls) {
+    if (!filter(decl)) continue
+    for (const prop of Object.values(decl.optionsSchema?.properties ?? {})) {
+      stats.properties += 1
+      for (const key of ['title', 'description', 'labels', 'placeholder']) {
+        if (prop?.[key] !== undefined) stats[key] += 1
+      }
+    }
+  }
+  return stats
+}
+
 function buildDiff() {
   const providers = readJson(INVENTORY)
   const meta = existsSync(META_PATH) ? readJson(META_PATH) : null
@@ -105,6 +197,9 @@ function buildDiff() {
   let staticCount = 0
   let baselineOptions = 0
   let baselineDeprecated = 0
+  // plein 的 ModelSpec 声明了 version / price / promptGuide，但当前 provider 一处都没填；
+  // 记录基准里实际有值的数量，和声明侧对照，证明「没补」不是抽取漏项。
+  const baselineExtras = { version: 0, price: 0, promptGuide: 0 }
   for (const provider of providers) {
     for (const model of provider.models) {
       if (provider.id === 'plein/mock') {
@@ -114,6 +209,9 @@ function buildDiff() {
       staticCount += 1
       if (model.options) baselineOptions += 1
       if (model.deprecated) baselineDeprecated += 1
+      for (const field of Object.keys(baselineExtras)) {
+        if (model[field] !== undefined) baselineExtras[field] += 1
+      }
       if (!baseline.has(model.id)) baseline.set(model.id, [])
       baseline.get(model.id).push({ providerId: provider.id, model })
     }
@@ -153,6 +251,33 @@ function buildDiff() {
                 : '方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源',
         })
       }
+      // optionsSchema：基准快照存的是 zod options 的内部结构，逐字段抽出来比。
+      if (source.model.options) {
+        const optionDiffs = optionsSchemaDiffs(source.model.options, decl.optionsSchema)
+        for (const od of optionDiffs) {
+          hasDiff = true
+          const isPrimary = source === primary
+          const known = KNOWN_DIFFS.find(
+            (item) =>
+              item.platform === decl.platform &&
+              item.id === decl.id &&
+              item.field === 'optionsSchema',
+          )
+          differences.push({
+            platform: decl.platform,
+            id: decl.id,
+            field: 'optionsSchema',
+            baseline: esc(od.baseline),
+            actual: esc(od.actual),
+            providerId: source.providerId,
+            reason: known
+              ? known.reason
+              : isPrimary
+                ? 'optionsSchema 结构与 plein 的 zod options 不一致（需排查）'
+                : '方舟两渠道合并：套餐渠道与按量渠道的 options 不同，声明取按量侧（volc/ark）',
+          })
+        }
+      }
     }
     if (!hasDiff) exactFields += 1
   }
@@ -180,12 +305,24 @@ function buildDiff() {
         id: decl.id,
         field: 'options',
         handling: decl.optionsSchema
-          ? '转成 optionsSchema（简单 JSON Schema）'
+          ? '转成 optionsSchema（JSON Schema，含 .meta() 的 title/description/labels/placeholder）'
           : '无法转换，省略 optionsSchema',
         reason: 'options 是 zod 内部结构，声明是纯数据，不保留 def/innerType',
       })
     }
   }
+
+  // 声明侧 version / price / promptGuide 的填充数量，与基准对照
+  const declarationExtras = { version: 0, price: 0, promptGuide: 0 }
+  for (const decl of decls) {
+    for (const field of Object.keys(declarationExtras)) {
+      if (decl[field] !== undefined) declarationExtras[field] += 1
+    }
+  }
+  const optionMeta = optionsMetadataStats(decls)
+  // openai 的元信息由另一个任务补齐，本任务不动；统计时单列，避免把它算成本次成果
+  const openaiOptionMeta = optionsMetadataStats(decls, (d) => d.platform === 'openai')
+  const scopedOptionMeta = optionsMetadataStats(decls, (d) => d.platform !== 'openai')
 
   const lines = []
   const h = (s) => lines.push(s)
@@ -215,6 +352,18 @@ function buildDiff() {
   h(`| 数量差异 | ${decls.length - staticCount}（方舟按量/套餐同 id 合并，见第七节） |`)
   h(`| 逐字段完全一致的声明 | ${exactFields} |`)
   h(`| 内容/顺序差异条目 | ${differences.length}（见第六节，全部逐条说明） |`)
+  h(
+    `| 基准含 version / price / promptGuide 的模型 | ${baselineExtras.version} / ${baselineExtras.price} / ${baselineExtras.promptGuide} |`,
+  )
+  h(
+    `| 声明含 version / price / promptGuide 的模型 | ${declarationExtras.version} / ${declarationExtras.price} / ${declarationExtras.promptGuide} |`,
+  )
+  h(
+    `| 基准含 options 的模型 → 声明 optionsSchema | ${baselineOptions} → ${optionsSchemaCount}（省略 ${optionsOmitted}，差额来自方舟两渠道同 id 合并） |`,
+  )
+  h(
+    `| optionsSchema 属性带 title / description / labels / placeholder | ${optionMeta.title} / ${optionMeta.description} / ${optionMeta.labels} / ${optionMeta.placeholder}（共 ${optionMeta.properties} 个属性） |`,
+  )
   h('')
   h('平台分布：')
   h('')
@@ -463,6 +612,12 @@ function buildDiff() {
   h(
     `- 基准中含 \`options\` 的模型：${baselineOptions}；生成 \`optionsSchema\` 的声明：${optionsSchemaCount}；因转不出而省略：${optionsOmitted}；其余差额 ${baselineOptions - optionsSchemaCount - optionsOmitted} 来自方舟两渠道同 id 合并（两条原始记录合成一条声明）。`,
   )
+  h(
+    `- \`optionsSchema\` 与 plein 的 zod \`options\` 逐字段比对（字段名、\`type\`、\`enum\`、\`default\`）：主来源差异 ${differences.filter((d) => d.field === 'optionsSchema' && !d.reason.startsWith('方舟两渠道合并')).length} 条，方舟两渠道差异 ${differences.filter((d) => d.field === 'optionsSchema' && d.reason.startsWith('方舟两渠道合并')).length} 条（声明只有一个 optionsSchema，取按量侧）。`,
+  )
+  h(
+    `- 基准中含 \`version\` / \`price\` / \`promptGuide\` 的模型：${baselineExtras.version} / ${baselineExtras.price} / ${baselineExtras.promptGuide}；声明里填了这几个字段的：${declarationExtras.version} / ${declarationExtras.price} / ${declarationExtras.promptGuide}。`,
+  )
   h(`- 基准中含 \`deprecated\` 的模型：${baselineDeprecated}。`)
   h('')
   h('### 6.2 差异明细（逐条）')
@@ -483,7 +638,7 @@ function buildDiff() {
   h('')
   h('- `deprecated`：不写入声明，改由 `lifecycle.status` 表达（见第四节）。')
   h(
-    "- `options`：zod 内部结构转成 `optionsSchema`（`{ type: 'object', properties: {...} }`），声明不保留 `options` / `def` / `innerType`；转不出的省略 `optionsSchema`。",
+    `- \`options\`：zod 内部结构转成 \`optionsSchema\`（\`z.toJSONSchema(options, { io: 'input', unrepresentable: 'any' })\` 的等价 JSON Schema，含 \`$schema\` 与 \`.meta()\` 元信息），声明不保留 \`options\` / \`def\` / \`innerType\`；转不出的省略 \`optionsSchema\`。`,
   )
   h(
     '- 新增字段：`canonicalId`、`channels`、`aliases`、`lifecycle`、`source`（均为 0003 要求）；`capabilities` 沿用 plein 原有 9 种，未硬加 0003 新增的归一化能力。',
@@ -498,6 +653,36 @@ function buildDiff() {
   h('| --- | --- | --- | --- |')
   for (const r of transformRows)
     h(`| ${r.id} | \`${r.field}\` | ${esc(r.handling)} | ${esc(r.reason)} |`)
+  h('')
+  h('### 6.4 version / price / promptGuide 与参数元信息')
+  h('')
+  h(
+    '`ModelDeclaration` 继承 `ModelSpec` 的 `version`（模型版本，参与缓存键）、`price`（每次提交的大致费用）与 `promptGuide`（提示词指南）三个可选字段。逐条对照 plein：',
+  )
+  h('')
+  h('| 字段 | 基准（plein provider） | 声明 | 结论 |')
+  h('| --- | --- | --- | --- |')
+  h(
+    `| \`version\` | 填了 ${baselineExtras.version} 个模型 | 填了 ${declarationExtras.version} 个 | ${baselineExtras.version === 0 ? 'plein 一处都没填，没有可原样搬的值；不按模型名里的日期猜' : '与基准一致'} |`,
+  )
+  h(
+    `| \`price\` | 填了 ${baselineExtras.price} 个模型 | 填了 ${declarationExtras.price} 个 | ${baselineExtras.price === 0 ? 'plein 一处都没填；各平台价格按量计费且随时调整，没有官方原文不写进声明' : '与基准一致'} |`,
+  )
+  h(
+    `| \`promptGuide\` | 填了 ${baselineExtras.promptGuide} 个模型 | 填了 ${declarationExtras.promptGuide} 个 | ${baselineExtras.promptGuide === 0 ? 'plein 一处都没填；指南正文属于创作参考，没有官方原文不编' : '与基准一致'} |`,
+  )
+  h('')
+  h(
+    '这三个字段在基准快照（`docs/inventory/plein-models.json`）里也是空的：快照直接从 plein 的 `describeProvider()` 序列化而来，plein 的 `ModelSpec` 虽然声明了字段，但当前 `packages/providers/src/*/index.ts` 里一个模型都没赋值。因此声明同样不填，也不从模型 id 的日期段或平台价目表反推——那等于伪造官方数据。比对保留这三个字段：plein 以后补上时，`scripts/compare-inventory.mjs` 会立刻报出漏项。',
+  )
+  h('')
+  h(
+    `参数元信息（\`.meta()\` 的 \`title\` / \`description\` / \`labels\` / \`placeholder\`）在基准快照里没有保留，这里单独统计声明侧覆盖率：共 ${optionMeta.properties} 个 optionsSchema 属性，带 \`title\` 的 ${optionMeta.title} 个、带 \`description\` 的 ${optionMeta.description} 个、带 \`labels\` 的 ${optionMeta.labels} 个、带 \`placeholder\` 的 ${optionMeta.placeholder} 个。其中 openai 的 ${openaiOptionMeta.properties} 个属性（带 \`title\` 的 ${openaiOptionMeta.title} 个）不在本次范围，元信息由另一个任务补齐；本次的四个平台 ${scopedOptionMeta.properties} 个属性全部带 \`title\`（\`description\` ${scopedOptionMeta.description} 个、\`labels\` ${scopedOptionMeta.labels} 个、\`placeholder\` ${scopedOptionMeta.placeholder} 个），与 plein 的 \`.meta()\` 一一对应。`,
+  )
+  h('')
+  h(
+    '校验方式：用一次性脚本在 plein 侧对 ark / bailian / minimax / doubao-speech 每个模型的 zod `options` 跑 `z.toJSONSchema(options, { io: "input", unrepresentable: "any" })`（与 `describeProvider()` 完全相同的参数），把输出原样写进对应声明的 `optionsSchema`（含顶层 `$schema`），再逐字段比对字段名、`type`、`enum`、`default` 与四个元信息键，结果一致；脚本不进仓库。`scripts/check-declarations.mjs` 增加了「optionsSchema 的每个属性必须带非空 `title`」的硬检查（openai 暂列例外，该任务完成后删掉），防止以后丢元信息。',
+  )
   h('')
 
   // 七
