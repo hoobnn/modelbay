@@ -8,7 +8,13 @@ export default {
   features: ['structured'],
   channels: [
     { channel: 'ark', id: 'custom-chat' },
-    { channel: 'ark-plan', id: 'custom-chat' },
+    {
+      channel: 'ark-plan',
+      id: 'custom-chat',
+      title: '自定义套餐对话模型',
+      features: ['tools', 'structured'],
+      agentOnly: true,
+    },
   ],
   aliases: { official: [], short: [] },
   lifecycle: {

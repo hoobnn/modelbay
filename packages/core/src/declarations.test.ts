@@ -402,4 +402,33 @@ describe('ModelRegistry', () => {
     expect(new ModelRegistry().add(dup).aliasConflicts()).toEqual([])
     expect(new ModelRegistry().aliasConflicts()).toEqual([])
   })
+
+  it('渠道级 title、description、features 覆盖只作用于该渠道', () => {
+    const declaration = patch({
+      title: '自定义对话模型',
+      description: '通用说明',
+      features: ['structured'],
+      channels: [
+        { channel: 'minimax', id: 'a' },
+        {
+          channel: 'bailian',
+          id: 'b',
+          title: '自定义套餐对话模型',
+          description: '套餐说明',
+          features: ['tools', 'structured'],
+        },
+      ],
+    })
+    const [open, scoped] = declaration.channels
+    expect(toModelInfo(declaration, open)).toMatchObject({
+      title: '自定义对话模型',
+      description: '通用说明',
+      features: ['structured'],
+    })
+    expect(toModelInfo(declaration, scoped)).toMatchObject({
+      title: '自定义套餐对话模型',
+      description: '套餐说明',
+      features: ['tools', 'structured'],
+    })
+  })
 })

@@ -3,7 +3,14 @@
  * `export default { ... } satisfies ModelDeclaration`。
  * 模型身份（canonicalId）和渠道（channels）分开；生命周期带官方来源。
  */
-import type { Capability, ModelInfo, ModelLimits, ModelSpec, VoicePreset } from './provider'
+import type {
+  Capability,
+  ModelFeature,
+  ModelInfo,
+  ModelLimits,
+  ModelSpec,
+  VoicePreset,
+} from './provider'
 import type { NativeOperationName, NormalizedCapability } from './capabilities'
 
 export type LifecycleStatus =
@@ -45,6 +52,12 @@ export interface ChannelRef {
   source?: ModelSource
   /** 这个渠道里该模型只给内置 Agent 用（同一模型在别的渠道可以是普通生成模型）。 */
   agentOnly?: true
+  /** 这个渠道里该模型的显示名；不填用声明的 `title`。 */
+  title?: string
+  /** 这个渠道里该模型的说明；不填用声明的 `description`。 */
+  description?: string
+  /** 这个渠道里该模型的对话特性；不填用声明的 `features`。 */
+  features?: ModelFeature[]
   /** 这个渠道不支持 `optionsSchema` 里的这些参数：派生出的模型信息里不展示。 */
   omitOptions?: string[]
 }
@@ -271,10 +284,14 @@ export function toModelInfo(declaration: ModelDeclaration, channel?: ChannelRef)
   )
   return {
     id: channel?.id ?? declaration.channels[0]?.id ?? declaration.canonicalId,
-    title: declaration.title,
+    title: channel?.title ?? declaration.title,
     capabilities,
-    ...(declaration.description ? { description: declaration.description } : {}),
-    ...(declaration.features ? { features: declaration.features } : {}),
+    ...((channel?.description ?? declaration.description)
+      ? { description: channel?.description ?? declaration.description }
+      : {}),
+    ...((channel?.features ?? declaration.features)
+      ? { features: channel?.features ?? declaration.features }
+      : {}),
     ...(declaration.limits || channel?.limits
       ? { limits: { ...declaration.limits, ...channel?.limits } }
       : {}),

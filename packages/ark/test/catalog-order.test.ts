@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { selectDefaultModel } from '@modelbay/core'
+import { selectDefaultModel, toModelInfo } from '@modelbay/core'
 import { allModels } from '../src/declarations'
 
 const idsIn = (channel: string, capability: string) =>
@@ -63,5 +63,26 @@ describe('方舟目录顺序', () => {
     expect(defaults('ark', 'text.chat' as never)).toBe('doubao-seed-2-1-pro-260915')
     expect(defaults('ark', 'image.generate' as never)).toBe('doubao-seedream-5-0-pro-260628')
     expect(defaults('ark', 'video.generate' as never)).toBe('doubao-seedance-2-5-260628')
+  })
+})
+
+describe('方舟自定义对话模型的渠道差异', () => {
+  it('套餐渠道是仅 Agent 的自定义套餐模型，带 tools', () => {
+    const custom = allModels.find((item) => item.id === 'custom-chat')!
+    const plan = toModelInfo(
+      custom,
+      custom.channels.find((ref) => ref.channel === 'ark-plan'),
+    )
+    expect(plan).toMatchObject({
+      title: '自定义套餐对话模型',
+      features: ['tools', 'structured'],
+      agentOnly: true,
+    })
+    const api = toModelInfo(
+      custom,
+      custom.channels.find((ref) => ref.channel === 'ark'),
+    )
+    expect(api).toMatchObject({ title: '自定义对话模型（设置中填写）', features: ['structured'] })
+    expect(api.agentOnly).toBeUndefined()
   })
 })
