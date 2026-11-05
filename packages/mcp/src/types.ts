@@ -86,6 +86,7 @@ export type LocalHandler =
 export interface GeneratedTool extends MCPTool {
   group: ToolGroup
   route: ToolRoute
+  mapArguments?: ToolSpec['mapArguments']
 }
 
 export interface GeneratedToolSet {

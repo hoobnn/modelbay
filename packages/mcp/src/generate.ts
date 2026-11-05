@@ -108,6 +108,7 @@ function buildTool(
     annotations,
     group,
     route,
+    ...(entry.mapArguments ? { mapArguments: entry.mapArguments } : {}),
   }
 
   return tool
