@@ -7,6 +7,7 @@
 import {
   defineAdapter,
   ProviderError,
+  resolveModel,
   toBase64,
   selectDefaultModel,
   type AdapterContext,
@@ -14,6 +15,7 @@ import {
   type AssetRef,
   type CapabilityInput,
   type ModelDeclaration,
+  type ModelLimits,
   type NormalizedCapability,
   type PlatformAdapter,
   type PollResult,
@@ -21,6 +23,7 @@ import {
   type SubmitResult,
 } from '@modelbay/core'
 import { asJson, arr, requestJson, send, type Json } from './http'
+import type { ImageEditPreparer, ImageProcessPreparer } from './image-edit'
 import {
   audioFile,
   choiceContents,
@@ -35,6 +38,8 @@ import { BAILIAN_NATIVE_OPERATIONS, nativeOperationSchemas, runBailianNative } f
 const GENERATION = '/api/v1/services/aigc/multimodal-generation/generation'
 const VIDEO_SYNTHESIS = '/api/v1/services/aigc/video-generation/video-synthesis'
 const TASKS = '/api/v1/tasks'
+/** 万相图像编辑 / 精修（异步任务，素材走临时 OSS）。 */
+export const IMAGE_EDIT_PATH = '/api/v1/services/aigc/image2image/image-synthesis'
 
 const FILE_EXT: Record<string, string> = {
   'image/png': 'png',
@@ -219,9 +224,38 @@ export function defaultModel(
   return selectDefaultModel(models, capability, channel)?.channel.id ?? null
 }
 
+/** 精修各边的说法 */
+const EXPANSION_LABELS = { top: '向上', bottom: '向下', left: '向左', right: '向右' } as const
+
+/** 模型的限制以声明为准（渠道上的限制覆盖模型上的）；没声明就不限制。 */
+function modelLimits(models: ModelDeclaration[], model: string): ModelLimits {
+  const found = resolveModel(models, model)
+  return found ? { ...found.declaration.limits, ...found.channel.limits } : {}
+}
+
+/** 万相图像编辑 / 精修都是异步任务：提交后拿 task_id 去轮询。 */
+async function submitImageTask(ctx: AdapterContext, body: Json): Promise<SubmitResult> {
+  const data = await requestJson(ctx, IMAGE_EDIT_PATH, body, { asyncTask: true, oss: true })
+  const taskId = asJson(data.output).task_id
+  if (typeof taskId !== 'string' || !taskId)
+    throw new ProviderError('unknown', 'Bailian did not return task_id; do not resubmit the task')
+  return { state: 'pending', remoteId: taskId, pollAfterMs: pollAfter(ctx) }
+}
+
 export interface BailianAdapterOptions {
-  /** Exposed for documentation only; model data is never written by the adapter. */
   docsUrl?: string
+  /**
+   * 局部重绘的预处理与上传实现（Node 子路径 `@modelbay/bailian/image-edit` 提供）。
+   *
+   * 没注入时 `image.edit` 报 `invalid_input`，不会发出缺蒙版或缺素材地址的请求。
+   */
+  edit?: ImageEditPreparer
+  /**
+   * 精修（AI 放大 / 扩图）的预处理与上传实现（同上）。
+   *
+   * 没注入时 `image.process` 报 `invalid_input`。
+   */
+  process?: ImageProcessPreparer
 }
 
 export function createBailianAdapter(
@@ -345,13 +379,84 @@ export function createBailianAdapter(
             throw new ProviderError('unknown', 'Bailian video submission is missing task_id')
           return { state: 'pending', remoteId: taskId, pollAfterMs: pollAfter(ctx) }
         }
-        case 'image.edit':
+        case 'image.edit': {
+          const input = request.input as CapabilityInput<'image.edit'>
+          const prompt = typeof input.prompt === 'string' ? input.prompt : ''
+          if (!prompt.trim()) throw new ProviderError('invalid_input', '局部重绘需要提示词')
+          const limits = modelLimits(models, model)
+          const maxCount = limits.count?.max ?? 1
+          const count = input.count ?? 1
+          // 次数在上传之前拒绝：不满足时不会先传两张图再失败。
+          if (!Number.isInteger(count) || count < 1 || count > maxCount)
+            throw new ProviderError('invalid_input', `万相图像编辑一次仅支持生成 ${maxCount} 张`)
+          if (!options.edit)
+            throw new ProviderError(
+              'invalid_input',
+              '局部重绘需要蒙版预处理与临时 OSS 上传：请从 @modelbay/bailian/image-edit 引入 prepareImageEditRequest，再用 createBailianAdapter(models, { edit: prepareImageEditRequest }) 注入',
+            )
+          const body = await options.edit(ctx, {
+            model,
+            prompt,
+            image: input.image,
+            mask: input.mask,
+            count,
+            ...(input.seed !== undefined ? { seed: input.seed } : {}),
+          })
+          return submitImageTask(ctx, body)
+        }
         case 'image.process': {
-          // 蒙版重绘/精修需要 sharp 预处理与 OSS 上传，放在可选的 Node 子路径里实现。
-          throw new ProviderError(
-            'invalid_input',
-            `${capability} requires the Node-only @modelbay/bailian/image-edit subpath`,
-          )
+          const input = request.input as CapabilityInput<'image.process'>
+          const limits = modelLimits(models, model)
+          const operations = limits.imageOperations ?? ['upscale', 'outpaint']
+          if (!operations.includes(input.operation))
+            throw new ProviderError('invalid_input', `万相精修支持的操作：${operations.join('、')}`)
+          if (!input.image || input.image.kind !== 'image')
+            throw new ProviderError('invalid_input', '万相精修需要图片原图')
+          const maxPrompt = limits.promptMaxLength ?? 800
+          if (input.prompt && input.prompt.length > maxPrompt)
+            throw new ProviderError('invalid_input', `万相精修提示词不能超过 ${maxPrompt} 字`)
+          const rules = limits.process
+          if (input.operation === 'upscale') {
+            const range = rules?.scale
+            if (!range) throw new ProviderError('invalid_input', '所选模型不支持 AI 放大')
+            if (input.scale === undefined)
+              throw new ProviderError(
+                'invalid_input',
+                `请指定 AI 放大倍数（${range.min}–${range.max}）`,
+              )
+            if (!Number.isFinite(input.scale) || input.scale < range.min || input.scale > range.max)
+              throw new ProviderError('invalid_input', `AI 放大倍数须为 ${range.min}–${range.max}`)
+          } else {
+            const range = rules?.expansion
+            if (!range) throw new ProviderError('invalid_input', '所选模型不支持扩图')
+            if (!input.expansion)
+              throw new ProviderError(
+                'invalid_input',
+                `请指定扩图比例（各边 ${range.min}–${range.max}）`,
+              )
+            for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+              const value = input.expansion[side]
+              if (!Number.isFinite(value) || value < range.min || value > range.max)
+                throw new ProviderError(
+                  'invalid_input',
+                  `扩图${EXPANSION_LABELS[side]}比例须为 ${range.min}–${range.max}`,
+                )
+            }
+          }
+          if (!options.process)
+            throw new ProviderError(
+              'invalid_input',
+              '万相精修需要原图上传到临时 OSS：请从 @modelbay/bailian/image-edit 引入 prepareImageProcessRequest，再用 createBailianAdapter(models, { process: prepareImageProcessRequest }) 注入',
+            )
+          const body = await options.process(ctx, {
+            model,
+            image: input.image,
+            operation: input.operation as 'upscale' | 'outpaint',
+            ...(input.prompt !== undefined ? { prompt: input.prompt } : {}),
+            ...(input.scale !== undefined ? { scale: input.scale } : {}),
+            ...(input.expansion !== undefined ? { expansion: input.expansion } : {}),
+          })
+          return submitImageTask(ctx, body)
         }
         default:
           throw new ProviderError('invalid_input', `Bailian does not support ${capability}`)
@@ -435,5 +540,5 @@ export function createBailianAdapter(
 /** Native operation parameter schemas, re-exported for the MCP generator. */
 export { nativeOperationSchemas }
 
-/** Capabilities that require the Node-only `@modelbay/bailian/image-edit` subpath. */
+/** Capabilities that need the Node-only `@modelbay/bailian/image-edit` subpath. */
 export const NODE_ONLY_CAPABILITIES = ['image.edit', 'image.process'] as const

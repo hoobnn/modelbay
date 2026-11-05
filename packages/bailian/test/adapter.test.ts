@@ -232,13 +232,37 @@ describe('submit: request construction and response parsing (fixtures)', () => {
   })
   it('node-only capabilities point at the subpath', async () => {
     const { ctx } = fakeContext([])
-    const adapter = createBailianAdapter(models)
+    // 用真实声明，能力范围（放大倍数、扩图比例）要按声明校验。
+    const adapter = createBailianAdapter(bailianModels)
     expect(NODE_ONLY_CAPABILITIES).toEqual(['image.edit', 'image.process'])
-    for (const capability of NODE_ONLY_CAPABILITIES) {
-      await expect(
-        adapter.submit({ capability, model: 'wanx2.1-imageedit', input: {} as never }, ctx),
-      ).rejects.toMatchObject({ code: 'invalid_input' })
-    }
+    const edit = await adapter
+      .submit(
+        {
+          capability: 'image.edit',
+          model: 'wanx2.1-imageedit',
+          input: {
+            prompt: 'x',
+            image: { assetId: 'a', kind: 'image' },
+            mask: { assetId: 'b', kind: 'image' },
+          },
+        },
+        ctx,
+      )
+      .catch((cause: unknown) => cause)
+    expect(edit).toMatchObject({ code: 'invalid_input' })
+    expect((edit as Error).message).toContain('@modelbay/bailian/image-edit')
+    const process = await adapter
+      .submit(
+        {
+          capability: 'image.process',
+          model: 'wanx2.1-imageedit',
+          input: { image: { assetId: 'a', kind: 'image' }, operation: 'upscale', scale: 2 },
+        },
+        ctx,
+      )
+      .catch((cause: unknown) => cause)
+    expect(process).toMatchObject({ code: 'invalid_input' })
+    expect((process as Error).message).toContain('@modelbay/bailian/image-edit')
   })
   it('rejects an unsupported capability', async () => {
     const { ctx } = fakeContext([])

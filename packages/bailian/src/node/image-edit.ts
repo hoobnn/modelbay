@@ -13,9 +13,11 @@
  * - 格式支持 JPG / JPEG / PNG / BMP / TIFF / WEBP，大小不超过 10MB。
  */
 import { ProviderError, type AdapterContext, type AssetRef } from '@modelbay/core'
-import { uploadAsset } from '../adapter'
+import { IMAGE_EDIT_PATH, uploadAsset } from '../adapter'
+import type { ImageEditPreparer, ImageProcessPreparer } from '../image-edit'
+import type { Json } from '../http'
 
-export const IMAGE_EDIT_PATH = '/api/v1/services/aigc/image2image/image-synthesis'
+export { IMAGE_EDIT_PATH }
 /** 官方要求的蒙版边长下限与上限（像素）。 */
 export const MASK_MIN_SIDE = 512
 export const MASK_MAX_SIDE = 4096
@@ -141,18 +143,16 @@ export interface ImageEditAssetsOptions {
   model?: string
   count?: number
   seed?: number
-  extra?: Record<string, unknown>
+  extra?: Json
 }
 
 /**
  * 端到端准备局部重绘的请求体：处理蒙版 → 上传两张图 → 拼请求体。
  *
  * 上传走百炼的临时 OSS 存储（48 小时有效），返回 `oss://` 地址。
+ * 宿主这样注入：`createBailianAdapter(models, { edit: prepareImageEditRequest })`。
  */
-export async function prepareImageEditRequest(
-  ctx: AdapterContext,
-  opts: ImageEditAssetsOptions,
-): Promise<Record<string, unknown>> {
+export const prepareImageEditRequest: ImageEditPreparer = async (ctx, opts) => {
   if (!ctx.assets)
     throw new ProviderError('invalid_input', 'An assets source is required for image editing')
   const model = opts.model ?? 'wanx2.1-imageedit'
@@ -178,6 +178,40 @@ export async function prepareImageEditRequest(
     ...(opts.seed === undefined ? {} : { seed: opts.seed }),
     ...(opts.extra === undefined ? {} : { extra: opts.extra }),
   })
+}
+
+/**
+ * 端到端准备精修的请求体：上传原图 → 拼请求体。
+ *
+ * AI 放大走 `super_resolution`，扩图走 `expand`；两者都是同一个
+ * image-synthesis 端点，只是 `input.function` 与 `parameters` 不同。
+ * 宿主这样注入：`createBailianAdapter(models, { process: prepareImageProcessRequest })`。
+ */
+export const prepareImageProcessRequest: ImageProcessPreparer = async (ctx, opts) => {
+  if (!ctx.assets)
+    throw new ProviderError('invalid_input', 'An assets source is required for image processing')
+  const source = await ctx.assets.load(opts.image.assetId)
+  if (!source.data.length) throw new ProviderError('invalid_input', '万相精修原图不能是空文件')
+  const baseImageUrl = await uploadAsset(ctx, opts.image, opts.model)
+  const parameters: Json = { n: 1, ...opts.extra }
+  if (opts.operation === 'upscale') {
+    parameters.upscale_factor = opts.scale ?? 2
+  } else {
+    const expansion = opts.expansion ?? { top: 1, bottom: 1, left: 1.5, right: 1.5 }
+    parameters.top_scale = expansion.top
+    parameters.bottom_scale = expansion.bottom
+    parameters.left_scale = expansion.left
+    parameters.right_scale = expansion.right
+  }
+  return {
+    model: opts.model,
+    input: {
+      function: opts.operation === 'upscale' ? 'super_resolution' : 'expand',
+      prompt: opts.prompt ?? '',
+      base_image_url: baseImageUrl,
+    },
+    parameters,
+  }
 }
 
 /** 把处理后的蒙版上传到百炼的临时 OSS 存储。 */

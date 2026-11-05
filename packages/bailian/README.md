@@ -86,10 +86,35 @@ mask handling and upload:
 - `prepareImageEditRequest(ctx, opts)` runs the whole flow — process the mask, upload
   the base image and the mask to the DashScope temporary OSS store (48 h) and build the
   `description_edit_with_mask` body.
+- `prepareImageProcessRequest(ctx, opts)` uploads the source image and builds the
+  `super_resolution` (AI upscale) or `expand` (outpaint) body.
 
 `sharp` (Apache-2.0) is Node-only and an **optional peer dependency** — install it
-next to this subpath. The root entry deliberately excludes the subpath; `submit` for
-`image.edit` / `image.process` returns a clear `invalid_input` pointing here.
+next to this subpath. The root entry deliberately excludes the subpath.
+
+**Injecting the Node-only capabilities.** Both capabilities are injection points, so
+the root entry never imports `sharp`:
+
+```ts
+import { createBailianAdapter, models } from '@modelbay/bailian'
+import {
+  prepareImageEditRequest,
+  prepareImageProcessRequest,
+} from '@modelbay/bailian/image-edit'
+
+const adapter = createBailianAdapter(models, {
+  edit: prepareImageEditRequest,
+  process: prepareImageProcessRequest,
+})
+```
+
+With the implementations injected, `submit` for `image.edit` / `image.process` sends the
+real request to `/api/v1/services/aigc/image2image/image-synthesis` with the async and
+OSS-resolve headers and returns the `task_id` for polling. The root entry still
+validates the request first — the prompt, the number of images (`limits.count.max`,
+rejected before any upload), the upscale factor and the outpaint ratios (all read from
+the model declaration). Without an injected implementation the capability fails with
+`invalid_input` naming this subpath and the injection above.
 
 ## Errors and redaction
 

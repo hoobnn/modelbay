@@ -150,6 +150,7 @@ describe('prepareImageEditRequest（蒙版处理 + 上传）', () => {
       },
     }
     const body = await prepareImageEditRequest(ctx, {
+      model: 'wanx2.1-imageedit',
       image: { assetId: 'base', kind: 'image' },
       mask: { assetId: 'mask', kind: 'image' },
       prompt: '把衣服换成红色',

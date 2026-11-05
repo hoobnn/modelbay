@@ -11,6 +11,7 @@ import { all } from './models/index'
 export const bailianAdapter: PlatformAdapter = createBailianAdapter(all)
 
 export { createBailianAdapter, defaultModel, NODE_ONLY_CAPABILITIES } from './adapter'
+export type { ImageEditPreparer, ImageProcessPreparer } from './image-edit'
 export { nativeOperationSchemas, BAILIAN_NATIVE_OPERATIONS } from './native'
 export {
   DEFAULT_BASE_URL,
