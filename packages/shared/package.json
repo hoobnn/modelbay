@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Runtime-agnostic code shared by platform adapters: transport, OpenAI-compatible chat (Vercel AI SDK), model lists, video reference validation, voice preview and size math",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoobnn/modelbay.git",
+    "directory": "packages/shared"
+  },
+  "homepage": "https://github.com/hoobnn/modelbay/tree/main/packages/shared#readme",
+  "bugs": {
+    "url": "https://github.com/hoobnn/modelbay/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "files": [

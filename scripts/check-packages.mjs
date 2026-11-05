@@ -30,6 +30,13 @@ for (const name of readdirSync(packagesDir).sort()) {
     continue
   }
   checked += 1
+  // npm 只把包目录里的 LICENSE / README 打进 tarball；provenance 要求 repository 指向发布仓库
+  for (const file of ['LICENSE', 'README.md']) {
+    if (!existsSync(join(dir, file))) problems.push(`${pkg.name}: 缺少 ${file}`)
+  }
+  if (pkg.repository?.directory !== `packages/${name}` || !pkg.repository?.url) {
+    problems.push(`${pkg.name}: repository.url / repository.directory 缺失或不匹配`)
+  }
   const publint = run(bin('publint'), [dir])
   if (!publint.ok) problems.push(`${pkg.name}: publint 失败\n${publint.output}`)
   const attw = run(bin('attw'), ['--pack', dir, '--profile', 'esm-only'])

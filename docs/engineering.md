@@ -58,7 +58,7 @@ test/
 - 测试和类型检查直接解析源码：`@modelbay/<包>` → `src/index.ts`，`@modelbay/<包>/node` → `src/node/index.ts`。别名在 `vite.package.ts` 和 `tsconfig.base.json` 里统一配置，新包不用改。
 - `zod` 是 `peerDependency`（`^4.6`）：宿主会把 core 的 schema 和自己的混用，装两份会出错。
 - 只允许 MIT、Apache-2.0、BSD、ISC 许可的依赖。新增运行时依赖要在 PR 里说明用途。core 尽量不加依赖。
-- 发布前每个包都要过 `publint` 和 `@arethetypeswrong/cli`（`pnpm check:packages`）。
+- 发布前每个包都要过 `publint` 和 `@arethetypeswrong/cli`，并且包目录里有 `README.md`、`LICENSE`（根 LICENSE 的副本），`repository.directory` 指向自己的目录（`pnpm check:packages`）。仓库地址是 `github.com/hoobnn/modelbay`，npm provenance 要求它和发布所在的仓库一致。
 
 ## 代码规则
 

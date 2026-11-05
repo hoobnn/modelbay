@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Alibaba Bailian / DashScope adapter",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoobnn/modelbay.git",
+    "directory": "packages/bailian"
+  },
+  "homepage": "https://github.com/hoobnn/modelbay/tree/main/packages/bailian#readme",
+  "bugs": {
+    "url": "https://github.com/hoobnn/modelbay/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "files": [

@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Volcengine Ark adapter (pay-as-you-go and plan channels)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoobnn/modelbay.git",
+    "directory": "packages/ark"
+  },
+  "homepage": "https://github.com/hoobnn/modelbay/tree/main/packages/ark#readme",
+  "bugs": {
+    "url": "https://github.com/hoobnn/modelbay/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "files": [
