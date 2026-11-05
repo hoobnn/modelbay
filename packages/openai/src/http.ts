@@ -20,16 +20,16 @@ export function asJson(value: unknown): Json {
 }
 
 /**
- * Replace secrets in error text with `<redacted>`, longest first so a short key
- * that is a substring of a longer one cannot survive. Also masks Bearer tokens.
+ * Replace secrets in error text with `[redacted]` (plein's convention), longest first so a
+ * short key that is a substring of a longer one cannot survive. Also strips Bearer / sk- tokens.
  */
 export function redactSecrets(text: string, secrets: Array<string | undefined>): string {
-  const mask = '<redacted>'
+  const mask = '[redacted]'
   const list = secrets
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => b.length - a.length)
   for (const secret of list) text = text.split(secret).join(mask)
-  return text.replace(/(Bearer\s+)\S+/gi, `$1${mask}`).replace(/sk-[A-Za-z0-9._-]+/g, mask)
+  return text.replace(/Bearer\s+\S+/gi, `Bearer ${mask}`).replace(/sk-[a-zA-Z0-9_-]+/g, mask)
 }
 
 export interface TransportMessages {

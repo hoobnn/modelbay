@@ -4,7 +4,7 @@ import { createOpenAIAdapter, models } from '../src/index'
 import { editMask } from '../src/node/mask'
 import { fakeContext, jsonResponse } from './helpers'
 
-const MODEL = 'openai:gpt-image-2-5-sunburst'
+const MODEL = 'openai:gpt-image-2.5-sunburst'
 
 /** 每次都造新的应答：Response 的 body 只能读一次。 */
 const imageReply = () => jsonResponse({ data: [{ b64_json: 'iVBORw0KGgo=' }] })

@@ -5,7 +5,8 @@
  * - `openaiCompatibleAdapter` (channel `openai-compatible`): a single custom
  *   Chat Completions channel whose Base URL / model id are supplied by the host.
  *
- * Both use `/chat/completions` for text chat. The root entry is runtime-agnostic;
+ * 官方渠道的 text.chat 走 `/responses`（加密思考续传），兼容渠道走流式
+ * `/chat/completions`（SSE 必须以 `[DONE]` 结束）。The root entry is runtime-agnostic;
  * sharp-based mask inversion lives in the optional `@modelbay/openai/node`
  * subpath.
  */
@@ -21,7 +22,7 @@ import {
   type SubmitResult,
 } from '@modelbay/core'
 import { allModels as all } from './declarations'
-import { chatCompletion } from './chat'
+import { classifyOpenAI, compatibleChat, responsesChat } from './chat'
 import { asJson, request, type Json, type TransportMessages } from './http'
 import { normalizedBase } from './config'
 import { buildEditBody, buildImageBody, openAiModelList, parseImageResponse } from './media'
@@ -45,16 +46,28 @@ function label(kind: Kind): string {
 }
 
 function messages(kind: Kind): TransportMessages {
+  if (kind === 'compatible')
+    return {
+      cancelled: '兼容渠道提交可能已受理，请勿直接重提',
+      network: '兼容渠道提交状态未知，请勿直接重提',
+    }
   return {
     cancelled: `${label(kind)}请求已取消；生成提交可能已受理`,
     network: `${label(kind)}网络请求失败；生成提交结果未知，请勿直接重提`,
   }
 }
 
+/**
+ * 密钥名：官方渠道 `OPENAI_API_KEY`；兼容渠道接受 `COMPATIBLE_API_KEY`（plein 宿主的命名，
+ * 先查，避免宿主对未声明密钥直接拒绝）或 `OPENAI_COMPATIBLE_API_KEY`。前后空白一律去掉。
+ */
 function requireKey(kind: Kind, ctx: AdapterContext): string {
-  const name = kind === 'openai' ? 'OPENAI_API_KEY' : 'OPENAI_COMPATIBLE_API_KEY'
-  const key = ctx.secret(name)
-  if (!key) throw new ProviderError('auth', `请填写 ${name}`)
+  const key =
+    kind === 'openai'
+      ? ctx.secret('OPENAI_API_KEY')?.trim()
+      : (ctx.secret('COMPATIBLE_API_KEY') ?? ctx.secret('OPENAI_COMPATIBLE_API_KEY'))?.trim()
+  if (!key)
+    throw new ProviderError('auth', kind === 'openai' ? '请填写 OpenAI API Key' : '请填写 API Key')
   return key
 }
 
@@ -67,17 +80,27 @@ function modelId(ref: string, models: ModelDeclaration[]): string {
 }
 
 /**
- * Base URL for the compatible channel. `AdapterContext` has no settings slot,
- * so non-secret channel config is conveyed through the same injected
- * `name → value` resolver (`ctx.secret`), with `input.extra.baseURL` as an
- * explicit per-request override. Public URLs are validated by `normalizedBase`.
+ * Base URL for the compatible channel. 优先取宿主透传的 `ctx.settings.baseURL`，
+ * 其次 `input.extra.baseURL`（单次请求覆盖），最后是 `OPENAI_COMPATIBLE_BASE_URL`
+ * 配置项。Public URLs are validated by `normalizedBase`.
  */
 function baseFor(kind: Kind, ctx: AdapterContext, extra: Json): string {
   if (kind === 'openai') return OPENAI_BASE
+  const fromSettings = ctx.settings?.baseURL
   const raw =
-    typeof extra.baseURL === 'string' ? extra.baseURL : ctx.secret('OPENAI_COMPATIBLE_BASE_URL')
+    typeof fromSettings === 'string' && fromSettings
+      ? fromSettings
+      : typeof extra.baseURL === 'string'
+        ? extra.baseURL
+        : ctx.secret('OPENAI_COMPATIBLE_BASE_URL')
   if (!raw) throw new ProviderError('invalid_input', '请填写兼容渠道 Base URL')
   return normalizedBase(raw)
+}
+
+/** 兼容渠道的真实模型 ID：宿主设置里的 `model` 优先（宿主可能用自己的身份串做 req.model）。 */
+function compatibleModel(ctx: AdapterContext, fallback: string): string {
+  const configured = ctx.settings?.model
+  return typeof configured === 'string' && configured ? configured : fallback
 }
 
 function authHeaders(key: string): Record<string, string> {
@@ -97,25 +120,40 @@ async function submit(
     Partial<CapabilityInput<'image.edit'>>
   const extra = asJson(input.extra ?? {})
   const base = baseFor(kind, ctx, extra)
-  const model = modelId(req.model, models)
+  const model =
+    kind === 'compatible'
+      ? compatibleModel(ctx, modelId(req.model, models))
+      : modelId(req.model, models)
+  if (kind === 'openai' && !req.remoteOnly) {
+    const known = resolveModel(models, req.model)
+    if (!known || known.custom || !known.declaration.capabilities.includes(req.capability))
+      throw new ProviderError('invalid_input', 'OpenAI 模型不支持该能力，请重新选择模型')
+  }
   const tag = label(kind)
   const transport = messages(kind)
 
   if (req.capability === 'text.chat') {
-    return chatCompletion({
+    const chat = input as CapabilityInput<'text.chat'>
+    if (kind === 'openai')
+      return responsesChat({
+        ctx,
+        model,
+        apiKey: key,
+        label: tag,
+        input: chat,
+        messages: transport,
+        temperatureDisabled:
+          resolveModel(models, req.model)?.declaration.limits?.temperature === false,
+      })
+    return compatibleChat({
       ctx,
-      url: `${base}/chat/completions`,
+      baseURL: base,
       model,
       apiKey: key,
       label: tag,
-      input: input as CapabilityInput<'text.chat'>,
+      input: chat,
       messages: transport,
-      structured: kind === 'openai' ? 'json_schema' : 'json_object',
-      classify: (_status, code) => {
-        if (/quota|billing|insufficient_quota/.test(code)) return 'quota'
-        if (/content_policy|safety|moderation/.test(code)) return 'content_policy'
-        return undefined
-      },
+      structured: ctx.settings?.structured === 'json_schema' ? 'json_schema' : 'json_object',
     })
   }
 
@@ -130,6 +168,7 @@ async function submit(
       label: tag,
       messages: transport,
       secrets: [key],
+      classify: classifyOpenAI,
       retries: 0,
     })
     return parseImageResponse(data, built.format)
@@ -152,6 +191,7 @@ async function submit(
       label: tag,
       messages: transport,
       secrets: [key],
+      classify: classifyOpenAI,
       retries: 0,
     })
     return parseImageResponse(data, built.format)
@@ -195,6 +235,7 @@ function makeAdapter(
         label: label(kind),
         messages: messages(kind),
         secrets: [key],
+        classify: classifyOpenAI,
       })
       return openAiModelList(data)
     },

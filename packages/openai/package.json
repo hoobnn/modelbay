@@ -32,7 +32,9 @@
     }
   },
   "dependencies": {
-    "@modelbay/core": "workspace:*"
+    "@ai-sdk/openai": "4.0.106",
+    "@modelbay/core": "workspace:*",
+    "@modelbay/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

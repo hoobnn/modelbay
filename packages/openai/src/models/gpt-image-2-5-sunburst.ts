@@ -16,9 +16,13 @@ export default {
   optionsSchema: {
     type: 'object',
     properties: {
-      quality: { type: 'string', enum: ['auto', 'low', 'medium', 'high', 'xhigh', 'max'] },
-      background: { type: 'string', enum: ['auto', 'opaque', 'transparent'] },
-      output_format: { type: 'string', enum: ['png', 'jpeg', 'webp'] },
+      quality: {
+        title: '画质',
+        type: 'string',
+        enum: ['auto', 'low', 'medium', 'high', 'xhigh', 'max'],
+      },
+      background: { title: '背景', type: 'string', enum: ['auto', 'opaque', 'transparent'] },
+      output_format: { title: '输出格式', type: 'string', enum: ['png', 'jpeg', 'webp'] },
     },
   },
   default: true,

@@ -1,256 +1,225 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { ProviderError, type CapabilityInput } from '@modelbay/core'
-import {
-  buildChatBody,
-  buildMessages,
-  chatCompletion,
-  imageDataUrl,
-  parseChatResponse,
-  type ChatCall,
-} from '../src/chat'
+import { terminalResponse, imageDataUrl, responsesChat, compatibleChat } from '../src/chat'
 import type { TransportMessages } from '../src/http'
-import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
+import { fakeContext } from './helpers'
 
-const messages: TransportMessages = {
+const transport: TransportMessages = {
   cancelled: 'OpenAI 请求已取消；生成提交可能已受理',
   network: 'OpenAI 网络请求失败；生成提交结果未知，请勿直接重提',
 }
 
-function call(overrides: Partial<ChatCall> = {}): ChatCall {
-  const { ctx } = fakeContext()
-  return {
-    ctx,
-    url: 'https://api.openai.com/v1/chat/completions',
-    model: 'gpt-6-1-sol',
-    apiKey: 'sk-recorded-key',
-    label: 'OpenAI',
-    input: { messages: [{ role: 'user', content: 'Hello' }] },
-    messages,
-    structured: 'json_schema',
-    ...overrides,
-  }
+function sse(frames: unknown[]): Response {
+  return new Response(frames.map((f) => `data: ${JSON.stringify(f)}\n\n`).join(''), {
+    headers: { 'Content-Type': 'text/event-stream' },
+  })
 }
 
-describe('buildChatBody：请求构造与字段透传', () => {
-  it('与录制夹具一致', () => {
-    const recorded = fixture<RecordedCall>('chat-success')
-    const input: CapabilityInput<'text.chat'> = {
-      messages: [{ role: 'user', content: 'Hello' }],
-      temperature: 0.5,
-      maxTokens: 512,
-      extra: { reasoning_effort: 'high' },
-    }
-    expect(buildChatBody(call({ input }), [{ role: 'user', content: 'Hello' }])).toEqual(
-      recorded.request.body,
-    )
-  })
+const responseFrames = (terminal = true) => [
+  { type: 'response.created', response: { id: 'r1', created_at: 1, model: 'gpt-6.1-sol' } },
+  {
+    type: 'response.output_item.added',
+    output_index: 0,
+    item: { id: 'm1', type: 'message', role: 'assistant', content: [] },
+  },
+  {
+    type: 'response.content_part.added',
+    item_id: 'm1',
+    output_index: 0,
+    content_index: 0,
+    part: { type: 'output_text', text: '', annotations: [] },
+  },
+  {
+    type: 'response.output_text.delta',
+    item_id: 'm1',
+    output_index: 0,
+    content_index: 0,
+    delta: 'hi',
+  },
+  ...(terminal
+    ? [
+        {
+          type: 'response.completed',
+          response: {
+            id: 'r1',
+            created_at: 1,
+            model: 'gpt-6.1-sol',
+            status: 'completed',
+            output: [],
+            usage: { input_tokens: 3, output_tokens: 1 },
+          },
+        },
+      ]
+    : []),
+]
 
-  it('平台特有字段（previous_response_id / 思考 / 联网搜索）原样透传', () => {
-    const input: CapabilityInput<'text.chat'> = {
-      messages: [{ role: 'user', content: 'hi' }],
-      extra: {
-        previous_response_id: 'resp_123',
-        reasoning_effort: 'medium',
-        thinking: { type: 'enabled' },
-        web_search: { enable: true },
-        top_p: 0.8,
-      },
-    }
-    const body = buildChatBody(call({ input }), [{ role: 'user', content: 'hi' }])
-    expect(body.previous_response_id).toBe('resp_123')
-    expect(body.reasoning_effort).toBe('medium')
-    expect(body.thinking).toEqual({ type: 'enabled' })
-    expect(body.web_search).toEqual({ enable: true })
-    expect(body.top_p).toBe(0.8)
-  })
+const input = { messages: [{ role: 'user' as const, content: 'hello' }], temperature: 0.7 }
 
-  it('RESERVED 字段不能被 extra 覆盖', () => {
-    const input: CapabilityInput<'text.chat'> = {
-      messages: [{ role: 'user', content: 'hi' }],
-      extra: { model: 'hacked', messages: [], stream: true, baseURL: 'https://evil.test' },
-    }
-    const body = buildChatBody(call({ input }), [{ role: 'user', content: 'hi' }])
-    expect(body.model).toBe('gpt-6-1-sol')
-    expect(body.stream).toBe(false)
-    expect(body.baseURL).toBeUndefined()
-  })
-
-  it('tools / toolChoice / jsonSchema', () => {
-    const schema = { type: 'object', properties: { a: { type: 'string' } } }
-    const input: CapabilityInput<'text.chat'> = {
-      messages: [{ role: 'user', content: 'hi' }],
-      tools: [{ name: 'fn', description: '工具', parameters: { type: 'object' } }],
-      toolChoice: 'required',
-      jsonSchema: schema,
-    }
-    const body = buildChatBody(call({ input }), [{ role: 'user', content: 'hi' }])
-    expect(body.tool_choice).toBe('required')
-    expect(body.tools).toHaveLength(1)
-    expect(body.response_format).toEqual({
-      type: 'json_schema',
-      json_schema: { name: 'modelbay_output', schema },
+describe('responsesChat：官方渠道 /responses', () => {
+  it('无状态请求带加密思考；temperature:false 时不发温度', async () => {
+    const { ctx, fetch, body } = fakeContext([sse(responseFrames())], {
+      secret: { OPENAI_API_KEY: 'sk-k' },
     })
+    const result = await responsesChat({
+      ctx,
+      model: 'gpt-6.1-sol',
+      apiKey: 'sk-k',
+      label: 'OpenAI',
+      input,
+      messages: transport,
+      temperatureDisabled: true,
+    })
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      outputs: [{ type: 'text', text: 'hi' }],
+      usage: { inputTokens: 3, outputTokens: 1 },
+    })
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.openai.com/v1/responses')
+    expect(body()).toMatchObject({ store: false, include: ['reasoning.encrypted_content'] })
+    expect(body()).not.toHaveProperty('temperature')
+  })
+
+  it('声明允许温度时照常发送', async () => {
+    const { ctx, body } = fakeContext([sse(responseFrames())])
+    await responsesChat({
+      ctx,
+      model: 'm',
+      apiKey: 'k',
+      label: 'OpenAI',
+      input,
+      messages: transport,
+    })
+    expect(body().temperature).toBe(0.7)
+  })
+
+  it('没有结束事件的流保留 outcome: unknown', async () => {
+    const { ctx } = fakeContext([sse(responseFrames(false))])
+    await expect(
+      responsesChat({ ctx, model: 'm', apiKey: 'k', label: 'OpenAI', input, messages: transport }),
+    ).rejects.toMatchObject({ outcome: 'unknown', retryable: false })
+  })
+
+  it('思考强度只接受 low / medium / high', async () => {
+    const { ctx, fetch } = fakeContext()
+    await expect(
+      responsesChat({
+        ctx,
+        model: 'm',
+        apiKey: 'k',
+        label: 'OpenAI',
+        input: { ...input, extra: { reasoning_effort: 'x' } },
+        messages: transport,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('HTTP 错误归类并脱敏密钥', async () => {
+    const { ctx } = fakeContext([
+      Response.json(
+        { error: { code: 'insufficient_quota', message: 'bad sk-secret' } },
+        { status: 429 },
+      ),
+    ])
+    await expect(
+      responsesChat({
+        ctx,
+        model: 'm',
+        apiKey: 'sk-secret',
+        label: 'OpenAI',
+        input,
+        messages: transport,
+      }),
+    ).rejects.toMatchObject({ code: 'quota', message: 'bad [redacted]' })
   })
 })
 
-describe('buildMessages：消息转换', () => {
-  it('assistant continuation 回传 reasoning_content / encrypted_content', async () => {
-    const { ctx } = fakeContext()
-    const out = await buildMessages(
-      ctx,
-      {
-        messages: [
-          {
-            role: 'assistant',
-            content: '思考中',
-            continuation: {
-              model: 'gpt-6-astra',
-              reasoningContent: '推理片段',
-              encryptedContent: 'enc-recorded',
-            },
-          },
-        ],
-      },
-      'OpenAI',
+describe('compatibleChat：兼容渠道 Chat Completions', () => {
+  const frame = (end = true) =>
+    new Response(
+      `data: ${JSON.stringify({ id: 'c1', choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] })}\n\n${end ? 'data: [DONE]\n\n' : ''}`,
+      { headers: { 'Content-Type': 'text/event-stream' } },
     )
-    expect(out[0]).toMatchObject({
-      reasoning_content: '推理片段',
-      encrypted_content: 'enc-recorded',
+
+  it('流式请求发到 baseURL，带 [DONE] 才算完整', async () => {
+    const { ctx, fetch, body } = fakeContext([frame()])
+    const result = await compatibleChat({
+      ctx,
+      baseURL: 'https://gw.example.com/v1',
+      model: 'custom',
+      apiKey: 'k',
+      label: '兼容渠道',
+      input,
+      messages: transport,
     })
+    expect(result).toMatchObject({ state: 'succeeded', outputs: [{ type: 'text', text: 'ok' }] })
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://gw.example.com/v1/chat/completions')
+    expect(body()).toMatchObject({ model: 'custom', stream: true })
   })
 
-  it('图片输入通过 assets 转 data URL；无 assets 时报错', async () => {
+  it('缺少 [DONE] 保留 outcome: unknown', async () => {
+    const { ctx } = fakeContext([frame(false)])
+    await expect(
+      compatibleChat({
+        ctx,
+        baseURL: 'https://gw.example.com/v1',
+        model: 'custom',
+        apiKey: 'k',
+        label: '兼容渠道',
+        input,
+        messages: transport,
+      }),
+    ).rejects.toMatchObject({ outcome: 'unknown' })
+  })
+
+  it('401 归为 auth，Bearer 令牌脱敏', async () => {
+    const { ctx } = fakeContext([
+      Response.json({ error: { message: 'k Bearer sk-private' } }, { status: 401 }),
+    ])
+    await expect(
+      compatibleChat({
+        ctx,
+        baseURL: 'https://gw.example.com/v1',
+        model: 'custom',
+        apiKey: 'k',
+        label: '兼容渠道',
+        input,
+        messages: transport,
+      }),
+    ).rejects.toMatchObject({ code: 'auth', message: '[redacted] Bearer [redacted]' })
+  })
+})
+
+describe('imageDataUrl 与 terminalResponse', () => {
+  it('优先读 ctx.files，回退 assets，都没有则报错', async () => {
+    const ref = { assetId: 'a1', kind: 'image' as const }
     const { ctx } = fakeContext([], {
       assets: { load: async () => ({ data: new Uint8Array([1, 2, 3]), mime: 'image/png' }) },
     })
-    const out = await buildMessages(
-      ctx,
-      {
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: '看图' },
-              { type: 'image', image: { assetId: 'a1', kind: 'image' } },
-            ],
-          },
-        ],
-      },
-      'OpenAI',
-    )
-    expect(out[0]).toMatchObject({
-      content: [
-        { type: 'text', text: '看图' },
-        { type: 'image_url', image_url: { url: 'data:image/png;base64,AQID' } },
-      ],
-    })
-    await expect(
-      imageDataUrl(fakeContext().ctx, { assetId: 'a1', kind: 'image' }, 'OpenAI'),
-    ).rejects.toMatchObject({ code: 'invalid_input' })
-  })
-})
-
-describe('parseChatResponse：响应解析', () => {
-  it('成功文本 + 用量', () => {
-    const recorded = fixture<RecordedCall>('chat-success')
-    const result = parseChatResponse(call(), recorded.response.body as Record<string, unknown>)
-    expect(result.state).toBe('succeeded')
-    if (result.state === 'succeeded') {
-      expect(result.outputs).toEqual([{ type: 'text', text: 'Hi there!' }])
-      expect(result.usage).toEqual({ inputTokens: 8, outputTokens: 4 })
+    expect(await imageDataUrl(ctx, ref, 'OpenAI')).toBe('data:image/png;base64,AQID')
+    const viaFiles = {
+      ...ctx,
+      files: { read: async () => ({ data: new Uint8Array([1]), mime: 'image/webp' }) },
     }
-  })
-
-  it('工具调用 + continuation', () => {
-    const recorded = fixture<RecordedCall>('chat-tool-calls')
-    const result = parseChatResponse(call(), recorded.response.body as Record<string, unknown>)
-    expect(result.state).toBe('succeeded')
-    if (result.state !== 'succeeded') return
-    const calls = result.outputs.find((item) => item.type === 'tool_calls')
-    expect(calls).toMatchObject({
-      calls: [{ id: 'call_2', name: 'get_weather', arguments: { city: '北京' } }],
-    })
-    if (calls?.type === 'tool_calls')
-      expect(calls.continuation).toMatchObject({ encryptedContent: '<redacted>' })
-  })
-
-  it('jsonSchema 结构化输出与错误分支', () => {
-    const withSchema = call({
-      input: { messages: [{ role: 'user', content: 'hi' }], jsonSchema: { type: 'object' } },
-    })
-    expect(
-      parseChatResponse(withSchema, { choices: [{ message: { content: '{"a":1}' } }] }),
-    ).toMatchObject({ state: 'succeeded', outputs: [{ type: 'json', value: { a: 1 } }] })
-    expect(() =>
-      parseChatResponse(withSchema, { choices: [{ message: { content: 'bad' } }] }),
-    ).toThrow(ProviderError)
-    expect(() =>
-      parseChatResponse(call(), { choices: [{ finish_reason: 'content_filter' }] }),
-    ).toThrow(/拒绝生成/)
-    expect(() => parseChatResponse(call(), { choices: [] })).toThrow(/缺少对话内容/)
-  })
-})
-
-describe('chatCompletion：完整请求 + 错误映射', () => {
-  it('URL / headers / body 与录制夹具一致', async () => {
-    const recorded = fixture<RecordedCall>('chat-success')
-    const { ctx, fetch } = fakeContext([jsonResponse(recorded.response.body)], {
-      secret: { OPENAI_API_KEY: 'sk-recorded-key' },
-    })
-    await chatCompletion(
-      call({
-        ctx,
-        apiKey: 'sk-recorded-key',
-        input: {
-          messages: [{ role: 'user', content: 'Hello' }],
-          temperature: 0.5,
-          maxTokens: 512,
-          extra: { reasoning_effort: 'high' },
-        },
-      }),
-    )
-    const [url, init] = fetch.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(recorded.request.url)
-    const headers = init?.headers as Record<string, string> | undefined
-    expect(headers?.Authorization).toBe('Bearer sk-recorded-key')
-    expect(JSON.parse(String(init?.body))).toEqual(recorded.request.body)
-  })
-
-  it('401 / 429 / 5xx / quota / content_policy 错误码映射', async () => {
-    const recorded = fixture<{ cases: Array<{ status: number; body: unknown; code: string }> }>(
-      'chat-errors',
-    )
-    for (const item of recorded.cases) {
-      const { ctx } = fakeContext([jsonResponse(item.body, item.status)])
-      await expect(chatCompletion(call({ ctx, apiKey: 'sk-k' }))).rejects.toMatchObject({
-        code: item.code,
-      })
-    }
-  })
-
-  it('上游 key 不进入错误信息', async () => {
-    const { ctx } = fakeContext([
-      jsonResponse(
-        { error: { code: 'auth', message: 'bad key sk-secret-abc for account acct-123' } },
-        401,
-      ),
-    ])
-    await expect(chatCompletion(call({ ctx, apiKey: 'sk-secret-abc' }))).rejects.toMatchObject({
-      code: 'auth',
-      message: expect.not.stringContaining('sk-secret-abc'),
-    })
-  })
-
-  it('夹具里的 Authorization / key / 账号 ID 已 <redacted>', () => {
-    const recorded = fixture<RecordedCall>('chat-success')
-    expect(recorded.request.headers.Authorization).toBe('Bearer <redacted>')
-    expect(JSON.stringify(fixture('chat-errors'))).toContain('<redacted>')
-  })
-
-  it('空 messages 抛 invalid_input', async () => {
-    const { ctx } = fakeContext()
-    await expect(chatCompletion(call({ ctx, input: { messages: [] } }))).rejects.toMatchObject({
+    expect(await imageDataUrl(viaFiles, ref, 'OpenAI')).toBe('data:image/webp;base64,AQ==')
+    await expect(imageDataUrl(fakeContext().ctx, ref, 'OpenAI')).rejects.toMatchObject({
       code: 'invalid_input',
     })
+  })
+
+  it('拒绝非图片 / 不支持的类型 / 超限', async () => {
+    const { ctx } = fakeContext([], {
+      assets: { load: async () => ({ data: new Uint8Array([1]), mime: 'image/gif' }) },
+    })
+    await expect(imageDataUrl(ctx, { assetId: 'a', kind: 'video' }, 'OpenAI')).rejects.toThrow(
+      /只接受图片/,
+    )
+    await expect(imageDataUrl(ctx, { assetId: 'a', kind: 'image' }, 'OpenAI')).rejects.toThrow(
+      /PNG、JPEG 或 WebP/,
+    )
+  })
+
+  it('非事件流响应原样返回', () => {
+    const res = Response.json({})
+    expect(terminalResponse(res)).toBe(res)
   })
 })

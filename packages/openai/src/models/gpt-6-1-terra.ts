@@ -9,7 +9,9 @@ export default {
   limits: { temperature: false },
   optionsSchema: {
     type: 'object',
-    properties: { reasoning_effort: { type: 'string', enum: ['low', 'medium', 'high'] } },
+    properties: {
+      reasoning_effort: { title: '思考强度', type: 'string', enum: ['low', 'medium', 'high'] },
+    },
   },
   channels: [{ channel: 'openai', id: 'gpt-6.1-terra' }],
   aliases: { official: [], short: [] },

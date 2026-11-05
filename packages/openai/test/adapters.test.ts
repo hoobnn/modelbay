@@ -9,9 +9,57 @@ import {
 } from '../src/index'
 import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
 
+function sse(frames: unknown[], done = false): Response {
+  const text =
+    frames.map((f) => `data: ${JSON.stringify(f)}\n\n`).join('') + (done ? 'data: [DONE]\n\n' : '')
+  return new Response(text, { headers: { 'Content-Type': 'text/event-stream' } })
+}
+
+/** Responses API 的最小成功流。 */
+function responsesStream(): Response {
+  return sse([
+    { type: 'response.created', response: { id: 'r1', created_at: 1, model: 'gpt-6.1-sol' } },
+    {
+      type: 'response.output_item.added',
+      output_index: 0,
+      item: { id: 'm1', type: 'message', role: 'assistant', content: [] },
+    },
+    {
+      type: 'response.content_part.added',
+      item_id: 'm1',
+      output_index: 0,
+      content_index: 0,
+      part: { type: 'output_text', text: '', annotations: [] },
+    },
+    {
+      type: 'response.output_text.delta',
+      item_id: 'm1',
+      output_index: 0,
+      content_index: 0,
+      delta: 'hi',
+    },
+    {
+      type: 'response.completed',
+      response: {
+        id: 'r1',
+        created_at: 1,
+        model: 'gpt-6.1-sol',
+        status: 'completed',
+        output: [],
+        usage: { input_tokens: 2, output_tokens: 1 },
+      },
+    },
+  ])
+}
+
+/** Chat Completions 流式应答，以 [DONE] 结束。 */
+function chatStream(): Response {
+  return sse([{ id: 'c1', choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }], true)
+}
+
 function request(
   capability: AdapterRequest['capability'],
-  model = 'openai:gpt-6-1-sol',
+  model = 'openai:gpt-6.1-sol',
 ): AdapterRequest {
   return {
     capability,
@@ -34,17 +82,16 @@ describe('适配器导出', () => {
 })
 
 describe('openaiAdapter.submit：官方数据面', () => {
-  it('文本对话走 /v1/chat/completions 并解析响应', async () => {
-    const recorded = fixture<RecordedCall>('chat-success')
-    const { ctx, fetch } = fakeContext([jsonResponse(recorded.response.body)], {
+  it('文本对话走 /v1/responses（流式）并解析响应', async () => {
+    const { ctx, fetch } = fakeContext([responsesStream()], {
       secret: { OPENAI_API_KEY: 'sk-recorded-key' },
     })
     const result = await openaiAdapter.submit(request('text.chat'), ctx)
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(recorded.request.url)
+    expect(url).toBe('https://api.openai.com/v1/responses')
     const headers = init?.headers as Record<string, string> | undefined
     expect(headers?.Authorization).toBe('Bearer sk-recorded-key')
-    expect(result.state).toBe('succeeded')
+    expect(result).toMatchObject({ state: 'succeeded', outputs: [{ type: 'text', text: 'hi' }] })
   })
 
   it('图片生成走 /v1/images/generations', async () => {
@@ -55,7 +102,7 @@ describe('openaiAdapter.submit：官方数据面', () => {
     const result = await openaiAdapter.submit(
       {
         capability: 'image.generate',
-        model: 'openai:gpt-image-2-5-sunburst',
+        model: 'openai:gpt-image-2.5-sunburst',
         input: { prompt: '一只猫' },
       },
       ctx,
@@ -83,7 +130,7 @@ describe('openaiAdapter.submit：官方数据面', () => {
     await adapter.submit(
       {
         capability: 'image.edit',
-        model: 'openai:gpt-image-2-5-sunburst',
+        model: 'openai:gpt-image-2.5-sunburst',
         input: {
           image: { assetId: 'src', kind: 'image' },
           mask: { assetId: 'mask', kind: 'image' },
@@ -132,24 +179,31 @@ describe('openaiCompatibleAdapter：兼容渠道', () => {
     OPENAI_COMPATIBLE_BASE_URL: 'https://llm.example.com/v1',
   }
 
-  it('Base URL 来自 ctx.secret 配置，走 /chat/completions', async () => {
-    const recorded = fixture<RecordedCall>('compatible-chat')
-    const { ctx, fetch } = fakeContext([jsonResponse(recorded.response.body)], {
-      secret: secrets,
-    })
+  it('Base URL 来自 ctx.secret 配置，走流式 /chat/completions', async () => {
+    const { ctx, fetch } = fakeContext([chatStream()], { secret: secrets })
     await openaiCompatibleAdapter.submit(
       request('text.chat', 'openai-compatible:my-custom-model'),
       ctx,
     )
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(recorded.request.url)
-    expect(JSON.parse(String(init?.body))).toEqual(recorded.request.body)
+    expect(url).toBe('https://llm.example.com/v1/chat/completions')
+    expect(JSON.parse(String(init?.body))).toMatchObject({ model: 'my-custom-model', stream: true })
+  })
+
+  it('ctx.settings 优先：baseURL 与真实模型 ID 由宿主透传', async () => {
+    const { ctx, fetch } = fakeContext([chatStream()], { secret: secrets })
+    ctx.settings = { baseURL: 'https://settings.example.com/v1', model: 'real-model' }
+    await openaiCompatibleAdapter.submit(
+      request('text.chat', 'openai-compatible:identity-hash'),
+      ctx,
+    )
+    const [url, init] = fetch.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://settings.example.com/v1/chat/completions')
+    expect(JSON.parse(String(init?.body)).model).toBe('real-model')
   })
 
   it('input.extra.baseURL 优先于配置，且不会透传到上游', async () => {
-    const { ctx, fetch } = fakeContext([{ choices: [{ message: { content: 'ok' } }] }], {
-      secret: secrets,
-    })
+    const { ctx, fetch } = fakeContext([chatStream()], { secret: secrets })
     await openaiCompatibleAdapter.submit(
       {
         capability: 'text.chat',

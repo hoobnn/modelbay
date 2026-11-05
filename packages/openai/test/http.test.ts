@@ -42,7 +42,7 @@ describe('redactSecrets', () => {
       'sk-super-secret-123',
       'sk-short',
     ])
-    expect(out).toContain('<redacted>')
+    expect(out).toContain('[redacted]')
     expect(out).not.toContain('sk-super-secret-123')
     expect(out).not.toContain('sk-short')
   })

@@ -9,6 +9,7 @@ import {
   fromBase64,
   toBase64,
   type AdapterContext,
+  type AssetRef,
   type CapabilityInput,
   type ProviderOutput,
   type RemoteModel,
@@ -55,6 +56,20 @@ export function imageSize(input: CapabilityInput<'image.generate'>): string {
 }
 
 const IMAGE_EXTRA = ['quality', 'background', 'output_format'] as const
+const MAX_BYTES = 14 * 1024 * 1024
+
+/** 只取声明里的图片参数；格式默认 PNG，JPEG 不能透明背景。 */
+function imageOptions(extra: Json): { options: Json; format: string } {
+  const options: Json = {}
+  for (const key of IMAGE_EXTRA) {
+    if (extra[key] !== undefined) options[key] = extra[key]
+  }
+  const format = String(options.output_format ?? 'png')
+  if (!['png', 'jpeg', 'webp'].includes(format)) invalid('不支持的输出格式')
+  if (format === 'jpeg' && options.background === 'transparent')
+    invalid('透明背景须使用 PNG 或 WebP')
+  return { options, format }
+}
 
 export interface BuiltImage {
   body: Json
@@ -69,15 +84,7 @@ export async function buildImageBody(
   ctx: AdapterContext,
   label: string,
 ): Promise<BuiltImage> {
-  const extra = asJson(input.extra ?? {})
-  const options: Json = {}
-  for (const key of IMAGE_EXTRA) {
-    if (extra[key] !== undefined) options[key] = extra[key]
-  }
-  const format = String(options.output_format ?? 'png')
-  if (!['png', 'jpeg', 'webp'].includes(format)) invalid('不支持的输出格式')
-  if (format === 'jpeg' && options.background === 'transparent')
-    invalid('透明背景须使用 PNG 或 WebP')
+  const { options, format } = imageOptions(asJson(input.extra ?? {}))
 
   const count = input.count ?? 1
   if (
@@ -113,16 +120,20 @@ export function editRequestBody(opts: {
   model: string
   prompt: string
   count: number
+  /** 画质 / 背景 / 输出格式；缺省只发 PNG。 */
+  options?: Json
+  format?: string
   /** Original image data URL. */
   source: string
   /** Mask data URL (RGBA PNG for OpenAI). */
   mask: string
 }): Json {
   return {
+    ...opts.options,
     model: opts.model,
     prompt: opts.prompt,
     n: opts.count,
-    output_format: 'png',
+    output_format: opts.format ?? 'png',
     images: [{ image_url: opts.source }],
     mask: { image_url: opts.mask },
   }
@@ -148,38 +159,82 @@ export async function buildEditBody(
       `${label} 图片编辑需要把白色重绘蒙版转成 alpha 蒙版：请从 @modelbay/openai/node 引入 editMask，` +
         '再用 createOpenAIAdapter(models, { editMask }) 注入',
     )
-  if (!ctx.assets) invalid(`${label} 图片编辑需要宿主注入 assets 才能读取原图与蒙版`)
+  const { options, format } = imageOptions(asJson(input.extra ?? {}))
+  const count = input.count ?? 1
+  if (
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > 10 ||
+    !input.prompt?.trim() ||
+    input.prompt.length > 32000
+  )
+    invalid('图片提示词须为 1–32000 字符，数量须为 1–10')
   const [source, mask] = await Promise.all([
-    ctx.assets.load(input.image.assetId),
-    ctx.assets.load(input.mask.assetId),
+    readFile(ctx, input.image, label),
+    readFile(ctx, input.mask, label),
   ])
-  const prepared = await editMask(ctx, {
-    source: { data: source.data, mime: source.mime || input.image.mime || 'image/png' },
-    mask: { data: mask.data, mime: mask.mime || input.mask.mime || 'image/png' },
-  })
+  if (source.data.length > MAX_BYTES || mask.data.length > MAX_BYTES)
+    invalid('原图或蒙版超过本地 14 MiB 限制')
+  let prepared
+  try {
+    prepared = await editMask(ctx, {
+      source: { data: source.data, mime: source.mime || input.image.mime || 'image/png' },
+      mask: { data: mask.data, mime: mask.mime || input.mask.mime || 'image/png' },
+    })
+  } catch (cause) {
+    if (cause instanceof ProviderError && cause.code !== 'invalid_input') throw cause
+    throw new ProviderError(
+      'invalid_input',
+      `${label} 原图或蒙版无法读取、尺寸不一致或转换后过大`,
+      {
+        cause,
+      },
+    )
+  }
+  if (Math.max(prepared.original.data.length, prepared.mask.data.length) > MAX_BYTES)
+    invalid(`${label} 原图或蒙版无法读取、尺寸不一致或转换后过大`)
   return {
     body: editRequestBody({
       model,
-      prompt: input.prompt ?? '',
-      count: input.count ?? 1,
+      prompt: input.prompt,
+      count,
+      options,
+      format,
       source: dataUrl(prepared.original),
       mask: dataUrl(prepared.mask),
     }),
-    format: 'png',
+    format,
     edit: true,
   }
 }
 
+/** 读资产：优先 plein 形状的 `ctx.files`，回退到 modelbay 的 `assets`。 */
+async function readFile(
+  ctx: AdapterContext,
+  ref: AssetRef,
+  label: string,
+): Promise<{ data: Uint8Array; mime: string }> {
+  if (ctx.files) return ctx.files.read(ref)
+  if (!ctx.assets) invalid(`${label} 图片编辑需要宿主注入 files 或 assets 才能读取原图与蒙版`)
+  return ctx.assets.load(ref.assetId)
+}
+
 const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+
+function unknownImage(): ProviderError {
+  return new ProviderError('unknown', 'OpenAI 图片响应无效，提交可能已计费，请勿直接重提', {
+    outcome: 'unknown',
+    retryable: false,
+  })
+}
 
 /** Parse an image response (`data: [{ b64_json }]`) into file outputs. */
 export function parseImageResponse(data: Json, format: string): SubmitResult {
   const items = Array.isArray(data.data) ? data.data : []
-  if (!items.length) throw new ProviderError('unknown', 'OpenAI 图片响应无效；请勿直接重提')
+  if (!items.length) throw unknownImage()
   const outputs: ProviderOutput[] = items.map((item) => {
     const encoded = asJson(item).b64_json
-    if (typeof encoded !== 'string' || !BASE64.test(encoded))
-      throw new ProviderError('unknown', 'OpenAI 图片响应无效；请勿直接重提')
+    if (typeof encoded !== 'string' || !BASE64.test(encoded)) throw unknownImage()
     return {
       type: 'file',
       kind: 'image',

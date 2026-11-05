@@ -1,261 +1,335 @@
 /**
- * OpenAI-compatible `/chat/completions` request builder and response parser.
- * Platform-specific fields (thinking, web search, previous_response_id, ...)
- * are passed through verbatim from `input.extra`; structured continuation fields
- * on assistant messages are converted back to the platform wire format.
+ * text.chat 的两条实现：官方渠道走 `/responses`（Vercel AI SDK 的 Responses 语义，
+ * 加密思考续传 + 终包完整性校验），兼容渠道走共享 Chat Completions（流式 + [DONE]）。
+ * 两者都经 `@modelbay/shared` 的 `chatCompletion`：消息转换、结构化输出校验、
+ * 流式读取与用量归一化在 shared，鉴权 / 端点 / 错误归类由这里注入。
  */
+import { createOpenAI } from '@ai-sdk/openai'
 import {
   ProviderError,
   toBase64,
   type AdapterContext,
   type AssetRef,
   type CapabilityInput,
-  type ChatMessage,
-  type ChatToolCall,
-  type ProviderOutput,
+  type ProviderErrorCode,
   type SubmitResult,
 } from '@modelbay/core'
-import { asJson, request, type ErrorClassifier, type Json, type TransportMessages } from './http'
+import { chatCompletion, requireSseDone } from '@modelbay/shared'
+import { asJson, readJson, send, withRetry, type TransportMessages } from './http'
 
-/** Fields controlled by the adapter; `input.extra` cannot override them. */
-export const RESERVED = new Set([
-  'model',
-  'messages',
-  'stream',
-  'stream_options',
-  'tools',
-  'tool_choice',
-  'response_format',
-  'temperature',
-  'max_tokens',
-  'n',
-  'baseURL',
-])
+/** 官方渠道的固定前缀；兼容渠道的 Base URL 由宿主配置提供。 */
+export const OPENAI_BASE = 'https://api.openai.com/v1'
 
-function textOf(content: ChatMessage['content']): string {
-  return typeof content === 'string'
-    ? content
-    : content
-        .filter((part) => part.type === 'text')
-        .map((part) => part.text)
-        .join('')
+interface ImageRule {
+  notImage: string
+  accept(mime: string): boolean
+  badMime: string
+  maxBytes: number
+  tooLarge: string
 }
 
-/** Turn an asset reference into a base64 data URL the platform can read. */
+const IMAGE_RULE: ImageRule = {
+  notImage: 'OpenAI 只接受图片资产',
+  accept: (mime) => ['image/png', 'image/jpeg', 'image/webp'].includes(mime),
+  badMime: 'OpenAI 图片须为 PNG、JPEG 或 WebP',
+  maxBytes: 14 * 1024 * 1024,
+  tooLarge: 'OpenAI 图片为空或超过本地 14 MiB 限制',
+}
+
+/** 兼容渠道的图片规则：多接受 GIF，上限 20 MiB。 */
+const COMPATIBLE_IMAGE_RULE: ImageRule = {
+  notImage: '兼容渠道只接受图片资产',
+  accept: (mime) => ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(mime),
+  badMime: '兼容渠道图片须为 PNG、JPEG、WebP 或 GIF',
+  maxBytes: 20 * 1024 * 1024,
+  tooLarge: '兼容渠道图片为空或超过 20 MiB',
+}
+
+/** 读一张图片：优先 plein 形状的 `ctx.files`（带媒体元数据），回退到 modelbay 的 assets。 */
+async function readImage(
+  ctx: AdapterContext,
+  ref: AssetRef,
+  label: string,
+): Promise<{ data: Uint8Array; mime: string }> {
+  if (ctx.files) return ctx.files.read(ref)
+  if (!ctx.assets)
+    throw new ProviderError('invalid_input', `${label} 需要宿主注入 files 或 assets 才能发送图片`)
+  return ctx.assets.load(ref.assetId)
+}
+
+/** 把资产引用变成平台能读的 data URL，本地按官方规则校验类型与大小。 */
 export async function imageDataUrl(
   ctx: AdapterContext,
   ref: AssetRef,
   label: string,
+  rule: ImageRule = IMAGE_RULE,
 ): Promise<string> {
-  if (!ctx.assets)
-    throw new ProviderError('invalid_input', `${label} 需要宿主注入 assets 才能发送图片`)
-  const asset = await ctx.assets.load(ref.assetId)
-  return `data:${asset.mime};base64,${toBase64(asset.data)}`
+  if (ref.kind !== 'image') throw new ProviderError('invalid_input', rule.notImage)
+  const file = await readImage(ctx, ref, label)
+  const mime = file.mime.toLowerCase()
+  if (!rule.accept(mime)) throw new ProviderError('invalid_input', rule.badMime)
+  if (!file.data.length || file.data.length > rule.maxBytes)
+    throw new ProviderError('invalid_input', rule.tooLarge)
+  return `data:${mime};base64,${toBase64(file.data)}`
 }
 
-/** Convert normalized chat messages into OpenAI-compatible wire messages. */
-export async function buildMessages(
-  ctx: AdapterContext,
-  input: CapabilityInput<'text.chat'>,
-  label: string,
-): Promise<Json[]> {
-  const out: Json[] = []
-  for (const message of input.messages) {
-    if (message.role === 'tool') {
-      out.push({
-        role: 'tool',
-        tool_call_id: message.toolCallId ?? '',
-        ...(message.toolName ? { name: message.toolName } : {}),
-        content: textOf(message.content),
-      })
-      continue
-    }
-    if (message.role === 'assistant') {
-      const wire: Json = { role: 'assistant', content: textOf(message.content) }
-      if (message.toolCalls?.length) {
-        wire.tool_calls = message.toolCalls.map((call) => ({
-          id: call.id,
-          type: 'function',
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
-        }))
-      }
-      // 思考续传：回传平台要求的加密 / 推理内容，不作为助手正文显示
-      const continuation = message.continuation
-      if (continuation) {
-        if (continuation.encryptedContent) wire.encrypted_content = continuation.encryptedContent
-        if (continuation.reasoningContent) wire.reasoning_content = continuation.reasoningContent
-      }
-      out.push(wire)
-      continue
-    }
-    if (message.role === 'system') {
-      out.push({ role: 'system', content: textOf(message.content) })
-      continue
-    }
-    if (typeof message.content === 'string') {
-      out.push({ role: 'user', content: message.content })
-      continue
-    }
-    out.push({
-      role: 'user',
-      content: await Promise.all(
-        message.content.map(async (part) =>
-          part.type === 'text'
-            ? { type: 'text', text: part.text }
-            : {
-                type: 'image_url',
-                image_url: { url: await imageDataUrl(ctx, part.image, label) },
-              },
-        ),
-      ),
-    })
+/** plein 官方渠道的错误归类：quota / auth / content_policy 之外按状态码走通用链。 */
+export function classifyOpenAI(
+  _status: number,
+  code: string,
+  _signal: string,
+): ProviderErrorCode | undefined {
+  if (/quota|billing|insufficient/.test(code)) return 'quota'
+  if (/content_policy|safety|moderation/.test(code)) return 'content_policy'
+  return undefined
+}
+
+function errorText(
+  call: ErrorCall,
+  status: number,
+  value: unknown,
+): { code: string; message: string } {
+  const root = asJson(value)
+  const error = asJson(root.error)
+  const code = String(error.code ?? error.type ?? '').toLowerCase()
+  const message = String(error.message ?? `${call.label} HTTP ${status}`)
+  return {
+    code,
+    message: redactKeys(message, call.apiKey),
   }
-  return out
 }
 
-export interface ChatCall {
+/** plein 的脱敏规则：密钥与其去空白形态都替换成 [redacted]，并清掉 Bearer / sk- 令牌。 */
+function redactKeys(text: string, apiKey: string): string {
+  const mask = '[redacted]'
+  let out = text
+  for (const secret of [apiKey, apiKey.trim()].sort((a, b) => b.length - a.length)) {
+    if (secret) out = out.split(secret).join(mask)
+  }
+  return out.replace(/Bearer\s+\S+/gi, `Bearer ${mask}`).replace(/sk-[a-zA-Z0-9_-]+/g, mask)
+}
+
+interface ErrorCall {
+  apiKey: string
+  label: string
+}
+
+/** plein 官方渠道的 remoteError：按 code 与状态归类，POST 不可重试。 */
+function remoteError(call: ErrorCall, status: number, value: unknown): ProviderError {
+  const { code, message } = errorText(call, status, value)
+  const category: ProviderErrorCode = /quota|billing|insufficient/.test(code)
+    ? 'quota'
+    : status === 401 || status === 403
+      ? 'auth'
+      : /content_policy|safety|moderation/.test(code)
+        ? 'content_policy'
+        : status === 429
+          ? 'rate_limit'
+          : status === 408 || status === 504
+            ? 'timeout'
+            : status >= 500
+              ? 'unavailable'
+              : status >= 400
+                ? 'invalid_input'
+                : 'unknown'
+  return withRetry(new ProviderError(category, message), 'POST', status)
+}
+
+/** plein 兼容渠道的 remoteError：code 优先于状态码，规则与官方渠道不同。 */
+function compatibleRemoteError(call: ErrorCall, status: number, value: unknown): ProviderError {
+  const root = asJson(value)
+  const error = asJson(root.error)
+  const code = String(error.code ?? root.code ?? '').toLowerCase()
+  const message = String(error.message ?? root.message ?? `兼容渠道 HTTP ${status}`)
+  const normalized: ProviderErrorCode =
+    status === 401 || status === 403
+      ? 'auth'
+      : /quota|insufficient|balance/.test(code)
+        ? 'quota'
+        : /content|safety|policy/.test(code)
+          ? 'content_policy'
+          : status === 429
+            ? 'rate_limit'
+            : status === 408 || status === 504
+              ? 'timeout'
+              : status >= 500
+                ? 'unavailable'
+                : status >= 400
+                  ? 'invalid_input'
+                  : 'unknown'
+  return withRetry(new ProviderError(normalized, redactKeys(message, call.apiKey)), 'POST', status)
+}
+
+/**
+ * 不能把截断的 Responses SSE 当作成功；SDK 负责解释终包里的业务状态。
+ * 事件流必须收到 response.completed / incomplete / failed / error 之一。
+ */
+export function terminalResponse(res: Response): Response {
+  if (!res.body || !res.headers.get('content-type')?.includes('text/event-stream')) return res
+  const decoder = new TextDecoder()
+  let pending = ''
+  let terminal = false
+  const body = res.body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        pending += decoder.decode(chunk, { stream: true })
+        const lines = pending.split('\n')
+        pending = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue
+          try {
+            const item = JSON.parse(line.slice(5))
+            if (
+              ['response.completed', 'response.incomplete', 'response.failed', 'error'].includes(
+                item.type,
+              )
+            )
+              terminal = true
+          } catch {
+            /* SDK reports malformed events. */
+          }
+        }
+        controller.enqueue(chunk)
+      },
+      flush(controller) {
+        if (!terminal)
+          controller.error(
+            new ProviderError('unknown', 'OpenAI 回答不完整，未收到结束事件；请勿直接重提', {
+              outcome: 'unknown',
+              retryable: false,
+            }),
+          )
+      },
+    }),
+  )
+  return new Response(body, { status: res.status, headers: res.headers })
+}
+
+export interface ResponsesChatCall {
   ctx: AdapterContext
-  /** Full `/chat/completions` URL. */
-  url: string
+  /** 渠道内的模型 ID（已按声明解析）。 */
   model: string
   apiKey: string
   label: string
   input: CapabilityInput<'text.chat'>
   messages: TransportMessages
-  structured?: 'json_schema' | 'json_object' | 'none'
-  classify?: ErrorClassifier
-  /** Extra body fields injected by the channel (e.g. store / include). */
-  providerFields?: Json
+  /** 声明 `limits.temperature: false` 时不发送节点默认温度。 */
+  temperatureDisabled?: boolean
 }
 
-/** Build the JSON body; non-reserved `extra` keys are forwarded unchanged. */
-export function buildChatBody(call: ChatCall, wireMessages: Json[]): Json {
-  const { input, model } = call
-  const extra: Json = {}
-  for (const [key, value] of Object.entries(input.extra ?? {})) {
-    if (!RESERVED.has(key)) extra[key] = value
-  }
-  const body: Json = {
-    ...extra,
-    ...call.providerFields,
-    model,
-    messages: wireMessages,
-    stream: false,
-  }
-  if (input.temperature !== undefined) body.temperature = input.temperature
-  if (input.maxTokens !== undefined) body.max_tokens = input.maxTokens
-  if (input.tools?.length) {
-    body.tools = input.tools.map((tool) => ({
-      type: 'function',
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.parameters,
-      },
-    }))
-    body.tool_choice = input.toolChoice ?? 'auto'
-  }
-  if (input.jsonSchema) {
-    if (call.structured === 'json_schema') {
-      body.response_format = {
-        type: 'json_schema',
-        json_schema: { name: 'modelbay_output', schema: input.jsonSchema },
-      }
-    } else {
-      body.response_format = { type: 'json_object' }
-      wireMessages.unshift({
-        role: 'system',
-        content: `Return only JSON matching this schema: ${JSON.stringify(input.jsonSchema)}`,
-      })
-    }
-  }
-  return body
-}
-
-/** Parse a Chat Completions response into normalized outputs + usage. */
-export function parseChatResponse(call: ChatCall, value: Json): SubmitResult {
-  const choices = Array.isArray(value.choices) ? value.choices : []
-  const first = asJson(choices[0])
-  const message = asJson(first.message ?? first.delta)
-  const text = typeof message.content === 'string' ? message.content : ''
-  const rawCalls = Array.isArray(message.tool_calls) ? message.tool_calls : []
-  const calls: ChatToolCall[] = rawCalls.map((entry) => {
-    const item = asJson(entry)
-    const fn = asJson(item.function)
-    let args: Record<string, unknown> = {}
-    try {
-      args = asJson(JSON.parse(String(fn.arguments ?? '{}')))
-    } catch {
-      args = {}
-    }
-    return { id: String(item.id ?? ''), name: String(fn.name ?? ''), arguments: args }
-  })
-  const finish = first.finish_reason ?? first.finishReason
-  if (finish === 'content_filter')
-    throw new ProviderError('content_policy', `${call.label} 拒绝生成此内容`)
-
-  const encrypted =
-    typeof message.encrypted_content === 'string' ? message.encrypted_content : undefined
-  const reasoning =
-    typeof message.reasoning_content === 'string' ? message.reasoning_content : undefined
-  const continuation =
-    encrypted || reasoning
-      ? {
-          model: call.model,
-          ...(reasoning ? { reasoningContent: reasoning } : {}),
-          ...(encrypted ? { encryptedContent: encrypted } : {}),
-        }
-      : undefined
-
-  const outputs: ProviderOutput[] = []
-  if (call.input.jsonSchema) {
-    try {
-      outputs.push({ type: 'json', value: JSON.parse(text) })
-    } catch (cause) {
-      throw new ProviderError('unknown', `${call.label} 返回的结构化内容不是有效 JSON`, { cause })
-    }
-  } else {
-    if (text) outputs.push({ type: 'text', text })
-    if (calls.length)
-      outputs.push({ type: 'tool_calls', calls, ...(continuation ? { continuation } : {}) })
-  }
-  if (!outputs.length) throw new ProviderError('unknown', `${call.label} 响应缺少对话内容`)
-
-  const usage = asJson(value.usage)
-  return {
-    state: 'succeeded',
-    outputs,
-    usage: {
-      ...(typeof usage.prompt_tokens === 'number'
-        ? { inputTokens: usage.prompt_tokens as number }
-        : {}),
-      ...(typeof usage.completion_tokens === 'number'
-        ? { outputTokens: usage.completion_tokens as number }
-        : {}),
-    },
-  }
-}
-
-/** Submit one chat completion. POST is never retried (the platform may bill it). */
-export async function chatCompletion(call: ChatCall): Promise<SubmitResult> {
-  if (!call.input.messages.length)
-    throw new ProviderError('invalid_input', `${call.label} 对话至少需要一条消息`)
-  const wireMessages = await buildMessages(call.ctx, call.input, call.label)
-  const body = buildChatBody(call, wireMessages)
-  const data = await request({
+/**
+ * 官方渠道 text.chat：`/responses` + `store: false` +
+ * `include: ['reasoning.encrypted_content']`（无状态工具循环的加密思考续传）。
+ */
+export async function responsesChat(call: ResponsesChatCall): Promise<SubmitResult> {
+  const effort = asJson(call.input.extra).reasoning_effort
+  if (effort !== undefined && !['low', 'medium', 'high'].includes(String(effort)))
+    throw new ProviderError('invalid_input', 'OpenAI 思考强度无效')
+  const fetchImpl = responsesFetch(call)
+  const api = createOpenAI({ apiKey: call.apiKey, baseURL: OPENAI_BASE, fetch: fetchImpl })
+  return chatCompletion({
     ctx: call.ctx,
-    url: call.url,
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${call.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
     label: call.label,
-    messages: call.messages,
-    secrets: [call.apiKey],
-    classify: call.classify,
-    retries: 0,
+    baseURL: OPENAI_BASE,
+    model: call.model,
+    languageModel: api.responses(call.model),
+    openaiResponses: true,
+    // 推理模型不支持普通温度采样；声明 temperature:false 时不发送节点默认 temperature。
+    input: {
+      ...call.input,
+      temperature: call.temperatureDisabled ? undefined : call.input.temperature,
+    },
+    structured: 'json_schema',
+    image: (ref) => imageDataUrl(call.ctx, ref, call.label),
+    providerOptions: {
+      openai: {
+        store: false,
+        include: ['reasoning.encrypted_content'],
+        ...(effort ? { reasoningEffort: String(effort) } : {}),
+      },
+    },
+    fetch: fetchImpl,
+    streamError: (error) => remoteError(call, 200, { error }),
   })
-  return parseChatResponse(call, data)
+}
+
+function responsesFetch(call: ResponsesChatCall): typeof fetch {
+  return async (url, init) => {
+    if (String(url) !== `${OPENAI_BASE}/responses`)
+      throw new ProviderError('invalid_input', 'OpenAI 请求地址无效')
+    const res = await send(
+      call.ctx,
+      String(url),
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${call.apiKey}`, 'Content-Type': 'application/json' },
+        body: String(init?.body),
+      },
+      call.messages,
+    )
+    if (!res.ok)
+      throw remoteError(call, res.status, await readJson(call.ctx, res, 'POST', call.messages))
+    return terminalResponse(res)
+  }
+}
+
+export interface CompatibleChatCall {
+  ctx: AdapterContext
+  /** 含协议前缀的 Base URL（如 https://gateway.example.com/v1），无尾斜杠。 */
+  baseURL: string
+  /** 渠道上的真实模型 ID。 */
+  model: string
+  apiKey: string
+  label: string
+  input: CapabilityInput<'text.chat'>
+  messages: TransportMessages
+  /** 宿主声明的结构化档位；`json_schema` 随请求发 Schema，其余只要求 JSON。 */
+  structured?: 'json_schema' | 'json_object'
+}
+
+function omitBaseURL(extra: Record<string, unknown>): Record<string, unknown> {
+  const { baseURL: _baseURL, ...rest } = extra
+  return rest
+}
+
+/** 兼容渠道 text.chat：流式 Chat Completions，SSE 必须以 [DONE] 结束。 */
+export async function compatibleChat(call: CompatibleChatCall): Promise<SubmitResult> {
+  return chatCompletion({
+    ctx: call.ctx,
+    label: call.label,
+    baseURL: call.baseURL,
+    model: call.model,
+    // `baseURL` 是适配器的单次请求覆盖项，不属于上游请求体
+    input: call.input.extra ? { ...call.input, extra: omitBaseURL(call.input.extra) } : call.input,
+    structured: call.structured === 'json_schema' ? 'json_schema' : 'json_object',
+    image: (ref) => imageDataUrl(call.ctx, ref, call.label, COMPATIBLE_IMAGE_RULE),
+    streamError: (error) => compatibleRemoteError(call, 200, { error }),
+    fetch: async (url, init) => {
+      if (String(url) !== `${call.baseURL}/chat/completions`)
+        throw new ProviderError('invalid_input', '兼容渠道请求地址与配置不一致')
+      const res = await send(
+        call.ctx,
+        String(url),
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${call.apiKey}`, 'Content-Type': 'application/json' },
+          body: String(init?.body),
+        },
+        call.messages,
+      )
+      if (!res.ok)
+        throw compatibleRemoteError(
+          call,
+          res.status,
+          await readJson(call.ctx, res, 'POST', call.messages),
+        )
+      return requireSseDone(
+        res,
+        () =>
+          new ProviderError('unknown', `${call.label}回答不完整，未收到 [DONE]；请勿直接重提`, {
+            outcome: 'unknown',
+          }),
+      )
+    },
+  })
 }
