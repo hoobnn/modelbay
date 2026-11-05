@@ -46,6 +46,9 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'close_realtime_session',
+    native: 'realtime-close',
+    nature: 'mutate',
+    group: 'realtime',
     description:
       '优雅关闭实时会话，等待session.closed，释放连接。退出MCP也会清理会话；历史session.id可用于后续官方会话接续。',
     inputSchema: {
@@ -123,6 +126,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'generate_podcast',
+    native: 'podcast',
     description:
       '生成双人对谈播客。输入四选一：\n' +
       '- text：一篇文章，模型改写成对谈（推荐 12000 字以内，超出会截断）。\n' +
@@ -237,6 +241,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'interpret_audio',
+    native: 'simultaneous-interpretation',
     description:
       '同声传译 2.0，处理本地 16kHz / 16bit / 单声道 WAV 或 PCM 文件。source_language / target_language 如 zh / en。\n' +
       'mode=s2t 只出原文和译文字幕；s2s 另外合成目标语音，output_format=pcm（16kHz）或 ogg_opus（48kHz），voice 指定音色。\n' +
@@ -294,6 +299,9 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'manage_word_table',
+    native: 'hotword-table',
+    nature: 'mutate',
+    group: 'management',
     description:
       '词表管理：创建/更新/查询/删除热词表与替换词表。action与parameters按官方契约；content为词表TXT内容。\n' +
       'auth=api_key 走官方热词表代理接口；auth=aksk 走签名OpenAPI（替换词表仅支持aksk）。不会静默开启计费开关。\n',
@@ -312,6 +320,9 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'open_realtime_session',
+    native: 'realtime-open',
+    nature: 'realtime',
+    group: 'realtime',
     description:
       '打开官方实时会话（legacy 对话 / seed 双工）。session为官方会话配置对象；extension可传官方扩展字段。\n' +
       'mode=legacy或seed。timeout为握手超时秒数。返回session.id与连接信息，后续用send_realtime_event与receive_realtime_events。\n',
@@ -334,6 +345,9 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'receive_realtime_events',
+    native: 'realtime-receive',
+    nature: 'realtime',
+    group: 'realtime',
     description:
       '接收实时会话事件（等待最多timeout秒，<=60秒），返回ASR、回复文本、Function Calling、上下文、usage等。\n' +
       '音频delta会转换为audio_file/chunk_bytes/audio_format/sample_rate，不返回巨大base64。收到工具调用后执行本地工具，再send_realtime_event回传call_id结果。\n' +
@@ -371,6 +385,9 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'send_realtime_event',
+    native: 'realtime-send',
+    nature: 'realtime',
+    group: 'realtime',
     description:
       '向持久实时会话发送官方JSON事件。event须有type：input_audio_buffer.append + audio(base64)，input_audio_buffer.commit强制判停；response.cancel打断进行中的回复（legacy与seed均可）；session.update更新配置。\n' +
       'conversation.item.create/retrieve/delete管理上下文，role=tool+call_id回传Function Calling结果；input_audio_mute.commit/unmute.commit处理静音。\n' +
@@ -391,6 +408,9 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'speech_console',
+    native: 'console-management',
+    nature: 'mutate',
+    group: 'management',
     description:
       '控制台OpenAPI：音色、API Key、服务开停、资源包/声音复刻订单、用量、配额、项目标签管理。action和parameters按官方契约；list_speech_capabilities给出支持动作。\n' +
       '需要VOLC_ACCESS_KEY_ID/VOLC_SECRET_ACCESS_KEY（IAM AK/SK，区别于语音API Key）。version默认按动作选择。会执行指定动作，包括创建、删除、下单；查询优先使用List/Get/QuotaMonitoring/UsageMonitoring。\n',
@@ -408,6 +428,8 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'speech_raw_request',
+    native: 'raw-request',
+    group: 'management',
     description:
       '兜底入口：按官方请求体原样调用，其他工具覆盖不到时才用。端点固定，不接收任意 URL。\n' +
       '- product=tts / asr_flash / audio：HTTP 合成、极速识别、音频生成，request 为官方完整请求体；音频 base64 换成本地文件。\n' +
@@ -484,6 +506,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'summarize_meeting',
+    native: 'meeting-notes',
     description:
       '豆包语音妙记：会议 / 课程录音或视频的转写，加全文总结、章节、待办、问答提取、翻译。异步：立即返回 job_id，\n' +
       '之后用 get_job 查进度，完成后把各项结果 JSON 下载到本地（官方链接 24 小时有效）。\n' +
@@ -564,6 +587,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'translate_text',
+    native: 'translation',
     description:
       'Seed-X 机器翻译。texts 一次 1–16 条，每条最多 1024 tokens（服务端校验），按原顺序返回。\n' +
       'target_language 如 en / zh / ja；source_language 不传自动检测。\n' +
@@ -592,6 +616,9 @@ export const doubaoSpeechTools: ToolSpec[] = [
   },
   {
     name: 'upgrade_voice',
+    native: 'voice-upgrade',
+    nature: 'mutate',
+    group: 'management',
     description:
       '把已有复刻音色升级到新版模型（不可撤回）。parameters：官方升级参数，深度合并。之后用 get_voice 查状态。',
     inputSchema: {

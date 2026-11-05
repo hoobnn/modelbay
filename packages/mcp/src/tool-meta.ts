@@ -1,57 +1,24 @@
 /**
- * 工具的结构化元数据（能力 / native 操作 / 本地处理器 / 分组 / 别名）。
- * 这里只放「结构性」映射，不含任何模型 ID、上下限、默认值或生命周期字符串：
- * 那部分一律由 src/derive.ts 从 ModelDeclaration + core schema 函数派生。
- *
- * 这些是按工具名的跨平台通用约定；同名工具在各平台语义一致。
- * 平台独有的同义名（如 MiniMax 的历史工具名）写在工具定义的 `aliases` 上，见 docs/mcp.md。
+ * 跨平台通用的工具名约定：同名工具在各平台语义一致，按名字推断能力、本地处理器、性质与分组。
+ * 这里不含任何模型 ID、上下限、默认值或生命周期字符串（那部分由 src/derive.ts 从声明派生），
+ * 也不含平台独有的工具：平台独有工具在自己的 `src/mcp/tools.ts` 里写 `capability` /
+ * `native` / `nature` / `group`，优先于这里的约定。详见 docs/mcp.md。
  */
 import type { LocalHandler, ToolGroup, ToolNature } from './types'
 
-/** 归一化能力（0003），用于模型参数派生与 submit 路由。 */
+/** 通用工具名 → 归一化能力（0003），用于模型参数派生与 submit 路由。 */
 const TOOL_CAPABILITY: Record<string, string> = {
   chat: 'text.chat',
   embed: 'text.embed',
   generate_image: 'image.generate',
-  text_to_image: 'image.generate',
   generate_video: 'video.generate',
-  edit_video: 'video.generate',
   text_to_speech: 'audio.speech',
-  text_to_audio: 'audio.speech',
-  generate_audio: 'audio.music',
-  music_generation: 'audio.music',
   speech_to_text: 'audio.transcribe',
   clone_voice: 'voice.clone',
-  voice_clone: 'voice.clone',
   design_voice: 'voice.design',
-  voice_design: 'voice.design',
 }
 
-/** 单平台独有的能力，走 adapter.native(op, params)。op 名尽量对齐 0003 的 NATIVE_OPERATIONS。 */
-const TOOL_NATIVE: Record<string, string> = {
-  create_h3_context_ir_task: 'context-ir',
-  animate_portrait: 'digital-human-lipsync',
-  rerank: 'rerank',
-  regenerate_video: 'video-2k-rerender',
-  generate_podcast: 'podcast',
-  interpret_audio: 'simultaneous-interpretation',
-  translate_text: 'translation',
-  summarize_meeting: 'meeting-notes',
-  speech_console: 'console-management',
-  manage_word_table: 'hotword-table',
-  speech_raw_request: 'raw-request',
-  delete_video_task: 'video-task-delete',
-  list_video_tasks: 'video-task-list',
-  query_video_generation: 'video-task-query',
-  upload_file: 'file-upload',
-  open_realtime_session: 'realtime-open',
-  send_realtime_event: 'realtime-send',
-  receive_realtime_events: 'realtime-receive',
-  close_realtime_session: 'realtime-close',
-  upgrade_voice: 'voice-upgrade',
-}
-
-/** MCP 本地工具：不联网、不需要 key，由 server 直接从生成结果 / 声明回答。 */
+/** MCP 本地工具：由 server 直接从生成结果 / 声明 / 任务存储回答，处理器实现在本包。 */
 const TOOL_LOCAL: Record<string, LocalHandler> = {
   get_tool_help: 'tool-help',
   list_capabilities: 'capabilities',
@@ -65,54 +32,8 @@ const TOOL_LOCAL: Record<string, LocalHandler> = {
   list_voices: 'voices',
 }
 
-/** 操作性质覆盖：annotations 四个 hint 全部从性质派生，不照抄基线。 */
-const NATURE_OVERRIDES: Record<string, ToolNature> = {
-  // 本地只读
-  get_tool_help: 'local',
-  list_capabilities: 'local',
-  list_speech_capabilities: 'local',
-  get_speech_usage_examples: 'local',
-  list_models: 'local',
-  list_jobs: 'local',
-  list_declared_models: 'local',
-  // 查询（联网但只读、幂等）
-  get_job: 'query',
-  recover_job: 'query',
-  get_voice: 'query',
-  list_voices: 'query',
-  list_video_tasks: 'query',
-  query_video_generation: 'query',
-  rerank: 'query',
-  // 破坏性 / 管理
-  delete_video_task: 'mutate',
-  close_realtime_session: 'mutate',
-  manage_word_table: 'mutate',
-  speech_console: 'mutate',
-  upgrade_voice: 'mutate',
-  // 实时会话
-  open_realtime_session: 'realtime',
-  send_realtime_event: 'realtime',
-  receive_realtime_events: 'realtime',
-}
-
-/** 工具组覆盖：实时会话、管理工具、需 node: 的能力默认不启用。 */
-const GROUP_OVERRIDES: Record<string, ToolGroup> = {
-  // realtime
-  open_realtime_session: 'realtime',
-  send_realtime_event: 'realtime',
-  receive_realtime_events: 'realtime',
-  close_realtime_session: 'realtime',
-  // management
-  delete_video_task: 'management',
-  list_video_tasks: 'management',
-  manage_word_table: 'management',
-  speech_console: 'management',
-  upgrade_voice: 'management',
-  speech_raw_request: 'management',
-  regenerate_video: 'management',
-  // node（需 node: 可选子路径）
-  upload_file: 'node',
-}
+/** 本地工具里联网查询的那几个（其余本地工具都是不联网的 `local`）。 */
+const QUERY_TOOLS = new Set(['get_job', 'recover_job', 'get_voice', 'list_voices'])
 
 /**
  * 超出基线的新工具：从声明派生可用模型与生命周期，避免客户端硬编码模型清单。
@@ -123,19 +44,20 @@ export const EXTRA_TOOL_NAMES = ['list_declared_models'] as const
 
 export interface ToolMeta {
   capability?: string
-  nativeOp?: string
   localHandler?: LocalHandler
   nature: ToolNature
   group: ToolGroup
 }
 
+/** 按通用工具名约定推断元数据；平台在工具定义里写明的字段优先于这里。 */
 export function deriveMeta(name: string): ToolMeta {
+  const localHandler = TOOL_LOCAL[name]
+  const local = localHandler !== undefined || (EXTRA_TOOL_NAMES as readonly string[]).includes(name)
   return {
     ...(TOOL_CAPABILITY[name] ? { capability: TOOL_CAPABILITY[name] } : {}),
-    ...(TOOL_NATIVE[name] ? { nativeOp: TOOL_NATIVE[name] } : {}),
-    ...(TOOL_LOCAL[name] ? { localHandler: TOOL_LOCAL[name] } : {}),
-    nature: NATURE_OVERRIDES[name] ?? 'generate',
-    group: GROUP_OVERRIDES[name] ?? 'core',
+    ...(localHandler ? { localHandler } : {}),
+    nature: QUERY_TOOLS.has(name) ? 'query' : local ? 'local' : 'generate',
+    group: 'core',
   }
 }
 

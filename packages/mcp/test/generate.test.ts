@@ -30,15 +30,30 @@ describe('工具目录解析', () => {
 })
 
 describe('工具元数据', () => {
-  it('归一化能力 / 本地处理器 / 可选组派生正确', () => {
+  it('通用工具名约定：归一化能力 / 本地处理器 / 性质', () => {
     expect(deriveMeta('chat').capability).toBe('text.chat')
     expect(deriveMeta('chat').nature).toBe('generate')
     expect(deriveMeta('chat').group).toBe('core')
-    expect(deriveMeta('get_tool_help').localHandler).toBe('tool-help')
-    expect(deriveMeta('open_realtime_session').group).toBe('realtime')
-    expect(deriveMeta('open_realtime_session').nature).toBe('realtime')
-    expect(deriveMeta('open_realtime_session').nativeOp).toBe('realtime-open')
-    expect(deriveMeta('upload_file').group).toBe('node')
+    expect(deriveMeta('get_tool_help')).toMatchObject({
+      localHandler: 'tool-help',
+      nature: 'local',
+    })
+    expect(deriveMeta('get_job')).toMatchObject({ localHandler: 'jobs', nature: 'query' })
+    expect(deriveMeta('list_declared_models').nature).toBe('local')
+    // 平台独有的工具名不在通用约定里
+    expect(deriveMeta('open_realtime_session')).toEqual({ nature: 'generate', group: 'core' })
+  })
+
+  it('平台工具定义里的 native / nature / group 优先于通用约定', () => {
+    const { adapter } = fakeAdapter()
+    const doubao = generateTools('doubao-speech', { adapter })
+    expect(doubao.byName.get('open_realtime_session')).toMatchObject({
+      group: 'realtime',
+      route: { kind: 'native', op: 'realtime-open', nature: 'realtime' },
+    })
+    const minimax = generateTools('minimax', { adapter })
+    expect(minimax.byName.get('upload_file')?.group).toBe('node')
+    expect(minimax.byName.get('delete_video_task')?.annotations.destructiveHint).toBe(true)
   })
 
   it('MiniMax 别名表与超出基线工具表', () => {

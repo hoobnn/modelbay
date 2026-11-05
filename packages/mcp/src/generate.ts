@@ -12,7 +12,7 @@ import {
   deriveInputSchema,
   deriveToolDescription,
 } from './derive'
-import { deriveMeta, EXTRA_TOOL_NAMES } from './tool-meta'
+import { deriveMeta, EXTRA_TOOL_NAMES, type ToolMeta } from './tool-meta'
 import type { GeneratedTool, GeneratedToolSet, MCPTool, ToolGroup, ToolRoute } from './types'
 
 export interface GenerateOptions {
@@ -78,10 +78,15 @@ function buildTool(
   defaultCapability: string,
   nodeOnly: Set<string>,
 ): GeneratedTool[] {
-  const meta = deriveMeta(entry.name)
-  // 目录里写的能力优先；没写就用工具元数据映射的能力。
+  // 平台在工具定义里写明的字段优先；没写的按通用工具名约定推断。
+  const convention = deriveMeta(entry.name)
+  const meta = {
+    ...convention,
+    nature: entry.nature ?? convention.nature,
+    group: entry.group ?? convention.group,
+  }
   const capability = entry.capability ?? meta.capability ?? defaultCapability
-  const route = buildRoute(meta, capability)
+  const route = buildRoute(meta, entry.native, capability)
 
   // nodeOnly 是适配器声明的可选 node: 子路径能力，强制归入可选组。
   const group: ToolGroup = route.kind === 'native' && nodeOnly.has(route.op) ? 'node' : meta.group
@@ -117,12 +122,12 @@ function buildTool(
   return result
 }
 
-function buildRoute(meta: ReturnType<typeof deriveMeta>, capability: string): ToolRoute {
+function buildRoute(meta: ToolMeta, nativeOp: string | undefined, capability: string): ToolRoute {
   if (meta.localHandler) {
     return { kind: 'local', handler: meta.localHandler, nature: meta.nature }
   }
-  if (meta.nativeOp) {
-    return { kind: 'native', op: meta.nativeOp, nature: meta.nature }
+  if (nativeOp) {
+    return { kind: 'native', op: nativeOp, nature: meta.nature }
   }
   return { kind: 'submit', capability, nature: meta.nature }
 }

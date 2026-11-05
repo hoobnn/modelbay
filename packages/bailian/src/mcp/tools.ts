@@ -17,6 +17,7 @@ const okOutput = {
 export const bailianTools: ToolSpec[] = [
   {
     name: 'animate_portrait',
+    native: 'digital-human-lipsync',
     description:
       '数字人对口型：图片+人声驱动人物口型、表情、动作。输入本地文件或公开URL。\n' +
       '图片jpg/png/webp等，音频wav/mp3，音频须小于15MB且小于20秒。\n' +
@@ -146,6 +147,7 @@ export const bailianTools: ToolSpec[] = [
   },
   {
     name: 'edit_video',
+    capability: 'video.generate',
     description:
       'HappyHorse视频指令编辑：修改风格/元素，video为本地文件或公开URL，reference_images为本地图片/URL。\n' +
       '输入视频3–60秒，输出最多15秒，超15秒只取前15秒；详细文件限制见官方接口。\n' +
@@ -432,6 +434,8 @@ export const bailianTools: ToolSpec[] = [
   },
   {
     name: 'rerank',
+    native: 'rerank',
+    nature: 'query',
     description:
       '对候选文档按与query的相关性排序，返回原索引和relevance_score；top_n控制数量，return_documents返回原文。\n' +
       '所有模型统一走原生text-rerank接口。分数用于本次请求内比较。按输入计费，模型及地域权限以服务端为准。\n',

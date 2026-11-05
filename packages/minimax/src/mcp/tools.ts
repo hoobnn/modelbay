@@ -17,6 +17,7 @@ const okOutput = {
 export const minimaxTools: ToolSpec[] = [
   {
     name: 'create_h3_context_ir_task',
+    native: 'context-ir',
     description:
       '创建 H3-Context-IR 任务（官方 POST /v2/h3_context_ir）：深度理解多模态输入，异步返回结构化增强提示词，不直接生成视频；按Token计费。\n' +
       '纯文本传prompt，多模态传官方content数组（二选一）；素材/组合限制同generate_video。\n' +
@@ -49,6 +50,9 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'delete_video_task',
+    native: 'video-task-delete',
+    nature: 'mutate',
+    group: 'management',
     description:
       '取消queued任务，或删除succeeded/failed任务的云端记录；running任务不支持取消。\n' +
       '会影响云端任务，仅用户要求取消/删除时调用；保留本地已下载文件。admin工具组默认关闭。\n',
@@ -170,6 +174,9 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'list_video_tasks',
+    native: 'video-task-list',
+    nature: 'query',
+    group: 'management',
     description:
       '分页查询云端最近7天H3任务，不下载。task_type为generation/h3_context_ir/regeneration。\n' +
       'status为queued/running/succeeded/failed/cancelled；本地历史记录用list_jobs。\n',
@@ -230,6 +237,8 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'query_video_generation',
+    native: 'video-task-query',
+    nature: 'query',
     description:
       '查询H3 V2任务（generation/h3_context_ir/regeneration），成功后下载或返回URL，不重新生成。\n' +
       '保留官方MCP工具名，但不支持旧V1任务。平台查询窗口7天；未知task_id会建立本地记录，已有记录沿用原输出目录。\n',
@@ -268,6 +277,8 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'regenerate_video',
+    native: 'video-2k-rerender',
+    group: 'management',
     description:
       '创建视频再生成任务（官方 POST /v2/video_regeneration）：将符合MiniMax-H3 768P输出规格的视频再生成为2K，单独计费；不是任意视频放大。\n' +
       'source_task_id与content二选一。按ID需要白名单、属于本账号且7天内成功生成的源任务。\n' +
@@ -364,6 +375,8 @@ export const minimaxTools: ToolSpec[] = [
   },
   {
     name: 'upload_file',
+    native: 'file-upload',
+    group: 'node',
     description:
       '上传指定本地绝对路径，返回file_id和mm_file://引用，不生成媒体。\n' +
       'purpose支持video_generation_input（图片<=30MB/视频<=50MB/音频<=15MB，保存7天）、voice_clone和prompt_audio（<=20MB）。\n' +

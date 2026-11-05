@@ -1,11 +1,20 @@
 /** MCP 生成器与 stdio server 的公共类型。 */
-import type { ToolSpec } from '@modelbay/core'
+import type {
+  ToolGroup as CoreToolGroup,
+  ToolNature as CoreToolNature,
+  ToolSpec,
+} from '@modelbay/core'
 
 /** 打开哪些工具组的环境变量（逗号分隔）。 */
 export const GROUP_ENV_VAR = 'MODELBAY_MCP_GROUPS'
 
 /** 工具组开关。默认只暴露 core；其余三组默认不启用。 */
-export const TOOL_GROUPS = ['core', 'realtime', 'management', 'node'] as const
+export const TOOL_GROUPS = [
+  'core',
+  'realtime',
+  'management',
+  'node',
+] as const satisfies readonly CoreToolGroup[]
 export type ToolGroup = (typeof TOOL_GROUPS)[number]
 
 export const MCP_TOOL_GROUPS: {
@@ -22,7 +31,13 @@ export const MCP_TOOL_GROUPS: {
  * 工具的操作性质，是「能力元数据」的一部分：annotations 与路由都从它派生，
  * 不直接照抄基线（基线条目有缺 destructiveHint 的情况）。
  */
-export const TOOL_NATURES = ['generate', 'query', 'mutate', 'local', 'realtime'] as const
+export const TOOL_NATURES = [
+  'generate',
+  'query',
+  'mutate',
+  'local',
+  'realtime',
+] as const satisfies readonly CoreToolNature[]
 export type ToolNature = (typeof TOOL_NATURES)[number]
 
 export interface JsonSchema {

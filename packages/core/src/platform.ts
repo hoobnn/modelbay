@@ -30,6 +30,12 @@ export interface ToolSchema {
   [key: string]: unknown
 }
 
+/** MCP 工具的操作性质：决定 annotations（只读 / 破坏性 / 幂等 / 联网）。缺省 `generate`。 */
+export type ToolNature = 'generate' | 'query' | 'mutate' | 'local' | 'realtime'
+
+/** MCP 工具组：默认只暴露 `core`，其余组由 `MODELBAY_MCP_GROUPS` 打开。缺省 `core`。 */
+export type ToolGroup = 'core' | 'realtime' | 'management' | 'node'
+
 /**
  * 一条 MCP 工具定义：只写与模型无关的平台特有部分（字段形状、平台开关、参数说明）。
  * 可选模型、默认值、上下限、生命周期提示由 `@modelbay/mcp` 在运行时从声明派生。
@@ -43,6 +49,12 @@ export interface ToolSpec {
   modelParams?: Record<string, ModelParamKind>
   /** 该工具对应的归一化能力；用于挑选声明和路由。缺省按工具名的通用约定推断。 */
   capability?: string
+  /** 平台独有能力：调用 `adapter.native(op, params)`，而不是按能力 submit。 */
+  native?: string
+  /** 操作性质；缺省按通用工具名约定，再缺省为 `generate`。 */
+  nature?: ToolNature
+  /** 工具组；缺省按通用工具名约定，再缺省为 `core`。 */
+  group?: ToolGroup
   /** 额外注册的同义工具名（保留历史名的同时提供跨平台统一命名）。 */
   aliases?: readonly string[]
 }
