@@ -98,6 +98,11 @@ export async function videoReferences(
     title?: string
     /** 参考视频按哪种任务模式检查（如编辑参考视频的最短时长） */
     videoTask?: string
+    /**
+     * 缺媒体元数据（宽高、时长、编码）时是否拒绝；缺省 true。
+     * 宿主只给了 `assets`（MCP / CLI，读不到元数据）时传 false，能读到的项仍照常检查
+     */
+    strict?: boolean
     uploadVideo?: (ref: AssetRef, file: LoadedFile) => Promise<string>
   },
 ) {
@@ -145,7 +150,7 @@ export async function videoReferences(
         frameRate: file.frameRate,
         audioCodecs: file.audioCodecs,
       },
-      { title, label, strict: true },
+      { title, label, strict: limits.strict ?? true },
     )
     if (problems.length) throw new ProviderError('invalid_input', problems[0]!)
     if (kind !== 'image') {

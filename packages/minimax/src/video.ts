@@ -23,6 +23,8 @@ export async function video(
   adapterCtx: AdapterContext,
 ): Promise<SubmitResult> {
   const ctx = withFiles(adapterCtx)
+  // 只有 assets（MCP / CLI）时读不到宽高、时长等元数据，缺项不拒绝，能读到的仍检查
+  const strict = Boolean(adapterCtx.files)
   const input = request.input
   required(input.prompt, 7000, '视频提示词')
   // 参考素材的格式要求以模型声明为准，宿主在运行前读的是同一份声明
@@ -74,6 +76,7 @@ export async function video(
         platform: 'minimax',
         requirements: limits.media,
         title: spec.title,
+        strict,
       })
       content.push({ ...frame, role })
     }
@@ -88,6 +91,7 @@ export async function video(
         platform: 'minimax',
         requirements: limits.media,
         title: spec.title,
+        strict,
       })),
     )
   const data = await requestJson(ctx, '/v2/video_generation', {

@@ -186,6 +186,19 @@ describe('MCP MiniMax 参数进上游请求', () => {
     expect(JSON.stringify(result)).toContain('123')
   })
 
+  it('generate_video：本地首帧经 assets 读取，缺宽高元数据也不拒绝', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mmx-'))
+    const frame = join(dir, 'frame.png')
+    writeFileSync(frame, Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2]))
+    const { handlers, captured } = setup((url) =>
+      url.includes('/v2/video_generation') ? json({ task_id: '7' }) : new Response('x'),
+    )
+    const result = await handlers.callTool('generate_video', { prompt: '海边', first_frame: frame })
+    expect(result.isError).toBeFalsy()
+    const content = bodyOf(captured, '/v2/video_generation')!.content as Array<{ role?: string }>
+    expect(content.some((item) => item.role === 'first_frame')).toBe(true)
+  })
+
   it('generate_video 不再声明 content', () => {
     const set = generateTools(platformOf('minimax'))
     const props = set.byName.get('generate_video')!.inputSchema.properties!
