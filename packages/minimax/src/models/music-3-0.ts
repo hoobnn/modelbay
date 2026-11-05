@@ -14,8 +14,8 @@ export default {
     since: '2026-08-20',
     source: {
       url: 'https://platform.minimax.cn/docs/api-reference/music-generation',
-      checkedAt: '2026-11-04',
+      checkedAt: '2026-11-05',
     },
   },
-  source: { url: 'https://platform.minimax.cn/docs/api-reference', checkedAt: '2026-11-04' },
+  source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
 } satisfies ModelDeclaration

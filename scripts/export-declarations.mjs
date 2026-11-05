@@ -15,7 +15,7 @@ const INVENTORY = join(root, 'docs/inventory/plein-models.json')
 const MCP_DIR = join(root, 'docs/inventory')
 const DECL_DIR = join(root, 'declarations')
 const META_PATH = join(DECL_DIR, '_meta.json')
-const CHECKED_AT = '2026-11-04'
+const CHECKED_AT = '2026-11-05'
 
 // ── 平台映射 ────────────────────────────────────────────────────────────
 // mock 不是真实平台，跳过；方舟按量/套餐两个 provider 都归 ark 包，渠道不同。
@@ -34,9 +34,67 @@ const PLATFORMS = ['ark', 'bailian', 'minimax', 'doubao-speech', 'openai']
 const PLATFORM_URL = {
   ark: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
   bailian: 'https://help.aliyun.com/zh/model-studio/models',
-  minimax: 'https://platform.minimax.cn/docs/api-reference',
-  'doubao-speech': 'https://www.volcengine.com/docs/6561/79820',
+  minimax: 'https://platform.minimax.cn/docs/faq/models',
+  'doubao-speech': 'https://docs.volcengine.com/docs/6561/2499930',
   openai: 'https://platform.openai.com/docs/models',
+}
+// 2026-11-05 逐个打开官方原文核对后的来源页：只列真正读到正文的页面。
+const SOURCE_URL = {
+  'ark-plan':
+    'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
+  'bailian-image': 'https://help.aliyun.com/zh/model-studio/image-model',
+  'bailian-video': 'https://help.aliyun.com/zh/model-studio/video-generation',
+  'minimax-video': 'https://platform.minimax.cn/docs/api-reference/video-generation-v2-create',
+  'doubao-speech-tts':
+    'https://docs.volcengine.com/docs/DoubaoVoice/unidirectional-streaming-text-to-speech-http',
+  'doubao-speech-asr': 'https://docs.volcengine.com/docs/6561/1354869',
+}
+// 读不到正文的页面（正文由前端渲染）保持原来的核对日期，不假装核对过。
+const SOURCE_CHECKED_AT = {
+  'https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh': '2026-11-04',
+  'https://www.volcengine.com/docs/6561/79820': '2026-11-04',
+}
+
+// 逐个模型的来源覆盖：平台 + 模型 ID → 来源页。
+const SOURCE_RULES = [
+  {
+    match: (c) =>
+      c.platform === 'ark' &&
+      Array.isArray(c.channels) &&
+      c.channels.includes('ark-plan') &&
+      !c.channels.includes('ark'),
+    url: SOURCE_URL['ark-plan'],
+  },
+  {
+    match: (c) =>
+      c.platform === 'bailian' &&
+      ['qwen-image-3.0', 'qwen-image-3.0-pro', 'wanx2.1-imageedit'].includes(c.id),
+    url: SOURCE_URL['bailian-image'],
+  },
+  {
+    match: (c) => c.platform === 'bailian' && ['wan3.0-video', 'wan3.0-video-prime'].includes(c.id),
+    url: SOURCE_URL['bailian-video'],
+  },
+  {
+    match: (c) =>
+      c.platform === 'minimax' && ['MiniMax-H3-Highspeed', 'MiniMax-H3-Lite'].includes(c.id),
+    url: SOURCE_URL['minimax-video'],
+  },
+  {
+    match: (c) => c.platform === 'doubao-speech' && ['seed-tts-2.0', 'seed-icl-2.0'].includes(c.id),
+    url: SOURCE_URL['doubao-speech-tts'],
+  },
+  {
+    match: (c) => c.platform === 'doubao-speech' && c.id === 'bigmodel',
+    url: SOURCE_URL['doubao-speech-asr'],
+  },
+]
+
+/** 逐个模型算出 source.url 与 checkedAt：命中规则用规则页，否则用平台页。 */
+function resolveSource(ctx) {
+  const rule = SOURCE_RULES.find((r) => r.match(ctx))
+  const url = rule?.url ?? PLATFORM_URL[ctx.platform]
+  return { url, checkedAt: SOURCE_CHECKED_AT[url] ?? CHECKED_AT }
 }
 // docs/inventory.md 第三节已核对的三个官方链接
 const MINIMAX_MUSIC_URL = 'https://platform.minimax.cn/docs/api-reference/music-generation'
@@ -233,7 +291,7 @@ function resolveLifecycle(ctx) {
   }
   const lifecycle = {
     status: 'active',
-    source: { url: PLATFORM_URL[ctx.platform], checkedAt: CHECKED_AT },
+    source: resolveSource(ctx),
   }
   if (ctx.deprecated) {
     return {
@@ -390,7 +448,11 @@ function buildAll() {
     // lifecycle
     const { lifecycle, decision } = resolveLifecycle({ platform, id: group.id, deprecated })
     decl.lifecycle = lifecycle
-    decl.source = { url: PLATFORM_URL[platform], checkedAt: CHECKED_AT }
+    decl.source = resolveSource({
+      platform,
+      id: group.id,
+      channels: decl.channels.map((c) => c.channel),
+    })
 
     if (decision.kind === 'rule') {
       ruleApplied.push({ canonicalId, id: group.id, ...decision })

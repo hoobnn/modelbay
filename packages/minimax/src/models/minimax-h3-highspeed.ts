@@ -52,7 +52,13 @@ export default {
   aliases: { official: [], short: ['highspeed'] },
   lifecycle: {
     status: 'active',
-    source: { url: 'https://platform.minimax.cn/docs/api-reference', checkedAt: '2026-11-04' },
+    source: {
+      url: 'https://platform.minimax.cn/docs/api-reference/video-generation-v2-create',
+      checkedAt: '2026-11-05',
+    },
   },
-  source: { url: 'https://platform.minimax.cn/docs/api-reference', checkedAt: '2026-11-04' },
+  source: {
+    url: 'https://platform.minimax.cn/docs/api-reference/video-generation-v2-create',
+    checkedAt: '2026-11-05',
+  },
 } satisfies ModelDeclaration

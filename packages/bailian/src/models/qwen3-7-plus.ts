@@ -10,7 +10,7 @@ export default {
   aliases: { official: [], short: ['plus'] },
   lifecycle: {
     status: 'active',
-    source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-04' },
+    source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-05' },
   },
-  source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-04' },
+  source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-05' },
 } satisfies ModelDeclaration

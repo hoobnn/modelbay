@@ -19,12 +19,12 @@
   "lifecycle": {
     "status": "active",
     "source": {
-      "url": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
-      "checkedAt": "2026-11-04"
+      "url": "https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview",
+      "checkedAt": "2026-11-05"
     }
   },
   "source": {
-    "url": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
-    "checkedAt": "2026-11-04"
+    "url": "https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview",
+    "checkedAt": "2026-11-05"
   }
 }

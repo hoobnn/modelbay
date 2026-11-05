@@ -25,7 +25,7 @@ export default {
   aliases: { official: [], short: [] },
   lifecycle: {
     status: 'active',
-    source: { url: 'https://platform.openai.com/docs/models', checkedAt: '2026-11-04' },
+    source: { url: 'https://platform.openai.com/docs/models', checkedAt: '2026-11-05' },
   },
-  source: { url: 'https://platform.openai.com/docs/models', checkedAt: '2026-11-04' },
+  source: { url: 'https://platform.openai.com/docs/models', checkedAt: '2026-11-05' },
 } satisfies ModelDeclaration

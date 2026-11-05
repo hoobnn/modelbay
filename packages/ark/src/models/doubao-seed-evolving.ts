@@ -15,11 +15,11 @@ export default {
     status: 'active',
     source: {
       url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
-      checkedAt: '2026-11-04',
+      checkedAt: '2026-11-05',
     },
   },
   source: {
     url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
-    checkedAt: '2026-11-04',
+    checkedAt: '2026-11-05',
   },
 } satisfies ModelDeclaration

@@ -10,7 +10,13 @@ export default {
   aliases: { official: [], short: [] },
   lifecycle: {
     status: 'active',
-    source: { url: 'https://www.volcengine.com/docs/6561/79820', checkedAt: '2026-11-04' },
+    source: {
+      url: 'https://docs.volcengine.com/docs/DoubaoVoice/unidirectional-streaming-text-to-speech-http',
+      checkedAt: '2026-11-05',
+    },
   },
-  source: { url: 'https://www.volcengine.com/docs/6561/79820', checkedAt: '2026-11-04' },
+  source: {
+    url: 'https://docs.volcengine.com/docs/DoubaoVoice/unidirectional-streaming-text-to-speech-http',
+    checkedAt: '2026-11-05',
+  },
 } satisfies ModelDeclaration

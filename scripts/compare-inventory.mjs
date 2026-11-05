@@ -176,7 +176,9 @@ function buildDiff() {
   h(
     '> 基准：`docs/inventory/plein-models.json`；产物：`declarations/**/*.json` 与 `packages/*/src/models/*.ts`。',
   )
-  h('> 来源与核对日期沿用 2026-11-04 盘点记录，未逐一重新联网核对。')
+  h(
+    '> 来源与核对日期：2026-11-05 逐个打开官方原文核对过；只有真正读到正文的页面才写当天的 `checkedAt`，读不到正文的保持 2026-11-04（清单见第三节）。',
+  )
   h('')
 
   // 一
@@ -244,12 +246,65 @@ function buildDiff() {
   // 三
   h('## 三、来源与核对日期')
   h('')
-  h("- 每个声明的 `source` 与 `lifecycle.source` 均为 `{ url, checkedAt: '2026-11-04' }`。")
   h(
-    '- `checkedAt = 2026-11-04` 是 `docs/inventory.md` 记录的实际核对日期；本次抽取沿用该盘点记录，未逐一重新联网核对官方原文。',
+    '- 每个声明的 `source` 与 `lifecycle.source` 都是 `{ url, checkedAt }`；`checkedAt` 是实际读到该页官方原文的日期。',
+  )
+  h(
+    '- 2026-11-05 逐个打开了声明里的 `source.url` 核对状态、默认值与主要上限：真正读到正文的页面 `checkedAt` 写成 2026-11-05；正文由前端渲染、读不到内容的页面保持 2026-11-04，并在下面的表里列出。',
   )
   h(
     '- `source.url` 用各平台官方模型列表/文档页；`lifecycle.source.url` 对有特殊状态的模型优先用 `docs/inventory.md` 第三节列出的官方公告链接。',
+  )
+  h('')
+  h('### 2026-11-05 逐页核对结果')
+  h('')
+  h('| 官方页面 | 读到正文 | 用到的声明 |')
+  h('| --- | --- | --- |')
+  if (meta) {
+    const links = meta.officialLinks ?? {}
+    h(`| ${code(meta.platformUrl.ark)} | 是 | 方舟按量渠道的全部模型 |`)
+    h(`| ${code(links.arkAgentPlan)} | 是 | 方舟套餐渠道的模型（套餐概览） |`)
+    h(
+      `| ${code(meta.platformUrl.bailian)} | 是 | 百炼文本模型与 qwen-image-3.0-pro、wan2.7-image-pro |`,
+    )
+    h(
+      `| ${code(links.bailianImage)} | 是 | 百炼 qwen-image-3.0、qwen-image-3.0-pro、wanx2.1-imageedit |`,
+    )
+    h(`| ${code(links.bailianVideo)} | 是 | 百炼 wan3.0-video、wan3.0-video-prime |`)
+    h(`| ${code(links.bailianTts)} | 是 | 百炼配音系列 |`)
+    h(`| ${code(meta.platformUrl.minimax)} | 是 | MiniMax 全部模型（含已下线的历史模型） |`)
+    h(
+      `| ${code(links.minimaxVideo)} | 是 | MiniMax-H3-Highspeed、MiniMax-H3-Lite、MiniMax-H3-Max |`,
+    )
+    h(`| ${code(links.minimaxMusic)} | 是 | music-3.0 的生命周期来源 |`)
+    h(`| ${code(meta.platformUrl.openai)} | 是 | OpenAI 全部模型 |`)
+    h(`| ${code(meta.platformUrl['doubao-speech'])} | 是 | 豆包语音模型列表（seed-audio-1.0） |`)
+    h(`| ${code(links.doubaoSpeechTts)} | 是 | seed-tts-2.0、seed-icl-2.0 |`)
+    h(`| ${code(links.doubaoSpeechAsr)} | 是 | bigmodel（流式语音识别） |`)
+    h(
+      `| ${code(links.arkDeprecation)} | 否（正文由前端渲染） | doubao-seedream-5-0-260128 的下线公告 |`,
+    )
+  }
+  h('')
+  if (meta?.unverified) {
+    h(`读不到正文的页面保持 \`checkedAt = ${meta.unverified.checkedAt}\`，涉及的声明：`)
+    h('')
+    for (const id of meta.unverified.declarations) h(`- \`${id}\``)
+    h('')
+  }
+  h('逐页核对中发现的出入（按官方原文改了声明）：')
+  h('')
+  h(
+    '- 方舟套餐渠道的模型 ID 用点号写法（`doubao-seed-2.1-pro`、`glm-5.3`、`kimi-k3.1-pro`），只出现在「套餐概览」页，原来挂的「模型列表」页里没有；这些声明的 `source` 改指套餐概览页。',
+  )
+  h(
+    '- 百炼的图像编辑与视频生成模型（`qwen-image-3.0`、`wanx2.1-imageedit`、`wan3.0-video`、`wan3.0-video-prime`）不在「模型大全」页，改指图像生成页 / 视频生成页。',
+  )
+  h(
+    '- MiniMax 的模型清单在「模型列表」页（`/docs/faq/models`），原来的 `/docs/api-reference` 会跳到「Prompt 缓存」页；H3 的 Highspeed / Lite 变体只在视频生成接口页出现。',
+  )
+  h(
+    '- 豆包语音的 `seed-tts-2.0`、`seed-icl-2.0`、`bigmodel`、`seed-audio-1.0` 各自改指对应的接口页；`seed-icl-1.0` 暂时找不到能读到正文的页面，保持原样。',
   )
   h('')
   h('| 平台 | 默认官方链接（source.url） |')

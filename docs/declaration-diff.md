@@ -2,7 +2,7 @@
 
 > 本报告由 `node scripts/compare-inventory.mjs` 生成，`export-declarations.mjs` 末尾会自动调用。
 > 基准：`docs/inventory/plein-models.json`；产物：`declarations/**/*.json` 与 `packages/*/src/models/*.ts`。
-> 来源与核对日期沿用 2026-11-04 盘点记录，未逐一重新联网核对。
+> 来源与核对日期：2026-11-05 逐个打开官方原文核对过；只有真正读到正文的页面才写当天的 `checkedAt`，读不到正文的保持 2026-11-04（清单见第三节）。
 
 ## 一、结论摘要
 
@@ -46,16 +46,54 @@
 
 ## 三、来源与核对日期
 
-- 每个声明的 `source` 与 `lifecycle.source` 均为 `{ url, checkedAt: '2026-11-04' }`。
-- `checkedAt = 2026-11-04` 是 `docs/inventory.md` 记录的实际核对日期；本次抽取沿用该盘点记录，未逐一重新联网核对官方原文。
+- 每个声明的 `source` 与 `lifecycle.source` 都是 `{ url, checkedAt }`；`checkedAt` 是实际读到该页官方原文的日期。
+- 2026-11-05 逐个打开了声明里的 `source.url` 核对状态、默认值与主要上限：真正读到正文的页面 `checkedAt` 写成 2026-11-05；正文由前端渲染、读不到内容的页面保持 2026-11-04，并在下面的表里列出。
 - `source.url` 用各平台官方模型列表/文档页；`lifecycle.source.url` 对有特殊状态的模型优先用 `docs/inventory.md` 第三节列出的官方公告链接。
+
+### 2026-11-05 逐页核对结果
+
+| 官方页面                                                                                      | 读到正文             | 用到的声明                                                 |
+| --------------------------------------------------------------------------------------------- | -------------------- | ---------------------------------------------------------- |
+| `https://docs.volcengine.com/docs/ark/model-list?lang=zh`                                     | 是                   | 方舟按量渠道的全部模型                                     |
+| `https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview` | 是                   | 方舟套餐渠道的模型（套餐概览）                             |
+| `https://help.aliyun.com/zh/model-studio/models`                                              | 是                   | 百炼文本模型与 qwen-image-3.0-pro、wan2.7-image-pro        |
+| `https://help.aliyun.com/zh/model-studio/image-model`                                         | 是                   | 百炼 qwen-image-3.0、qwen-image-3.0-pro、wanx2.1-imageedit |
+| `https://help.aliyun.com/zh/model-studio/video-generation`                                    | 是                   | 百炼 wan3.0-video、wan3.0-video-prime                      |
+| `https://help.aliyun.com/zh/model-studio/tts-model`                                           | 是                   | 百炼配音系列                                               |
+| `https://platform.minimax.cn/docs/faq/models`                                                 | 是                   | MiniMax 全部模型（含已下线的历史模型）                     |
+| `https://platform.minimax.cn/docs/api-reference/video-generation-v2-create`                   | 是                   | MiniMax-H3-Highspeed、MiniMax-H3-Lite、MiniMax-H3-Max      |
+| `https://platform.minimax.cn/docs/api-reference/music-generation`                             | 是                   | music-3.0 的生命周期来源                                   |
+| `https://platform.openai.com/docs/models`                                                     | 是                   | OpenAI 全部模型                                            |
+| `https://docs.volcengine.com/docs/6561/2499930`                                               | 是                   | 豆包语音模型列表（seed-audio-1.0）                         |
+| `https://docs.volcengine.com/docs/DoubaoVoice/unidirectional-streaming-text-to-speech-http`   | 是                   | seed-tts-2.0、seed-icl-2.0                                 |
+| `https://docs.volcengine.com/docs/6561/1354869`                                               | 是                   | bigmodel（流式语音识别）                                   |
+| `https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh`                       | 否（正文由前端渲染） | doubao-seedream-5-0-260128 的下线公告                      |
+
+读不到正文的页面保持 `checkedAt = 2026-11-04`，涉及的声明：
+
+- `volc/ark-code-latest`
+- `volc/custom-chat`
+- `volc/custom-image`
+- `volc/custom-video`
+- `volc/kimi-k2.7-code`
+- `volc/minimax-m3`
+- `volc/doubao-seedream-5-0-260128`
+- `aliyun/qwen3-tts-instruct-flash`
+- `doubao/seed-icl-1.0`
+
+逐页核对中发现的出入（按官方原文改了声明）：
+
+- 方舟套餐渠道的模型 ID 用点号写法（`doubao-seed-2.1-pro`、`glm-5.3`、`kimi-k3.1-pro`），只出现在「套餐概览」页，原来挂的「模型列表」页里没有；这些声明的 `source` 改指套餐概览页。
+- 百炼的图像编辑与视频生成模型（`qwen-image-3.0`、`wanx2.1-imageedit`、`wan3.0-video`、`wan3.0-video-prime`）不在「模型大全」页，改指图像生成页 / 视频生成页。
+- MiniMax 的模型清单在「模型列表」页（`/docs/faq/models`），原来的 `/docs/api-reference` 会跳到「Prompt 缓存」页；H3 的 Highspeed / Lite 变体只在视频生成接口页出现。
+- 豆包语音的 `seed-tts-2.0`、`seed-icl-2.0`、`bigmodel`、`seed-audio-1.0` 各自改指对应的接口页；`seed-icl-1.0` 暂时找不到能读到正文的页面，保持原样。
 
 | 平台          | 默认官方链接（source.url）                                |
 | ------------- | --------------------------------------------------------- |
 | ark           | `https://docs.volcengine.com/docs/ark/model-list?lang=zh` |
 | bailian       | `https://help.aliyun.com/zh/model-studio/models`          |
-| minimax       | `https://platform.minimax.cn/docs/api-reference`          |
-| doubao-speech | `https://www.volcengine.com/docs/6561/79820`              |
+| minimax       | `https://platform.minimax.cn/docs/faq/models`             |
+| doubao-speech | `https://docs.volcengine.com/docs/6561/2499930`           |
 | openai        | `https://platform.openai.com/docs/models`                 |
 
 `docs/inventory.md` 第三节列出的 3 个官方来源链接，以及 Seedream 下线公告（`lifecycle.source` 特殊状态用）：

@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-04",
+  "checkedAt": "2026-11-05",
   "inventory": {
     "providers": 7,
     "models": 84,
@@ -55,14 +55,20 @@
   "platformUrl": {
     "ark": "https://docs.volcengine.com/docs/ark/model-list?lang=zh",
     "bailian": "https://help.aliyun.com/zh/model-studio/models",
-    "minimax": "https://platform.minimax.cn/docs/api-reference",
-    "doubao-speech": "https://www.volcengine.com/docs/6561/79820",
+    "minimax": "https://platform.minimax.cn/docs/faq/models",
+    "doubao-speech": "https://docs.volcengine.com/docs/6561/2499930",
     "openai": "https://platform.openai.com/docs/models"
   },
   "officialLinks": {
     "minimaxMusic": "https://platform.minimax.cn/docs/api-reference/music-generation",
     "arkDeprecation": "https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh",
-    "bailianTts": "https://help.aliyun.com/zh/model-studio/tts-model"
+    "bailianTts": "https://help.aliyun.com/zh/model-studio/tts-model",
+    "arkAgentPlan": "https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview",
+    "bailianImage": "https://help.aliyun.com/zh/model-studio/image-model",
+    "bailianVideo": "https://help.aliyun.com/zh/model-studio/video-generation",
+    "minimaxVideo": "https://platform.minimax.cn/docs/api-reference/video-generation-v2-create",
+    "doubaoSpeechTts": "https://docs.volcengine.com/docs/DoubaoVoice/unidirectional-streaming-text-to-speech-http",
+    "doubaoSpeechAsr": "https://docs.volcengine.com/docs/6561/1354869"
   },
   "skippedMock": [
     "agent",
@@ -1404,5 +1410,20 @@
       ],
       "fieldDiffs": []
     }
-  ]
+  ],
+  "unverified": {
+    "checkedAt": "2026-11-04",
+    "note": "这些声明的官方页面正文由前端渲染，2026-11-05 没能读到原文，保持原来的核对日期",
+    "declarations": [
+      "volc/ark-code-latest",
+      "volc/custom-chat",
+      "volc/custom-image",
+      "volc/custom-video",
+      "volc/kimi-k2.7-code",
+      "volc/minimax-m3",
+      "volc/doubao-seedream-5-0-260128",
+      "aliyun/qwen3-tts-instruct-flash",
+      "doubao/seed-icl-1.0"
+    ]
+  }
 }
