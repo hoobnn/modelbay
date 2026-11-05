@@ -4,5 +4,5 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vite.package.ts"]
+  "include": ["vite.config.ts", "vite.package.ts", "scripts/*.ts"]
 }

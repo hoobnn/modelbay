@@ -6,7 +6,7 @@ import type { ModelDeclaration } from '@modelbay/core'
  * 官方「语音合成概述」的 Qwen3-TTS 只列 qwen3-tts-flash-realtime 与 qwen3-tts-flash，
  * 模型总览里也已经没有这个型号。下线状态沿用 plein 原有判断，来源是它当时引用的
  * 阿里云公告页；公告页正文由前端渲染，这里没能读到原文，所以 checkedAt 取 plein
- * 引用该公告的日期，不是本仓库核对正文的日期（见 docs/declaration-diff.md）。
+ * 引用该公告的日期，不是本仓库核对正文的日期。
  */
 export default {
   canonicalId: 'aliyun/qwen3-tts-instruct-flash',

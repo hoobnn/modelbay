@@ -11,7 +11,7 @@
   "scripts": {
     "lint": "vp check && markdownlint '**/*.md' --ignore-path .gitignore",
     "format": "vp check --fix && markdownlint '**/*.md' --ignore-path .gitignore --fix",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "tsc -p . --noEmit && pnpm -r typecheck",
     "test": "vp test",
     "test:coverage": "vp test run --coverage",
     "build": "pnpm -r build",
@@ -19,8 +19,9 @@
     "check:packages": "node scripts/check-packages.mjs",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:core-runtime": "node scripts/check-core-runtime.mjs",
-    "check:declarations": "node scripts/check-declarations.mjs",
-    "verify": "pnpm dedupe --check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm check:coverage && pnpm check:declarations && pnpm build && pnpm check:packages && pnpm check:licenses && pnpm check:core-runtime",
+    "export:declarations": "vpx -s scripts/export-declarations.ts",
+    "check:sources": "pnpm export:declarations && node scripts/upstream-docs.mjs --check-coverage",
+    "verify": "pnpm dedupe --check && pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm check:coverage && pnpm check:sources && pnpm build && pnpm check:packages && pnpm check:licenses && pnpm check:core-runtime",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "prepare": "husky"

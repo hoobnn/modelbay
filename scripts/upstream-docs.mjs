@@ -2,8 +2,8 @@
 /**
  * 官方文档 SHA-256 指纹审计（迁移自 hoobnn-mcps/scripts/upstream_docs.py）。
  *
- * - 读取 `declarations/**\/*.json`（M2 生成）里的 `source.url` / `lifecycle.source.url`；
- *   模型声明在源仓是 TS，构建时导出成这些 JSON，本脚本解析的就是这份导出数据。
+ * - 读取 `.upstream-docs/declarations/**\/*.json` 里的 `source.url` / `lifecycle.source.url`。
+ *   声明的唯一来源是各平台包的 TS 文件，先跑 `vpx -s scripts/export-declarations.ts` 导出。
  * - fail-closed：只允许白名单官方 HTTPS 文档域名；网络缺失 / 抓取失败一律显式报错
  *   并以非零码退出，绝不静默当作「无变化」。
  * - `--check-coverage` 是纯离线模式（取代原脚本用 Python AST 的 `check_coverage()`）：
@@ -31,16 +31,11 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-// 老仓库四平台 matrix 的 server 名 → 声明目录名
-const SERVER_ALIASES = {
-  'volcengine-ark': 'ark',
-  'ali-bailian': 'bailian',
-}
-
 // 官方文档域名白名单（按后缀匹配，覆盖五家平台的文档站）
 const ALLOWED_HOST_SUFFIXES = [
   'volcengine.com',
   'aliyun.com',
+  'alibabacloud.com',
   'minimax.cn',
   'minimaxi.com',
   'minimax.io',
@@ -62,7 +57,7 @@ const URL_PATTERN = /https?:\/\/[^\s<>"'`\\]+/g
 const USAGE = `用法：node scripts/upstream-docs.mjs [选项]
 
   --check-coverage          离线：只解析 declarations JSON，校验来源映射（不联网）
-  --declarations <dir>      声明目录（默认 declarations）
+  --declarations <dir>      声明目录（默认 .upstream-docs/declarations）
   --baseline <file>         基线 JSON（默认 docs/upstream[/<server>]/baseline.json）
   --output <dir>            输出目录（默认 .upstream-docs）
   --server <name>           只检查一个平台
@@ -79,7 +74,7 @@ function requireValue(argv, index, flag) {
 
 function parseArgs(argv) {
   const args = {
-    declarations: join(ROOT, 'declarations'),
+    declarations: join(ROOT, '.upstream-docs', 'declarations'),
     baseline: null,
     output: join(ROOT, '.upstream-docs'),
     server: null,
@@ -159,8 +154,7 @@ function walkJson(directory) {
 
 function matchesServer(rel, server) {
   const top = rel.split('/')[0]
-  const directory = SERVER_ALIASES[server] ?? server
-  return top === server || top === directory
+  return top === server
 }
 
 function loadDeclarations(directory, server) {
@@ -536,7 +530,7 @@ async function main() {
   if (entries.length === 0) {
     const scope = args.server ? `（平台 ${args.server}）` : ''
     process.stderr.write(
-      `未找到 declarations/**/*.json${scope}；M2 声明尚未生成或路径不对，拒绝静默通过。\n`,
+      `未找到声明 JSON${scope}；先运行 vpx -s scripts/export-declarations.ts，拒绝静默通过。\n`,
     )
     process.exitCode = 1
     return

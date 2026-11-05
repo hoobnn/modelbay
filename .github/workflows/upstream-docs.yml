@@ -1,9 +1,9 @@
-name: Official documentation audit (M5)
+name: Official documentation audit
 
-# 从 hoobnn-mcps 迁过来的上游文档监控。沿用老仓库的 cron（每天 10:23 Asia/Shanghai）
-# 与四平台 matrix：抓取官方文档、比对 SHA-256 指纹，检测到变化就开 issue 交人工审核。
+# 上游文档监控（每天 10:23 Asia/Shanghai）：先从各平台包的 TS 声明导出 JSON，
+# 再抓取官方文档、比对 SHA-256 指纹，检测到变化就开 issue 交人工审核。
 # 定时任务绝不自动改声明、合并、打 tag 或发布；缺网络 / 抓取失败时脚本以非零码退出，
-# 本 job 显式失败，不静默通过。M2 的 declarations/**/*.json 需先合进仓库，本工作流才运行。
+# 本 job 显式失败，不静默通过。
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
         description: Platform to check
         type: choice
         default: all
-        options: [all, volcengine-ark, ali-bailian, doubao-speech, minimax]
+        options: [all, ark, bailian, minimax, doubao-speech, openai]
   schedule:
     - cron: "23 2 * * *"
 
@@ -31,12 +31,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        server: ${{ fromJSON(inputs.server && inputs.server != 'all' && format('["{0}"]', inputs.server) || '["volcengine-ark","ali-bailian","doubao-speech","minimax"]') }}
+        server: ${{ fromJSON(inputs.server && inputs.server != 'all' && format('["{0}"]', inputs.server) || '["ark","bailian","minimax","doubao-speech","openai"]') }}
     steps:
       - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 从 TS 声明导出 JSON
+        run: pnpm export:declarations
       - name: 离线校验声明来源映射
         run: node scripts/upstream-docs.mjs --check-coverage --server "${{ matrix.server }}"
       - name: 抓取官方文档并比对指纹
