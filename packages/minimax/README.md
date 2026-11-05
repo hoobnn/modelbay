@@ -41,8 +41,9 @@ Also implemented:
 - `list-video-tasks` — `GET /v2/query/video_generation` (paginated)
 - `raw-request` — arbitrary `path` / `method` / `body` / `query` fallback
 
-`create_h3_context_ir_task`, `regenerate_video`, `text_to_image`, `text_to_audio`,
-`voice_clone`, `voice_design` MCP aliases map to these ops / capabilities.
+MCP tools use the same names as the other platforms (`generate_image`, `text_to_speech`,
+`clone_voice`, `design_voice`); `create_h3_context_ir_task` and `regenerate_video` map to the
+native ops above.
 
 ## Errors and redaction
 

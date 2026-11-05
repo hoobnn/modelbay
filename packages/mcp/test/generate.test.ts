@@ -56,10 +56,7 @@ describe('工具元数据', () => {
     expect(minimax.byName.get('delete_video_task')?.annotations.destructiveHint).toBe(true)
   })
 
-  it('MiniMax 别名表与超出基线工具表', () => {
-    const aliases = Object.fromEntries(toolsOf('minimax').map((tool) => [tool.name, tool.aliases]))
-    expect(aliases.text_to_audio).toContain('text_to_speech')
-    expect(aliases.voice_clone).toContain('clone_voice')
+  it('额外工具表含 list_declared_models', () => {
     expect(EXTRA_TOOL_NAMES).toContain('list_declared_models')
   })
 
@@ -156,7 +153,7 @@ describe('generateTools / listTools / toMCPTool', () => {
     expect(listTools(set, MCP_TOOL_GROUPS.all).length).toBeGreaterThanOrEqual(9)
   })
 
-  it('toMCPTool 去掉内部字段（group/route/aliasOf）', () => {
+  it('toMCPTool 去掉内部字段（group/route）', () => {
     const set = generateTools('ark', { models: fakeModels })
     const tool = set.all.find((item) => item.name === 'chat')!
     const publicTool = toMCPTool(tool)
@@ -182,10 +179,9 @@ describe('generateTools / listTools / toMCPTool', () => {
     expect(set.byName.get('rerank')?.group).toBe('node')
   })
 
-  it('routes / byName 覆盖全量工具（含别名）', () => {
+  it('routes / byName 覆盖全量工具', () => {
     const set = generateTools('minimax', { models: fakeModels })
     expect(set.routes.size).toBe(set.all.length)
     expect(set.byName.size).toBe(set.all.length)
-    expect(set.routes.get('text_to_speech')).toEqual(set.routes.get('text_to_audio'))
   })
 })

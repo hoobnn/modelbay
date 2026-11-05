@@ -4,10 +4,10 @@
 
 ## 两层来源
 
-| 层               | 写在哪                                             | 内容                                                                                              |
-| ---------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 平台特有部分     | `packages/<平台>/src/mcp/tools.ts`（`ToolSpec[]`） | 字段形状、平台开关、参数说明；`capability`、`native`、`nature`、`group`、`modelParams`、`aliases` |
-| 与模型有关的部分 | 运行时由 `packages/mcp/src/derive.ts` 从声明派生   | `model` 的可选 ID 与默认值、随模型变化的参数范围、说明里的模型清单与生命周期提示                  |
+| 层               | 写在哪                                             | 内容                                                                                   |
+| ---------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 平台特有部分     | `packages/<平台>/src/mcp/tools.ts`（`ToolSpec[]`） | 字段形状、平台开关、参数说明；`capability`、`native`、`nature`、`group`、`modelParams` |
+| 与模型有关的部分 | 运行时由 `packages/mcp/src/derive.ts` 从声明派生   | `model` 的可选 ID 与默认值、随模型变化的参数范围、说明里的模型清单与生命周期提示       |
 
 工具定义里不出现模型 ID、上下限数值、默认值或生命周期字符串。改一份声明，MCP 的 schema 和说明就跟着变，`packages/mcp/test/declaration-driven.test.ts` 在内存里改声明并断言生成结果随之变化。
 
@@ -48,9 +48,9 @@
 | `management` | 不启用 | 删除任务、控制台、热词表、原始请求、2K 再生成等管理操作     |
 | `node`       | 不启用 | 需要本地文件 I/O 的工具；适配器 `nodeOnly` 里的操作强制归入 |
 
-## 别名与额外工具
+## 统一工具名与额外工具
 
-- 工具定义的 `aliases` 额外注册同义工具，`inputSchema`、路由、组都相同。目前只有 MiniMax 用：`text_to_audio`→`text_to_speech`、`text_to_image`→`generate_image`、`voice_clone`→`clone_voice`、`voice_design`→`design_voice`，让 MiniMax 也能用和其他平台相同的工具名。
+- 同一个归一化能力在所有平台用同一个工具名：`generate_image`、`generate_video`、`text_to_speech`、`clone_voice`、`design_voice`、`get_job`……每个能力只注册一个工具，不提供同义名。
 - 每个平台额外有一个 `list_declared_models`：列出声明里的模型、能力和生命周期提示，客户端不用硬编码模型清单。它不叫 `list_models`，因为百炼的 `list_models` 是官方模型目录查询，语义不同。工具名要符合 `^[a-zA-Z0-9_-]{1,64}$`，所以不用带冒号的名字。
 - `resources/list`、`resources/templates/list`、`prompts/list` 返回空集合，避免部分客户端探测时报 `-32601`。
 

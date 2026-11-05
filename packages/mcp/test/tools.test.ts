@@ -185,27 +185,16 @@ describe('工具组开关 MCP_TOOL_GROUPS', () => {
   })
 })
 
-describe('MiniMax 别名与跨平台统一命名', () => {
-  it('历史别名保留，并额外注册统一命名工具', () => {
+describe('MiniMax 使用跨平台统一工具名', () => {
+  it('只注册统一名，每个能力一个工具', () => {
     const { adapter } = fakeAdapter()
     const set = generateTools('minimax', { adapter })
     const names = new Set(toolNames(set, MCP_TOOL_GROUPS.all))
-    for (const legacy of ['text_to_audio', 'text_to_image', 'voice_clone', 'voice_design']) {
-      expect(names.has(legacy)).toBe(true)
-    }
     for (const unified of ['text_to_speech', 'generate_image', 'clone_voice', 'design_voice']) {
       expect(names.has(unified)).toBe(true)
     }
-    expect(set.byName.get('text_to_speech')?.aliasOf).toBe('text_to_audio')
-  })
-
-  it('别名工具与原工具的 inputSchema / route 一致', () => {
-    const { adapter } = fakeAdapter()
-    const set = generateTools('minimax', { adapter })
-    const original = set.byName.get('text_to_audio')!
-    const alias = set.byName.get('text_to_speech')!
-    expect(alias.inputSchema).toEqual(original.inputSchema)
-    expect(alias.route).toEqual(original.route)
-    expect(alias.group).toBe(original.group)
+    for (const legacy of ['text_to_audio', 'text_to_image', 'voice_clone', 'voice_design']) {
+      expect(names.has(legacy)).toBe(false)
+    }
   })
 })

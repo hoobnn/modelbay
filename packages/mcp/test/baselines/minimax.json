@@ -848,7 +848,7 @@
     }
   },
   {
-    "name": "text_to_audio",
+    "name": "text_to_speech",
     "description": "同步语音合成，text最多10000字符，按字符计费；默认speech-2.8-hd，也可显式选择其他官方语音模型。\nvoice_id用list_voices获取；speed=0.5–2，vol=(0,10]，pitch=-12–12，format=mp3/wav/flac/pcm。\nparameters深度合并voice_setting/audio_setting等官方选项，不支持stream；结果持久保存，可recover_job补下载。\n",
     "inputSchema": {
       "properties": {
@@ -945,7 +945,7 @@
         }
       },
       "required": ["text"],
-      "title": "text_to_audioArguments",
+      "title": "text_to_speechArguments",
       "type": "object"
     },
     "outputSchema": {
@@ -966,7 +966,7 @@
     }
   },
   {
-    "name": "text_to_image",
+    "name": "generate_image",
     "description": "MiniMax文生图/人物参考图生图，model=image-01或image-01-live，n=1–9，按张计费。\nsubject_reference为单人人像公网URL/data URI或本地JPG/PNG(<10MB)。prompt最多1500字符。\nparameters支持官方高级字段（如style、seed、aigc_watermark），不能覆盖model/response_format/subject_reference。\nlocal模式下载图片，url模式返回24小时链接；部分失败如实报告，recover_job只补交付。\n",
     "inputSchema": {
       "properties": {
@@ -1033,7 +1033,7 @@
         }
       },
       "required": ["prompt"],
-      "title": "text_to_imageArguments",
+      "title": "generate_imageArguments",
       "type": "object"
     },
     "outputSchema": {
@@ -1090,7 +1090,7 @@
     }
   },
   {
-    "name": "voice_clone",
+    "name": "clone_voice",
     "description": "音色快速复刻，file（本地绝对路径）或已上传file_id二选一；mp3/m4a/wav，10秒–5分钟，<=20MB。\nvoice_id须8–256字符且字母开头，仅字母数字-_且不能以-_结尾。可选试听text<=1000字符，试听按合成计费。\nparameters支持clone_prompt等官方参数；示例音频可用upload_file(purpose=prompt_audio)上传。\n需账号认证；复刻音色首次正式合成时收取复刻费用，7天内未使用会被删除。\n",
     "inputSchema": {
       "properties": {
@@ -1159,7 +1159,7 @@
         }
       },
       "required": ["voice_id"],
-      "title": "voice_cloneArguments",
+      "title": "clone_voiceArguments",
       "type": "object"
     },
     "outputSchema": {
@@ -1180,7 +1180,7 @@
     }
   },
   {
-    "name": "voice_design",
+    "name": "design_voice",
     "description": "按声音描述设计音色，preview_text为1–500字符且试听计费；返回voice_id和本地试听音频。\n官方试听只提供hex，即使url模式也落地音频，避免将大段hex混进工具上下文。首次正式合成收取音色设计费用，7天未使用删除。\n",
     "inputSchema": {
       "properties": {
@@ -1231,7 +1231,7 @@
         }
       },
       "required": ["prompt", "preview_text"],
-      "title": "voice_designArguments",
+      "title": "design_voiceArguments",
       "type": "object"
     },
     "outputSchema": {

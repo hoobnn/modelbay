@@ -66,14 +66,14 @@ Example: `MODELBAY_MCP_GROUPS=core,realtime modelbay-mcp doubao-speech`.
 
 - Each platform package defines its tools in `src/mcp/tools.ts` (`ToolSpec[]`): field shapes,
   platform switches and parameter descriptions, plus routing hints (`capability`, `native`,
-  `nature`, `group`, `modelParams`, `aliases`). No model IDs, limits, defaults or lifecycle strings.
+  `nature`, `group`, `modelParams`). No model IDs, limits, defaults or lifecycle strings.
 - The **model part** of each `inputSchema` — model IDs, defaults, per-model limits and lifecycle
   notices — is derived at startup from the platform's `ModelDeclaration`s via `@modelbay/core`.
   Editing a declaration changes the generated tools; nothing is hardcoded.
 - `annotations` are derived from the tool's `nature` (`generate` / `query` / `mutate` / `local` /
   `realtime`).
-- MiniMax tools (`text_to_audio`, `text_to_image`, `voice_clone`, `voice_design`) are also exposed
-  under the names the other platforms use.
+- Shared capabilities use the same tool name on every platform (`generate_image`,
+  `text_to_speech`, `clone_voice`, `design_voice`, `get_job`, ...).
 
 Details (in Chinese): [`docs/mcp.md`](../../docs/mcp.md).
 

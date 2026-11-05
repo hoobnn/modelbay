@@ -129,7 +129,7 @@ const IMAGE_KEYS = [
 ] as const
 
 /**
- * MCP text_to_image 的参数位置：顶层 aspect_ratio / n / prompt_optimizer，
+ * MCP generate_image 的参数位置：顶层 aspect_ratio / n / prompt_optimizer，
  * parameters 里的 style 对象、seed、aigc_watermark；宿主放在 extra。
  * 只取白名单键，其余字段不进入 extra。
  */

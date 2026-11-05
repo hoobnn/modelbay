@@ -318,7 +318,7 @@ describe('createHandlers tools/call 路由', () => {
 
   it('local 工具不需要 key，本地回答', async () => {
     const handlers = handlersFor('minimax', fakeAdapter().adapter, {})
-    const help = await handlers.callTool('get_tool_help', { tool: 'text_to_audio' })
+    const help = await handlers.callTool('get_tool_help', { tool: 'text_to_speech' })
     expect((help as CallToolResult).content[0]?.text).toBeTruthy()
     const models = await handlers.callTool('list_declared_models', {})
     expect((models as CallToolResult).structuredContent).toBeDefined()

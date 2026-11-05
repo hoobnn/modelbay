@@ -309,9 +309,8 @@ export const minimaxTools: ToolSpec[] = [
     outputSchema: okOutput,
   },
   {
-    name: 'text_to_audio',
+    name: 'text_to_speech',
     // 历史工具名保留兼容，同时注册跨平台统一命名
-    aliases: ['text_to_speech'],
     description:
       '同步语音合成，按字符计费。voice_id用list_voices获取；speed=0.5–2，vol=(0,10]，pitch=-12–12，format=mp3/wav/flac/pcm。\n' +
       'parameters深度合并voice_setting/audio_setting等官方选项，不支持stream；结果持久保存，可recover_job补下载。\n',
@@ -319,7 +318,7 @@ export const minimaxTools: ToolSpec[] = [
     modelParams: { speed: 'speed', text: 'promptLength' },
     inputSchema: {
       type: 'object',
-      title: 'text_to_audioArguments',
+      title: 'text_to_speechArguments',
       properties: {
         text: { type: 'string' },
         voice_id: { type: 'string' },
@@ -344,9 +343,8 @@ export const minimaxTools: ToolSpec[] = [
     outputSchema: okOutput,
   },
   {
-    name: 'text_to_image',
+    name: 'generate_image',
     // 历史工具名保留兼容，同时注册跨平台统一命名
-    aliases: ['generate_image'],
     description:
       'MiniMax文生图/人物参考图生图，按张计费。subject_reference为单人人像公网URL/data URI或本地JPG/PNG(<10MB)。\n' +
       'parameters支持官方高级字段（如style、seed、aigc_watermark），不能覆盖model/response_format/subject_reference。\n' +
@@ -355,7 +353,7 @@ export const minimaxTools: ToolSpec[] = [
     modelParams: { aspect_ratio: 'aspectRatio', n: 'count', prompt: 'promptLength' },
     inputSchema: {
       type: 'object',
-      title: 'text_to_imageArguments',
+      title: 'generate_imageArguments',
       properties: {
         prompt: { type: 'string' },
         model: { type: 'string' },
@@ -393,9 +391,8 @@ export const minimaxTools: ToolSpec[] = [
     outputSchema: okOutput,
   },
   {
-    name: 'voice_clone',
+    name: 'clone_voice',
     // 历史工具名保留兼容，同时注册跨平台统一命名
-    aliases: ['clone_voice'],
     description:
       '音色快速复刻，file（本地绝对路径）或已上传file_id二选一；mp3/m4a/wav，10秒–5分钟，<=20MB。\n' +
       'voice_id须8–256字符且字母开头，仅字母数字-_且不能以-_结尾。可选试听text<=1000字符，试听按合成计费。\n',
@@ -403,7 +400,7 @@ export const minimaxTools: ToolSpec[] = [
     modelParams: { text: 'promptLength' },
     inputSchema: {
       type: 'object',
-      title: 'voice_cloneArguments',
+      title: 'clone_voiceArguments',
       properties: {
         voice_id: { type: 'string' },
         file: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
@@ -421,14 +418,13 @@ export const minimaxTools: ToolSpec[] = [
     outputSchema: okOutput,
   },
   {
-    name: 'voice_design',
+    name: 'design_voice',
     // 历史工具名保留兼容，同时注册跨平台统一命名
-    aliases: ['design_voice'],
-    description: '按文字描述设计音色，preview_text为试听文本。生成的音色用于text_to_audio。',
+    description: '按文字描述设计音色，preview_text为试听文本。生成的音色用于text_to_speech。',
     capability: 'voice.design',
     inputSchema: {
       type: 'object',
-      title: 'voice_designArguments',
+      title: 'design_voiceArguments',
       properties: {
         prompt: { type: 'string' },
         preview_text: { type: 'string' },

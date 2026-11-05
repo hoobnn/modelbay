@@ -55,8 +55,6 @@ export interface ToolSpec {
   nature?: ToolNature
   /** 工具组；缺省按通用工具名约定，再缺省为 `core`。 */
   group?: ToolGroup
-  /** 额外注册的同义工具名（保留历史名的同时提供跨平台统一命名）。 */
-  aliases?: readonly string[]
 }
 
 /** 一个平台的完整自描述。 */

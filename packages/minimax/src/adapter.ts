@@ -28,7 +28,7 @@ const VIDEO_PATH = '/v2/video_generation'
 /** 宿主没有配置默认音色（如 MCP）时的系统音色 */
 const DEFAULT_VOICE = 'male-qn-qingse'
 
-/** MCP 目录（text_to_audio / music_generation）声明的可调参数白名单 */
+/** MCP 目录（text_to_speech / music_generation）声明的可调参数白名单 */
 const VOICE_KEYS = ['vol', 'pitch', 'emotion'] as const
 const AUDIO_KEYS = ['format', 'sample_rate', 'bitrate', 'channel'] as const
 const AUDIO_MIME: Record<string, string> = {

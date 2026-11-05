@@ -39,7 +39,7 @@ export function listTools(set: GeneratedToolSet, groups: readonly ToolGroup[]): 
   return set.all.filter((tool) => groups.includes(tool.group)).map(toMCPTool)
 }
 
-/** 生成全量工具（含所有组与别名）；实际 tools/list 由 listTools 按组过滤。 */
+/** 生成全量工具（含所有组）；实际 tools/list 由 listTools 按组过滤。 */
 export function generateTools(
   target: PlatformDescriptor | string,
   options: GenerateOptions = {},
@@ -56,7 +56,7 @@ export function generateTools(
 
   const all: GeneratedTool[] = []
   for (const entry of entries) {
-    all.push(...buildTool(entry, platform.primaryChannel, models, defaultCapability, nodeOnly))
+    all.push(buildTool(entry, platform.primaryChannel, models, defaultCapability, nodeOnly))
   }
   for (const name of EXTRA_TOOL_NAMES) {
     all.push(buildExtraTool(name))
@@ -77,7 +77,7 @@ function buildTool(
   models: readonly ModelDeclaration[],
   defaultCapability: string,
   nodeOnly: Set<string>,
-): GeneratedTool[] {
+): GeneratedTool {
   // 平台在工具定义里写明的字段优先；没写的按通用工具名约定推断。
   const convention = deriveMeta(entry.name)
   const meta = {
@@ -110,16 +110,7 @@ function buildTool(
     route,
   }
 
-  const result: GeneratedTool[] = [tool]
-  for (const alias of entry.aliases ?? []) {
-    result.push({
-      ...structuredClone(tool),
-      name: alias,
-      description: `${description}\n（${entry.name} 的跨平台统一命名别名，保留兼容）`,
-      aliasOf: entry.name,
-    })
-  }
-  return result
+  return tool
 }
 
 function buildRoute(meta: ToolMeta, nativeOp: string | undefined, capability: string): ToolRoute {

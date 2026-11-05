@@ -86,14 +86,12 @@ export type LocalHandler =
 export interface GeneratedTool extends MCPTool {
   group: ToolGroup
   route: ToolRoute
-  /** 生成的别名工具标记：指向被别名的规范工具名。 */
-  aliasOf?: string
 }
 
 export interface GeneratedToolSet {
   /** 平台键（`PlatformDescriptor.key`）。 */
   platform: string
-  /** 全量工具（含所有组、含别名）。 */
+  /** 全量工具（含所有组）。 */
   all: GeneratedTool[]
   routes: Map<string, ToolRoute>
   byName: Map<string, GeneratedTool>

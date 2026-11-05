@@ -37,11 +37,8 @@ const EXPECTED: Record<McpKey, Record<string, string | null | undefined>> = {
     generate_video: 'minimax:MiniMax-H3',
     list_video_tasks: null,
     music_generation: undefined,
-    text_to_audio: 'minimax:speech-2.8-hd',
     text_to_speech: 'minimax:speech-2.8-hd',
-    text_to_image: 'minimax:image-01',
     generate_image: 'minimax:image-01',
-    voice_clone: 'minimax:speech-2.8-hd',
     clone_voice: 'minimax:speech-2.8-hd',
   },
   bailian: {
