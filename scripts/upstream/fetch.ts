@@ -193,7 +193,10 @@ async function fetchMarkdown(url: string, timeoutMs: number): Promise<FetchedPag
     }
   }
 
-  if (direct.status >= 400 && direct.status !== 403) {
+  // 登记了正文容器的域名（阿里云公告页）对境外 runner 会直接回 404，浏览器渲染能拿到正文，
+  // 所以这些域名的 4xx 交给渲染兜底；其余域名的 4xx 仍算抓取失败
+  const renderable = new URL(url).hostname in RENDER_SELECTORS
+  if (direct.status >= 400 && direct.status !== 403 && !renderable) {
     throw new Error(`官方文档返回 HTTP ${direct.status}：${url}`)
   }
   return null
