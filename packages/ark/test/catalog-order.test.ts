@@ -8,7 +8,7 @@ const idsIn = (channel: string, capability: string) =>
     .flatMap((item) => item.channels.filter((ref) => ref.channel === channel).map((ref) => ref.id))
 
 describe('方舟目录顺序', () => {
-  it('按量对话模型的顺序与 plein 原目录一致，宿主默认取第一个', () => {
+  it('按量对话模型的顺序固定，宿主默认取第一个', () => {
     expect(idsIn('ark', 'text.chat')).toEqual([
       'doubao-seed-2-1-pro-260628',
       'doubao-seed-2-1-pro-260915',
@@ -19,7 +19,7 @@ describe('方舟目录顺序', () => {
     ])
   })
 
-  it('按量图片与视频模型的顺序与 plein 原目录一致', () => {
+  it('按量图片与视频模型的顺序固定', () => {
     expect(idsIn('ark', 'image.generate')).toEqual([
       'doubao-seedream-5-0-pro-260628',
       'doubao-seedream-5-0-flash-260915',
@@ -88,7 +88,7 @@ describe('方舟自定义对话模型的渠道差异', () => {
 })
 
 describe('套餐弃用模型', () => {
-  it('minimax-m3 与 kimi-k2.7-code 沿用 plein 判断，派生为 deprecated', () => {
+  it('minimax-m3 与 kimi-k2.7-code 是 sunsetting，派生为 deprecated', () => {
     for (const id of ['minimax-m3', 'kimi-k2.7-code']) {
       const declaration = allModels.find((item) => item.id === id)!
       expect(declaration.lifecycle.status).toBe('sunsetting')
@@ -98,7 +98,7 @@ describe('套餐弃用模型', () => {
 })
 
 describe('Seed Evolving 的套餐渠道说明', () => {
-  it('套餐渠道沿用 plein 原目录的标题与说明，按量渠道不变', () => {
+  it('套餐渠道有自己的标题与说明，按量渠道不变', () => {
     const evolving = allModels.find((item) => item.id === 'doubao-seed-evolving')!
     const plan = toModelInfo(
       evolving,

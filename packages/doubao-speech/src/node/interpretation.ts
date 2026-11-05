@@ -132,7 +132,7 @@ class SubtitleCollector {
 /**
  * 跑一次同传。
  *
- * 流程与 Python 版 `interpret_audio` 一致：开始会话 → 分片上传音频 →
+ * 流程：开始会话 → 分片上传音频 →
  * 收译文与目标语音 → 结束会话。
  */
 export async function interpretAudio(

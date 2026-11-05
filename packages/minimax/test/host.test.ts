@@ -1,4 +1,4 @@
-/** 对齐 plein `minimax/index.test.ts` 与 `image-parameters` / `remote-models` 的 MiniMax 用例（请求构造、校验、解析、错误、轮询）。 */
+/** MiniMax 适配器在宿主下的用例：请求构造、校验、解析、错误、轮询、远端模型列表。 */
 import { describe, expect, it } from 'vite-plus/test'
 import type { AdapterRequest, AssetRef, CapabilityInput } from '@modelbay/core'
 import { minimaxAdapter } from '../src/index'

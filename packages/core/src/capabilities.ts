@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import { Capability } from './provider'
 
-/** plein 原有的 9 种能力，类型定义仍以 provider.ts 为准 */
+/** 基础 9 种能力，类型定义以 provider.ts 为准 */
 export const LEGACY_CAPABILITIES = Capability.options
 
 /** 0003 新增：两家及以上平台都有的能力 */

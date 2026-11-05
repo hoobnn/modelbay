@@ -28,7 +28,7 @@ merged verbatim into each request body (confirmed against `/v1/chat/completions`
 ## Native operations
 
 Declared in `MINIMAX_NATIVE_OPERATIONS`; each op's input JSON Schema is declared by the
-adapter in `nativeOperationSchemas` (for the MCP generator). Minimum baseline for M3:
+adapter in `nativeOperationSchemas` (for the MCP generator). Supported operations:
 
 - `context-ir` — `POST /v2/h3_context_ir` (H3 structured prompt enhancement, async)
 - `video-2k-rerender` — `POST /v2/video_regeneration` (768P -> 2K regeneration)

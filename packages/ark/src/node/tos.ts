@@ -13,7 +13,7 @@ export interface ReferenceStorage {
   referencePathStyle: boolean
   referenceBucket: string
   referenceRegion: string
-  /** 对象 key 前缀；缺省 `modelbay/video-references`（plein 宿主传 `plein/video-references`） */
+  /** 对象 key 前缀；缺省 `modelbay/video-references` */
   referenceKeyPrefix?: string
 }
 
@@ -321,8 +321,7 @@ export function referenceUploader(ctx: AdapterContext, storage: ReferenceStorage
 /**
  * 从宿主配置读取参考视频存储设置。
  *
- * 宿主给了 `ctx.settings`（plein 的设置对象，字段同名）就直接读，缺省值与 plein 一致
- * （`tos`、`cn-beijing`）；没有 settings（MCP / CLI）时回退到 `ARK_REFERENCE_*` env / secret。
+ * 宿主给了 `ctx.settings` 就直接读，缺省值是 `tos`、`cn-beijing`；没有 settings（MCP / CLI）时回退到 `ARK_REFERENCE_*` env / secret。
  */
 export function referenceStorageFrom(ctx: AdapterContext): ReferenceStorage {
   if (ctx.settings) {

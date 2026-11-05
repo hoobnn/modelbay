@@ -16,7 +16,7 @@ function propertyType(prop: Record<string, unknown>): string {
   return 'unknown'
 }
 
-describe.each(MCP_KEYS)('M4 基线对照：%s', (platform) => {
+describe.each(MCP_KEYS)('工具清单快照对照：%s', (platform) => {
   const baseline = readInventory(platform)
   const { adapter } = fakeAdapter()
   const set = generateTools(platform, { adapter })

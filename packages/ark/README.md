@@ -2,8 +2,7 @@
 
 Volcengine Ark adapter for [Modelbay](../../README.md). MIT licensed.
 
-This package exposes **two** `PlatformAdapter`s, matching the two Ark data planes
-that plein used to maintain separately:
+This package exposes **two** `PlatformAdapter`s, one per Ark data plane:
 
 | Export           | Adapter id      | Channel    | Base URL                                        | Secret                   |
 | ---------------- | --------------- | ---------- | ----------------------------------------------- | ------------------------ |
@@ -141,8 +140,8 @@ only image references needs no uploader.
 
 `uploadReferenceVideo(ctx, file)` reads the storage settings from the host
 configuration (`ARK_REFERENCE_STORAGE`, `ARK_REFERENCE_ENDPOINT`,
-`ARK_REFERENCE_PATH_STYLE`, `ARK_REFERENCE_BUCKET`, `ARK_REFERENCE_REGION`;
-the field names match plein's `ReferenceStorage`) and the key pair
+`ARK_REFERENCE_PATH_STYLE`, `ARK_REFERENCE_BUCKET`, `ARK_REFERENCE_REGION`)
+and the key pair
 `ARK_TOS_ACCESS_KEY` / `ARK_TOS_SECRET_KEY`. `referenceStorageFrom(ctx)`
 exposes the same lookup for hosts that build the uploader themselves.
 

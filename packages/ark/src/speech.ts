@@ -1,6 +1,6 @@
 /**
  * Ark Agent Plan reuses Doubao Speech for TTS — the only cross-adapter
- * dependency allowed by the contract (ark → doubao-speech). The dependency is
+ * dependency allowed (ark → doubao-speech, see docs/extending.md). The dependency is
  * imported statically now that `@modelbay/doubao-speech` publishes a stable
  * root entry; a dynamic specifier would bypass Vite's alias and fall back to
  * an unresolvable `dist` during tests.

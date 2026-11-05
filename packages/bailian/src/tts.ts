@@ -1,6 +1,5 @@
 /**
- * Qwen-Audio-TTS / CosyVoice / Qwen3-TTS 语音合成，移植自 Python MCP
- * `ali_bailian_mcp/media.py`。所有调用都走 `ctx.fetch`，没有 WebSocket。
+ * Qwen-Audio-TTS / CosyVoice / Qwen3-TTS 语音合成。所有调用都走 `ctx.fetch`，没有 WebSocket。
  *
  * 模型数据一律从 `src/models/` 的声明读：
  * - 用哪个接口（协议）由声明里的渠道 endpoint 决定；
@@ -157,7 +156,7 @@ export interface TtsModelRequest {
 }
 
 /**
- * 解析要用的 TTS 模型（与 hoobnn-mcps 0.8.0 的规则一致）。
+ * 解析要用的 TTS 模型。
  *
  * 显式模型优先；未指定时按自定义音色 ID 前缀（`{target_model}-…`）推断；
  * 音色、parameters 都没传且 language 为空或是语种代码时用声明里的默认模型；

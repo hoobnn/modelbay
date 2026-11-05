@@ -1,4 +1,4 @@
-/** 对齐 plein `minimax/multimodal.test.ts`：H3 多模态 V2 content、素材预检与画幅规则。 */
+/** H3 多模态 V2 content、素材预检与画幅规则。 */
 import type { CapabilityInput } from '@modelbay/core'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { minimaxAdapter as minimaxProvider } from '../src/index'

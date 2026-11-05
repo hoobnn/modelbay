@@ -48,7 +48,7 @@ export interface AdapterContext {
   /** text.chat 边生成边回调文本增量；宿主没要求时为空，平台照常一次返回 */
   stream?(delta: { text: string }): void
   /**
-   * plein 形状的文件读取：带媒体元数据（时长 / 宽高 / 编码），
+   * 宿主提供的文件读取：带媒体元数据（时长 / 宽高 / 编码），
    * 与 assets 二选一；适配器优先用它，回退到 assets。
    */
   files?: { read(ref: AssetRef): Promise<LoadedFile> }

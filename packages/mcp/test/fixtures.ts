@@ -5,7 +5,7 @@ import type { ModelDeclaration, PlatformAdapter, SubmitResult } from '@modelbay/
 import type { PlatformDescriptor } from '@modelbay/core'
 import { resolvePlatform } from '../src/launch'
 
-/** 有 MCP 工具目录、并有 Python 版基线可对照的平台。 */
+/** 有 MCP 工具目录、并有工具清单快照可对照的平台。 */
 export const MCP_KEYS = ['ark', 'minimax', 'bailian', 'doubao-speech'] as const
 export type McpKey = (typeof MCP_KEYS)[number]
 
@@ -106,7 +106,7 @@ export interface InventoryTool {
 }
 
 /**
- * 读 Python 版 MCP 的工具快照（2026-11-04 冻结，见 docs/mcp.md），逐个平台对照「能力不缩水」。
+ * 读工具清单快照（2026-11-04 冻结，见 docs/mcp.md），逐个平台对照，防止工具或字段丢失。
  */
 export function readInventory(platform: McpKey): InventoryTool[] {
   const url = new URL(`./baselines/${platform}.json`, import.meta.url)

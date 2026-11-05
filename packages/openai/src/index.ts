@@ -60,7 +60,7 @@ function messages(kind: Kind): TransportMessages {
 }
 
 /**
- * 密钥名：官方渠道 `OPENAI_API_KEY`；兼容渠道接受 `COMPATIBLE_API_KEY`（plein 宿主的命名，
+ * 密钥名：官方渠道 `OPENAI_API_KEY`；兼容渠道接受 `COMPATIBLE_API_KEY`（宿主常用的命名，
  * 先查，避免宿主对未声明密钥直接拒绝）或 `OPENAI_COMPATIBLE_API_KEY`。前后空白一律去掉。
  */
 function requireKey(kind: Kind, ctx: AdapterContext): string {

@@ -86,7 +86,7 @@ export interface HostOptions {
 }
 
 /**
- * 模拟 plein 宿主：透传 `settings`（region / voice）与带媒体元数据的 `files.read`，
+ * 模拟宿主：透传 `settings`（region / voice）与带媒体元数据的 `files.read`，
  * 没有 `assets`。回复队列用完再请求会报错。
  */
 export function hostContext(replies: Reply[] = [], opts: HostOptions = {}) {

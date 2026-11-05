@@ -160,7 +160,7 @@ export function apiKeySecrets(ctx: AdapterContext): Array<string | undefined> {
   return API_KEY_NAMES.map((name) => ctx.secret(name))
 }
 
-/** 宿主的百炼设置（与 plein bailian provider 的 settings 同名同义）；没有这层配置时为空对象。 */
+/** 宿主的百炼设置（ctx.settings）；没有这层配置时为空对象。 */
 export function bailianSettings(ctx: Pick<AdapterContext, 'settings'>): Json {
   return asJson(ctx.settings)
 }

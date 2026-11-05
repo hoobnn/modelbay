@@ -1,6 +1,6 @@
 /**
- * plein `providers/src/doubao/index.test.ts` 中属于请求构造 / 校验 / 解析 / 错误 / 签名的用例，
- * 在 adapter 上的等价版本（mock fetch，断言同样的请求体、拒绝条件、错误 code 与输出）。
+ * 宿主通过 adapter 调用时的请求构造 / 校验 / 解析 / 错误 / 签名用例
+ * （mock fetch，断言请求体、拒绝条件、错误 code 与输出）。
  */
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { createAdapterContext, type AdapterContext, type LoadedFile } from '@modelbay/core'

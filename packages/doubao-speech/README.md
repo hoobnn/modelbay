@@ -44,7 +44,7 @@ synthesis is synchronous, so `poll` is intentionally not implemented (no pending
 ## Native operations
 
 Declared in `DOUBAO_NATIVE_OPERATIONS`; each op's input JSON Schema is declared by the
-adapter in `nativeOperationSchemas` (for the MCP generator). M3 baseline:
+adapter in `nativeOperationSchemas` (for the MCP generator). Supported operations:
 
 - `podcast` — `POST /api/v3/podcast/sse` (validated request + SSE event parsing)
 - `simultaneous-interpretation` — **request plan only**: the official protocol is

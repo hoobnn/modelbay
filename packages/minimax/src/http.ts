@@ -132,7 +132,7 @@ export const CN_BASE_URL = 'https://api.minimax.cn'
 export const GLOBAL_BASE_URL = 'https://api.minimax.io'
 
 /**
- * 地域：宿主给了 `ctx.settings.region` 就以它为准（与 plein 同名同义）；
+ * 地域：宿主给了 `ctx.settings.region` 就以它为准；
  * 没有 settings 的 MCP 场景回退到原来的 `MINIMAX_REGION` / `MINIMAX_BASE_URL`。
  */
 export function region(ctx: Pick<AdapterContext, 'settings' | 'secret'>): 'cn' | 'global' {
@@ -142,7 +142,7 @@ export function region(ctx: Pick<AdapterContext, 'settings' | 'secret'>): 'cn' |
 }
 
 export function baseUrl(ctx: AdapterContext): string {
-  // 宿主显式给了地域（plein 设置）就以它为准，不再读环境式覆盖；覆盖只服务没有 settings 的 MCP 场景
+  // 宿主显式给了地域就以它为准，不再读环境式覆盖；覆盖只服务没有 settings 的 MCP 场景
   const hostRegion = ctx.settings?.region === 'cn' || ctx.settings?.region === 'global'
   const override = hostRegion ? undefined : ctx.secret('MINIMAX_BASE_URL')?.trim()
   if (override) return override
@@ -172,7 +172,7 @@ export function errorCode(code: number | string): ProviderErrorCode {
   return 'unknown'
 }
 
-/** 与 plein 一致：不单设 timeout 文案，超时按网络失败 / 取消归类。 */
+/** 不单设 timeout 文案，超时按网络失败 / 取消归类。 */
 export function requestMessages(method: Method): TransportMessages {
   return {
     cancelled: 'MiniMax 请求已取消',

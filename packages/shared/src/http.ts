@@ -1,8 +1,8 @@
 /**
  * 各平台适配器共用的请求底座：只管传输、重试规则、脱敏和素材编码；
  * 端点、参数映射和各家错误码的归类留在适配器里。
- * 类型只依赖 `@modelbay/core`（AdapterContext 是 plein ProviderContext 的超集），
- * plein 宿主与 modelbay 适配器都能原样传入。
+ * 类型只依赖 `@modelbay/core`（AdapterContext 是 ProviderContext 的超集），
+ * 两种上下文都能原样传入。
  */
 import {
   ProviderError,

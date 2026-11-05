@@ -1,6 +1,5 @@
 /**
  * MiniMax `PlatformAdapter` factory. `defineAdapter()` is applied in `index.ts`.
- * 请求构造、前置校验、响应解析与错误分类与 plein 的 minimax provider 保持一致。
  */
 import {
   defineAdapter,

@@ -141,7 +141,7 @@ describe('方舟参考视频：没注入时报错', () => {
   })
 })
 
-describe('方舟参考视频：真实 TOS 上传（从 plein 搬来的断言）', () => {
+describe('方舟参考视频：真实 TOS 上传', () => {
   it('三类素材上传和引用编号', async () => {
     const adapter = createArkAdapter(models, { uploadVideo: uploadReferenceVideo })
     const { ctx, fetch, body } = fakeContext(

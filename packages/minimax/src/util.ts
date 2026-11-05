@@ -41,7 +41,7 @@ export const sensitive = (value: unknown): boolean =>
 
 /**
  * MCP 工具参数的位置：MCP 把工具参数原样作为 `input`（`vol`、`pitch`、`parameters` 等），
- * plein 宿主则放在 `input.extra`。这里合并三处（顶层 < parameters < extra），
+ * SDK 宿主则放在 `input.extra`。这里合并三处（顶层 < parameters < extra），
  * 调用方只按各自的白名单取值，白名单外的字段一律不透传。
  */
 export function optionSource(input: object): Json {

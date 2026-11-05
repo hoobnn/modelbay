@@ -208,7 +208,12 @@ export async function chatCompletion(opts: ChatOptions) {
     abortSignal: opts.ctx.signal,
     providerOptions: opts.providerOptions ?? { modelbay: extra },
     ...(input.jsonSchema
-      ? { output: Output.object({ schema: outputSchema(input.jsonSchema), name: 'plein_output' }) }
+      ? {
+          output: Output.object({
+            schema: outputSchema(input.jsonSchema),
+            name: 'modelbay_output',
+          }),
+        }
       : {}),
     // 工具只声明不执行：模型要调用时把调用交回宿主，由智能体循环执行后再发下一轮
     ...(input.tools?.length

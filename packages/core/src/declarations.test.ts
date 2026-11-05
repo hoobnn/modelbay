@@ -299,7 +299,7 @@ describe('toModelInfo', () => {
     expect(toModelInfo(retired).deprecated).toBe(true)
   })
 
-  it('停止新购与宣布下线的模型保留 plein 的弃用标记，superseded 不算', () => {
+  it('停止新购与宣布下线的模型标为弃用，superseded 不算', () => {
     const closed = patch({
       lifecycle: { status: 'closed-to-new-accounts', since: '2026-08-20', source },
     })

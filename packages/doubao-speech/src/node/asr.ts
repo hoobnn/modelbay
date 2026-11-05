@@ -12,8 +12,7 @@
  * -  标准双向流式（旧版链路）：`.../api/v3/sauc/bigmodel`
  * -  资源 ID `volc.seedasr.sauc.duration`
  *
- * The frame codec below was ported from the Python implementation in
- * `hoobnn-mcps/servers/doubao-speech/src/doubao_speech_mcp/streaming_asr.py`.
+ * The frame codec below follows the official binary WebSocket protocol.
  */
 import { gunzipSync, gzipSync } from 'node:zlib'
 import { ProviderError, type AdapterContext } from '@modelbay/core'
@@ -241,7 +240,7 @@ function transcriptOf(data: Json): string {
 /**
  * 跑一次流式识别。
  *
- * 流程与 Python 版 `streaming_recognize` 一致：发完整客户端请求 → 按片发音频
+ * 流程：发完整客户端请求 → 按片发音频
  * （最后一片用负序号标记结束）→ 收服务端的识别结果 → 收到结束包或连接关闭为止。
  */
 export async function transcribeStream(
@@ -372,7 +371,7 @@ function asJson(value: unknown): Json {
 /**
  * `speech_raw_request(product='asr_stream' / 'asr_websocket')` 的实现入口。
  *
- * 参数与 Python 版一致：`audio` 是本地 WAV / PCM 路径，`mode` 是 realtime 或 sentence，
+ * 参数：`audio` 是本地 WAV / PCM 路径，`mode` 是 realtime 或 sentence，
  * `request` 是官方的完整请求体（`audio` / `request` 两段原样合并）。
  * `product=asr_websocket` 走标准双向流式端点（`/api/v3/sauc/bigmodel`）。
  */

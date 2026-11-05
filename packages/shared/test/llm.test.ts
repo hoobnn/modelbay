@@ -1,6 +1,5 @@
 /**
- * 迁移自 plein `packages/providers/src/shared/*` 与 `src/size.ts` 的测试；
- * 断言保持不变，只把类型与工具的导入换到 `@modelbay/core`。
+ * 共用对话层、HTTP 传输与尺寸换算的测试。
  */
 import { ProviderError, type CapabilityInput } from '@modelbay/core'
 import { describe, expect, it, vi } from 'vite-plus/test'

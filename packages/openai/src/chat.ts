@@ -45,7 +45,7 @@ const COMPATIBLE_IMAGE_RULE: ImageRule = {
   tooLarge: '兼容渠道图片为空或超过 20 MiB',
 }
 
-/** 读一张图片：优先 plein 形状的 `ctx.files`（带媒体元数据），回退到 modelbay 的 assets。 */
+/** 读一张图片：优先宿主的 `ctx.files`（带媒体元数据），回退到 assets。 */
 async function readImage(
   ctx: AdapterContext,
   ref: AssetRef,
@@ -73,7 +73,7 @@ export async function imageDataUrl(
   return `data:${mime};base64,${toBase64(file.data)}`
 }
 
-/** plein 官方渠道的错误归类：quota / auth / content_policy 之外按状态码走通用链。 */
+/** 官方渠道的错误归类：quota / auth / content_policy 之外按状态码走通用链。 */
 export function classifyOpenAI(
   _status: number,
   code: string,
@@ -99,7 +99,7 @@ function errorText(
   }
 }
 
-/** plein 的脱敏规则：密钥与其去空白形态都替换成 [redacted]，并清掉 Bearer / sk- 令牌。 */
+/** 脱敏规则：密钥与其去空白形态都替换成 [redacted]，并清掉 Bearer / sk- 令牌。 */
 function redactKeys(text: string, apiKey: string): string {
   const mask = '[redacted]'
   let out = text
@@ -114,7 +114,7 @@ interface ErrorCall {
   label: string
 }
 
-/** plein 官方渠道的 remoteError：按 code 与状态归类，POST 不可重试。 */
+/** 官方渠道的 remoteError：按 code 与状态归类，POST 不可重试。 */
 function remoteError(call: ErrorCall, status: number, value: unknown): ProviderError {
   const { code, message } = errorText(call, status, value)
   const category: ProviderErrorCode = /quota|billing|insufficient/.test(code)
@@ -135,7 +135,7 @@ function remoteError(call: ErrorCall, status: number, value: unknown): ProviderE
   return withRetry(new ProviderError(category, message), 'POST', status)
 }
 
-/** plein 兼容渠道的 remoteError：code 优先于状态码，规则与官方渠道不同。 */
+/** 兼容渠道的 remoteError：code 优先于状态码，规则与官方渠道不同。 */
 function compatibleRemoteError(call: ErrorCall, status: number, value: unknown): ProviderError {
   const root = asJson(value)
   const error = asJson(root.error)

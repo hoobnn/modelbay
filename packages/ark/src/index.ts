@@ -1,7 +1,7 @@
 /**
  * `@modelbay/ark` — Volcengine Ark adapter.
  *
- * Two `PlatformAdapter`s are exported (matching plein's two data planes):
+ * Two `PlatformAdapter`s are exported, one per data plane:
  * - `arkAdapter` (channel `ark`): pay-as-you-go `/api/v3`
  * - `arkPlanAdapter` (channel `ark-plan`): Agent Plan `/api/plan/v3`
  *

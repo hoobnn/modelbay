@@ -8,6 +8,8 @@ import type { PlatformAdapter } from '@modelbay/core'
 import { createBailianAdapter } from './adapter'
 import { all } from './models/index'
 
+/** 本平台的全部模型声明。 */
+export const models = all
 export const bailianAdapter: PlatformAdapter = createBailianAdapter(all)
 
 export { createBailianAdapter, defaultModel, NODE_ONLY_CAPABILITIES } from './adapter'

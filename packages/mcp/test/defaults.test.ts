@@ -1,8 +1,7 @@
 /**
  * 默认模型的回归测试：四个 MCP 里每个带 `model` 字段的工具，默认值必须等于预期表。
  *
- * 预期表对齐 Python 版 MCP 的默认值（`test/baselines/*.json` 里各工具 `model`
- * 字段的 `default` 与 `hoobnn-mcps/servers/*` 的别名表）：
+ * 预期表与工具清单快照（`test/baselines/*.json`）里各工具 `model` 字段的 `default` 一致：
  * - 方舟 chat 的 `pro` → `doubao-seed-2-1-pro-260915`（按量渠道，不是套餐渠道）；
  * - 百炼 chat 的 `max` → `qwen3.8-max`，生图的 `qwen` → `qwen-image-3.0-pro`，
  *   视频的 `wan` → `wan3.0-video`；

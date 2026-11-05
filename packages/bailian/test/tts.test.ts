@@ -25,7 +25,7 @@ import { fakeContext, fixture } from './helpers'
 
 const models = ttsModels(all)
 
-/** Python `tts(**changes)` 的等价写法：默认不传模型/音色/参数。 */
+/** 默认不传模型/音色/参数，按需覆盖。 */
 function opts(
   changes: Partial<Parameters<typeof ttsRequest>[1]> = {},
 ): Parameters<typeof ttsRequest>[1] {
@@ -33,7 +33,7 @@ function opts(
 }
 
 describe('splitText / instructionLength', () => {
-  it('packs sentences into chunks up to the limit (matches Python split_text)', () => {
+  it('packs sentences into chunks up to the limit ', () => {
     expect(splitText('你好。世界！')).toEqual(['你好。世界！'])
     expect(splitText('你好。世界！', 3)).toEqual(['你好。', '世界！'])
   })
@@ -322,7 +322,7 @@ describe('synthesizeQwenAudioTts (recorded fixtures)', () => {
   })
 })
 
-// ── 以下用例移植自 hoobnn-mcps 的 tests/test_official_contracts.py ──────────
+// ── 官方接口契约用例 ──────────
 
 describe('移植：tts_routes_by_model_and_custom_voice_prefix', () => {
   const cases: [Parameters<typeof ttsRequest>[1], string][] = [

@@ -25,7 +25,7 @@ import { capturePlanContinuation } from './plan-chat'
 
 /**
  * `input.extra` 在对话里只放行这些平台字段；其余一律报错，不能覆盖模型 / 输入 / 路由。
- * 前四项与 plein 一致；后三项是 MCP 目录 `chat` 工具承诺的参数（缓存路由标识、联网搜索、续接响应）。
+ * 前四项是通用参数；后三项是 MCP 目录 `chat` 工具承诺的参数（缓存路由标识、联网搜索、续接响应）。
  */
 export const CHAT_EXTRA = [
   'thinking',

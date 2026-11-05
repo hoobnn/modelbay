@@ -1,9 +1,9 @@
 /**
  * 同传链路的测试：protobuf 编解码 + WSS 会话。
  *
- * 服务端帧是录制的：用 Python 版官方 protobuf（data.speech.ast.TranslateResponse）
+ * 服务端帧是录制的：用官方 protobuf 定义（data.speech.ast.TranslateResponse）
  * 编出来存在 `test/fixtures/ast-frames.json`，这里用 TypeScript 的解码器解，
- * 保证两边说的是同一种协议。socket 是假的，不联网。
+ * 保证和官方协议一致。socket 是假的，不联网。
  */
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

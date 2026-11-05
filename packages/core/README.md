@@ -1,8 +1,9 @@
 # @modelbay/core
 
 Runtime-agnostic foundation of [Modelbay](../../README.md): capability types,
-model parameter validation, media requirements, error normalization and model
-declarations.
+model parameter validation, media requirements, error normalization, model
+declarations, the async job runner, and the `PlatformDescriptor` type that every
+platform package exports (`definePlatform()`, `readSecrets()`, `missingSecrets()`).
 
 It only uses APIs available in every runtime (`fetch`, `Uint8Array`,
 `ReadableStream`, `AbortSignal`, `crypto.subtle`). Node-only capabilities are
@@ -16,10 +17,7 @@ import { modelParamsProblem, ProviderError, type ModelSpec } from '@modelbay/cor
 `zod` is a peer dependency — install it once in the host application so that
 core schemas and host schemas share a single instance.
 
-Subpath exports mirror the modules that were moved out of `@plein/plugin-sdk`:
-`@modelbay/core/provider`, `/model-params`, `/media-requirements`,
-`/image-input`, `/video-input`, `/ids`, `/ports`, `/media` and
-`/reference-tokens`.
+Everything is exported from the package root; there are no subpath exports.
 
 ## License
 

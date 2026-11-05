@@ -1,4 +1,4 @@
-/** 对齐 plein 的 MiniMax 声音复刻 / 音色设计 / 试听用例，以及远端模型列表。 */
+/** MiniMax 声音复刻 / 音色设计 / 试听，以及远端模型列表。 */
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { AssetRef } from '@modelbay/core'
 import {
@@ -160,7 +160,7 @@ describe('声音复刻', () => {
     expect(ctx.assets.load).toHaveBeenCalledWith('a')
   })
 
-  it('导出的规格与 plein VoiceCloneSpec / VoiceDesignSpec 形状一致', () => {
+  it('导出的复刻 / 设计规格形状稳定', () => {
     expect(minimaxVoiceClone).toMatchObject({
       voiceId: 'generated',
       promptSample: true,

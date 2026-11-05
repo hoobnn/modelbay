@@ -1,6 +1,5 @@
 /**
- * Bailian voice enrollment (clone / design / list / query), ported from the Python MCP
- * `ali_bailian_mcp/products.py`. Clone, design and list share one HTTP endpoint and one
+ * Bailian voice enrollment (clone / design / list / query). Clone, design and list share one HTTP endpoint and one
  * `voice-enrollment` model; there is no WebSocket.
  *
  * 哪些模型能复刻、哪些能设计、能传哪些语种、能不能开音频预处理，

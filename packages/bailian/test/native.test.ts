@@ -80,7 +80,7 @@ describe('textEmbed (recorded fixture)', () => {
   it('requires exactly one of texts/contents and rejects protected parameters', async () => {
     const { ctx } = fakeContext([])
     await expect(textEmbed({}, ctx, models)).rejects.toMatchObject({ code: 'invalid_input' })
-    // 多模态向量化要显式指定模型（与 Python 版一致）
+    // 多模态向量化要显式指定模型
     await expect(textEmbed({ contents: [{ text: 'a' }] }, ctx, models)).rejects.toMatchObject({
       code: 'invalid_input',
     })
@@ -134,7 +134,7 @@ describe('digitalHumanLipsync (recorded fixture)', () => {
   })
 })
 
-describe('runBailianNative dispatch (the four ported Python capabilities)', () => {
+describe('runBailianNative dispatch (TTS / ASR / voice / embedding)', () => {
   it('qwen-audio-tts -> SpeechSynthesizer', async () => {
     const f = fixture('tts-synthesizer')
     const { ctx, calls } = fakeContext([f.response.body])

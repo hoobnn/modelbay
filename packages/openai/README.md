@@ -39,7 +39,7 @@ task. Asynchronous submit/poll/cancel is implemented by `@modelbay/ark`.
 ## Text chat: platform field passthrough
 
 Chat uses the OpenAI-compatible `/chat/completions` endpoint (non-streaming) for
-**both** adapters, as required by M3. The adapter controls only `model`,
+**both** adapters. The adapter controls only `model`,
 `messages`, `stream`, `tools`, `tool_choice`, `response_format`, `temperature`,
 `max_tokens`, `n` and `baseURL` (the reserved set). **Every other key in
 `input.extra` is forwarded verbatim** into the JSON body. Verified fields:

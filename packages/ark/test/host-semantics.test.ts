@@ -1,5 +1,5 @@
 /**
- * 与 plein 方舟用例对齐的行为：图片像素区间 / 视频校验 / 64 MiB 请求体 / 产物域名白名单 /
+ * 宿主语义下的方舟行为：图片像素区间 / 视频校验 / 64 MiB 请求体 / 产物域名白名单 /
  * 失败任务的错误分类 / 抠图 / 自定义图片与视频槽 / 参考视频上传 / 套餐 ASR 与目录。
  */
 import { gunzipSync, gzipSync } from 'node:zlib'
@@ -22,7 +22,7 @@ const image = { assetId: 'source', kind: 'image' as const }
 const audio = { assetId: 'voice', kind: 'audio' as const }
 const video = { assetId: 'motion', kind: 'video' as const }
 
-/** 带元数据的 files 读取（plein 形状）。 */
+/** 带元数据的 files 读取（宿主提供）。 */
 function setup(
   replies: unknown[] = [],
   over: Partial<LoadedFile> = {},
@@ -311,7 +311,7 @@ describe('视频校验', () => {
     )
     f.ctx.settings = {
       referenceBucket: 'test-bucket',
-      referenceKeyPrefix: 'plein/video-references',
+      referenceKeyPrefix: 'host/video-references',
     }
     await createArkAdapter(models, nodeOptions).submit(
       gen('video.generate', V25, { prompt: 'p', references: [video] }),
@@ -319,7 +319,7 @@ describe('视频校验', () => {
     )
     const put = new URL(String(f.fetch.mock.calls[0]![0]))
     expect(put.hostname).toBe('test-bucket.tos-cn-beijing.volces.com')
-    expect(put.pathname).toMatch(/^\/plein\/video-references\/[a-f0-9]{64}\.mp4$/)
+    expect(put.pathname).toMatch(/^\/host\/video-references\/[a-f0-9]{64}\.mp4$/)
     const direct = await uploadReferenceVideo(
       { ...f.ctx, settings: { referenceBucket: 'test-bucket' } } as AdapterContext,
       { data: new Uint8Array([1]), mime: 'video/mp4' },

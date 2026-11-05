@@ -595,7 +595,7 @@ export async function pollVideo(remoteId: string, opts: TaskOptions): Promise<Po
     secrets: [opts.key],
     classify: opts.classify,
     toleratedStatuses: ['failed', 'cancelled', 'expired'],
-    // 与 plein 原实现一致：可重试的轮询失败最多再试 1 次，其余交给宿主的轮询退避
+    // 可重试的轮询失败最多再试 1 次，其余交给宿主的轮询退避
     retries: 1,
   })
   return parseTaskStatus(data, { key: opts.key, label: opts.label })

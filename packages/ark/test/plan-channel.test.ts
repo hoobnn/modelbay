@@ -1,14 +1,13 @@
 /**
  * 方舟套餐渠道（Agent Plan 数据面）。
  *
- * 断言从 plein `packages/providers/src/ark/ark.test.ts` 的套餐段搬过来，
- * 只改了 import：请求体、请求头、套餐模型名与「计费请求前失败」的行为都要一致。
+ * 断言请求体、请求头、套餐模型名与「计费请求前失败」的行为。
  */
 import { describe, expect, it } from 'vite-plus/test'
 import { arkPlanAdapter, models } from '../src/index'
 import { fakeContext } from './helpers'
 
-/** plein 的 IMAGE / VIDEO：按量 ID，套餐渠道要翻译成套餐 ID 再发出去。 */
+/** 按量 ID：套餐渠道要翻译成套餐 ID 再发出去。 */
 const PLAN_IMAGE = 'doubao-seedream-5-0-pro-260628'
 const PLAN_VIDEO = 'doubao-seedance-2-5-260628'
 
@@ -99,8 +98,7 @@ describe('套餐渠道：模型名从声明派生', () => {
     }
   })
 
-  it('声明里的 ark-plan ID 与 plein 的对照表逐条一致', () => {
-    // plein `packages/providers/src/ark/index.ts` 的 PLAN_MODELS。
+  it('声明里的 ark-plan ID 与对照表逐条一致', () => {
     const expected: Record<string, string> = {
       'doubao-seedream-5-0-pro-260628': 'doubao-seedream-5.0-pro',
       'doubao-seedream-5-0-flash-260915': 'doubao-seedream-5.0-flash',

@@ -100,7 +100,7 @@ describe('OpenAI 蒙版：没注入时报错', () => {
   })
 })
 
-describe('OpenAI 蒙版：真实 alpha 转换（从 plein 搬来的断言）', () => {
+describe('OpenAI 蒙版：真实 alpha 转换', () => {
   it('蒙版白色转换为透明，黑色转换为不透明，原图转 PNG 且尺寸一致', async () => {
     const adapter = createOpenAIAdapter(models, { editMask })
     const original = await sharp({

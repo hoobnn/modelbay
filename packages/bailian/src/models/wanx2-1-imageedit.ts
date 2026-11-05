@@ -10,7 +10,7 @@ export default {
     count: { max: 1 },
     promptMaxLength: 800,
     imageOperations: ['upscale', 'outpaint'],
-    // 放大倍数与扩图比例的默认值是产品层的：沿用 plein 的产品默认值，
+    // 放大倍数与扩图比例的默认值是产品层的取值，
     // 官方文档没有给这两个参数的默认值，所以没有官方来源可附。
     process: {
       scale: { min: 1, max: 4, default: 2 },

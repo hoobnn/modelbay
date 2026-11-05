@@ -32,9 +32,9 @@ export interface FakeOptions {
   mime?: string
   data?: Uint8Array
   signal?: AbortSignal
-  /** 宿主设置（与 plein bailian provider 的 settings 同名）。 */
+  /** 宿主设置（ctx.settings）。 */
   settings?: Record<string, unknown>
-  /** 注入 plein 形状的 files.read（带媒体元数据）；缺省只给 assets.load。 */
+  /** 注入宿主的 files.read（带媒体元数据）；缺省只给 assets.load。 */
   files?: { width?: number; height?: number; duration?: number }
 }
 

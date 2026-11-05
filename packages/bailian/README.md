@@ -29,7 +29,7 @@ through unchanged: `input.extra` is merged verbatim into the request body for ch
 image/video `parameters` (confirmed against the OpenAI-compatible chat/completions and
 multimodal-generation contracts). `image.edit` / `image.process` are Node-only — see below.
 
-## Python MCP capabilities ported to TypeScript (M3)
+## Speech, ASR and voice capabilities
 
 All four are plain HTTP through `ctx.fetch`; there is no WebSocket. They are exported as
 functions and are also callable as native operations:
@@ -56,9 +56,9 @@ keeping a model list in code:
 - `default: true` marks the default speech model (`qwen-audio-3.1-tts-flash`), and
   `limits.speech.defaultVoice` is the system voice used when the caller does not pass one.
 
-`resolveTtsModel` follows the 0.8.0 Python rules: an explicit model wins, then a custom
+`resolveTtsModel` picks the model as follows: an explicit model wins, then a custom
 voice ID prefix (`{target_model}-…`), then the declared default model when no voice and no
-extra parameters are given and `language` is empty or a language code; every other legacy
+extra parameters are given and `language` is empty or a language code; every other
 call (a `qwen3` voice, a non-code `language`, extra `parameters`) falls back to
 `qwen3-tts-flash`.
 
@@ -115,8 +115,7 @@ validates the request first — the prompt, the number of images (`limits.count.
 rejected before any upload), the upscale factor and the outpaint ratios (all read from
 the model declaration). When the caller leaves the factor or the ratios out, the
 declaration's `limits.process.scale.default` / `limits.process.expansion.default` are
-used (those are product-level defaults kept from plein; the official docs give no
-defaults for them). Without an injected implementation the capability fails with
+used (those are product-level defaults; the official docs give no defaults for them). Without an injected implementation the capability fails with
 `invalid_input` naming this subpath and the injection above.
 
 ## Errors and redaction

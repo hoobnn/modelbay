@@ -262,7 +262,7 @@ describe('enrollment calls (recorded fixtures)', () => {
   })
 })
 
-// ── 以下用例移植自 hoobnn-mcps 的 tests/test_official_contracts.py ──────────
+// ── 官方接口契约用例 ──────────
 
 describe('移植：clone_voice_uses_voice_enrollment_create_voice', () => {
   it('复刻走 voice-enrollment 的 create_voice，默认目标是声明里的默认模型', async () => {

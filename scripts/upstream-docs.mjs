@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * 官方文档 SHA-256 指纹审计（迁移自 hoobnn-mcps/scripts/upstream_docs.py）。
+ * 官方文档 SHA-256 指纹审计。
  *
  * - 读取 `.upstream-docs/declarations/**\/*.json` 里的 `source.url` / `lifecycle.source.url`。
  *   声明的唯一来源是各平台包的 TS 文件，先跑 `vpx -s scripts/export-declarations.ts` 导出。
  * - fail-closed：只允许白名单官方 HTTPS 文档域名；网络缺失 / 抓取失败一律显式报错
  *   并以非零码退出，绝不静默当作「无变化」。
- * - `--check-coverage` 是纯离线模式（取代原脚本用 Python AST 的 `check_coverage()`）：
+ * - `--check-coverage` 是纯离线模式：
  *   解析声明 JSON，确认每个声明都被官方来源覆盖。
  * - 正常模式抓正文，抽取「可见正文 + 模型标识 + 官方文档链接」等稳定信号后做
  *   SHA-256 指纹，与已审基线比对，输出受影响的模型声明列表。直接哈希 SPA 原始
@@ -179,8 +179,7 @@ function loadDeclarations(directory, server) {
 }
 
 /**
- * 离线覆盖检查：取代原脚本用 Python AST 解析 server.py 的 check_coverage()。
- * 这里改为解析声明导出的 JSON，确认每个声明都被有效的官方来源覆盖。
+ * 离线覆盖检查：解析声明导出的 JSON，确认每个声明都被有效的官方来源覆盖。
  */
 function checkCoverage(entries) {
   const problems = []

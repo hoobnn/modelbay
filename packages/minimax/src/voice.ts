@@ -1,5 +1,5 @@
 /**
- * 声音复刻 / 音色设计（plein `VoiceCloneSpec.clone` / `VoiceDesignSpec.design` 等价入口）。
+ * 声音复刻 / 音色设计。
  * 复刻是同步接口：上传样本拿 file_id，再提交复刻，成功即可用；增强参考单独上传为 prompt_audio。
  */
 import {
@@ -200,7 +200,7 @@ export async function designVoice(
   }
 }
 
-/** 与 plein `voiceClone` 声明等价：桥接包装时把 clone 的 ctx 换成 AdapterContext 即可。 */
+/** 声音复刻规格：宿主包装时把 clone 的 ctx 换成 AdapterContext 即可。 */
 export const minimaxVoiceClone: VoiceCloneSpec<AdapterContext> = {
   voiceId: 'generated',
   promptSample: true,
@@ -209,7 +209,7 @@ export const minimaxVoiceClone: VoiceCloneSpec<AdapterContext> = {
   clone: cloneVoice,
 }
 
-/** 与 plein `voiceDesign` 声明等价。 */
+/** 音色设计规格。 */
 export const minimaxVoiceDesign: VoiceDesignSpec<AdapterContext> = {
   voiceId: 'generated',
   hint: '用文字描述设计新音色，无需音频样本；试听合成会计费。',

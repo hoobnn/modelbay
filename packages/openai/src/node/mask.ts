@@ -3,7 +3,7 @@
  * The root entry never imports this file: the real mask inversion needs `sharp`,
  * which is Node-only and is installed by the integrator.
  *
- * 蒙版约定（沿用 plein）：白色区域表示要重绘的部分，黑色区域保持不变。
+ * 蒙版约定：白色区域表示要重绘的部分，黑色区域保持不变。
  * OpenAI 的 `/images/edits` 要求蒙版是 RGBA PNG，透明处才重绘，
  * 所以这里把亮度反转成 alpha：白 → 透明（重绘），黑 → 不透明（保留）。
  */

@@ -1,6 +1,6 @@
 /**
- * 与 plein `bailian` provider 的行为对齐用例（请求体、前置校验、错误分类、轮询语义）。
- * 上下文按 plein 宿主的形状构造：settings 全带默认值、files.read 带媒体元数据。
+ * 宿主语义下的百炼用例（请求体、前置校验、错误分类、轮询语义）。
+ * 上下文按宿主的形状构造：settings 全带默认值、files.read 带媒体元数据。
  */
 import { describe, expect, it } from 'vite-plus/test'
 import type { AdapterRequest, CapabilityInput } from '@modelbay/core'

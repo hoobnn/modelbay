@@ -20,7 +20,7 @@ export function asJson(value: unknown): Json {
 }
 
 /**
- * Replace secrets in error text with `[redacted]` (plein's convention), longest first so a
+ * Replace secrets in error text with `[redacted]`, longest first so a
  * short key that is a substring of a longer one cannot survive. Also strips Bearer / sk- tokens.
  */
 export function redactSecrets(text: string, secrets: Array<string | undefined>): string {

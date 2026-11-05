@@ -1,6 +1,5 @@
 /**
- * Qwen ASR (HTTP, non-streaming), ported from the Python MCP
- * `ali_bailian_mcp/media.py::speech_to_text`. Uses `/compatible-mode/v1/chat/completions`.
+ * Qwen ASR (HTTP, non-streaming). Uses `/compatible-mode/v1/chat/completions`.
  */
 import { ProviderError, selectDefaultModel, toBase64, type AssetRef } from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration } from '@modelbay/core'

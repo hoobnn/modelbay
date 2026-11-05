@@ -1,5 +1,5 @@
 /**
- * 方舟对话：走 `@modelbay/shared` 的流式对话层（SSE），断言与 plein 的 ark.test.ts 对话段一致：
+ * 方舟对话：走 `@modelbay/shared` 的流式对话层（SSE），断言：
  * 请求体、`stream: true`、[DONE] 完整性、extra 白名单、套餐 continuation 累积与回传、自定义槽。
  */
 import { describe, expect, it } from 'vite-plus/test'
@@ -200,7 +200,7 @@ describe('对话（按量）', () => {
   })
 })
 
-describe('extra：白名单放行，其余按 plein 报错', () => {
+describe('extra：白名单放行，其余报错', () => {
   it('白名单字段（含 MCP 目录承诺的缓存路由 / 联网 / 续接）到达请求体', async () => {
     const extra = {
       thinking: { type: 'enabled' },

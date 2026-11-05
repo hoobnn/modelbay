@@ -266,9 +266,8 @@ export function defaultConflicts(declarations: readonly ModelDeclaration[]): str
 }
 
 /**
- * plein 的 deprecated 语义：停止新购（closed-to-new-accounts）、官方宣布下线（sunsetting）
+ * `ModelInfo.deprecated` 的语义：停止新购（closed-to-new-accounts）、官方宣布下线（sunsetting）
  * 与已下线（retired）都算弃用，目录里置后；active / superseded 不算。
- * 对应 plein 原本标 `deprecated: true` 的模型（如停止新购的 Seedream 5.0 Lite）。
  */
 const DEPRECATED_STATUSES: readonly LifecycleStatus[] = [
   'sunsetting',
@@ -276,7 +275,7 @@ const DEPRECATED_STATUSES: readonly LifecycleStatus[] = [
   'retired',
 ]
 
-/** plein 的 ModelInfo 视图：从声明 + 渠道派生，不再由消费方自己写 */
+/** ModelInfo 视图：从声明 + 渠道派生，消费方不用自己写 */
 export function toModelInfo(declaration: ModelDeclaration, channel?: ChannelRef): ModelInfo {
   const optionsSchema = channelOptionsSchema(declaration.optionsSchema, channel?.omitOptions)
   const capabilities = declaration.capabilities.filter((item): item is Capability =>

@@ -209,7 +209,7 @@ export async function buildEditBody(
   }
 }
 
-/** 读资产：优先 plein 形状的 `ctx.files`，回退到 modelbay 的 `assets`。 */
+/** 读资产：优先宿主的 `ctx.files`，回退到 `assets`。 */
 async function readFile(
   ctx: AdapterContext,
   ref: AssetRef,

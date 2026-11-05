@@ -1,4 +1,4 @@
-/** image.generate：前置校验按模型声明，宽高按长边换算，人物参考与画风与 plein 一致。 */
+/** image.generate：前置校验按模型声明，宽高按长边换算，人物参考与画风按官方参数映射。 */
 import {
   imageModelProblem,
   ProviderError,
@@ -130,7 +130,7 @@ const IMAGE_KEYS = [
 
 /**
  * MCP text_to_image 的参数位置：顶层 aspect_ratio / n / prompt_optimizer，
- * parameters 里的 style 对象、seed、aigc_watermark；plein 宿主放在 extra。
+ * parameters 里的 style 对象、seed、aigc_watermark；宿主放在 extra。
  * 只取白名单键，其余字段不进入 extra。
  */
 function normalizeImageInput(

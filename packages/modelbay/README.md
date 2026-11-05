@@ -2,7 +2,7 @@
 
 The single install point for the [Modelbay](../../README.md) SDK. It re-exports
 the runtime-agnostic `@modelbay/core` API and the five platform adapter packages,
-and adds `createModelbay()` which wires everything together.
+holds the platform registry, and adds `createModelbay()` which wires everything together.
 
 MIT licensed.
 
@@ -46,12 +46,12 @@ environment is set up.
 | Export                                                | Description                                                   |
 | ----------------------------------------------------- | ------------------------------------------------------------- |
 | `createModelbay(options)`                             | Build a `Modelbay` with a registered model registry           |
-| `defaultAdapters()`                                   | The five default platform adapters                            |
-| `MODELBAY_SECRET_ENV_VARS`                            | Canonical key names per platform                              |
+| `defaultAdapters(platforms?)`                         | Runtime-agnostic adapters of every registered platform        |
+| `PLATFORMS`, `findPlatform(key)`                      | Platform registry (`PlatformDescriptor` per platform)         |
 | `Modelbay.generate(request)`                          | Submit + poll; returns `JobOutcome` (URLs or bytes)           |
 | `Modelbay.registry`                                   | `ModelRegistry` (`all`, `resolve`, `defaultFor`, `list`, ...) |
 | `Modelbay.capabilities()`                             | Deduplicated normalized capabilities                          |
-| `Modelbay.doctor()`                                   | Key configuration report; never contains key values           |
+| `Modelbay.doctor()`                                   | Key configuration report with missing names; never values     |
 | `ark`, `bailian`, `minimax`, `doubaoSpeech`, `openai` | Namespace re-exports of the platform packages                 |
 
 Everything exported by `@modelbay/core` is re-exported here as well, so a
@@ -60,15 +60,29 @@ consumer needs only the single `modelbay` dependency.
 ## Keys
 
 Keys are supplied by the host and are never stored, logged or printed by the
-SDK. The canonical environment variable names are:
+SDK. The environment variable names come from each platform's descriptor
+(`PLATFORMS[i].secrets`); any one group is enough:
 
-| Platform        | Variables                                        |
-| --------------- | ------------------------------------------------ |
-| Volcengine Ark  | `ARK_API_KEY`                                    |
-| Alibaba Bailian | `DASHSCOPE_API_KEY`                              |
-| MiniMax         | `MINIMAX_API_KEY`                                |
-| Doubao Speech   | `VOLC_SPEECH_APP_ID`, `VOLC_SPEECH_ACCESS_TOKEN` |
-| OpenAI          | `OPENAI_API_KEY`                                 |
+| Platform        | Variables                                                    |
+| --------------- | ------------------------------------------------------------ |
+| Volcengine Ark  | `ARK_API_KEY`, or `ARK_AGENT_PLAN_API_KEY`                   |
+| Alibaba Bailian | `BAILIAN_API_KEY` (alias `DASHSCOPE_API_KEY`)                |
+| MiniMax         | `MINIMAX_API_KEY`                                            |
+| Doubao Speech   | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN` |
+| OpenAI          | `OPENAI_API_KEY`, or `OPENAI_COMPATIBLE_API_KEY`             |
+
+## Node-only capabilities
+
+The root entry is runtime-agnostic. On Node, `modelbay/node` loads each
+platform's `@modelbay/<platform>/node` extension (object-storage upload, `sharp`
+mask processing, WebSocket ASR, ...) and injects it:
+
+```ts
+import { createModelbay } from 'modelbay'
+import { nodeAdapters } from 'modelbay/node'
+
+const mb = createModelbay({ adapters: await nodeAdapters() })
+```
 
 ## Design notes
 

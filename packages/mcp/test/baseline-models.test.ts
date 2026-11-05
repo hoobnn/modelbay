@@ -1,7 +1,7 @@
 /**
- * 基线覆盖测试：盘点基线里出现的模型 ID 必须都有声明。
+ * 快照覆盖测试：工具清单快照里出现的模型 ID 必须都有声明。
  *
- * `test/baselines/*.json` 是 Python 版 MCP 的工具快照。每个带 `model` 字段的工具，
+ * `test/baselines/*.json` 是工具清单快照。每个带 `model` 字段的工具，
  * 它的 `default` 与 `enum` 里出现的模型 ID（简称按别名解析）都必须在声明里找得到——
  * 否则要么是漏声明，要么是代码里硬编码了一个没有声明的型号。
  */
@@ -56,7 +56,7 @@ describe('基线里的模型 ID 都有声明', () => {
 
   it('MCP 独有的模型也有声明（不再藏在适配器代码里）', () => {
     const bailian = bailianAdapter.models ?? []
-    // Python 版 MCP 里只有它才有的型号
+    // 只在 MCP 工具里出现的型号
     for (const id of [
       'z-image-turbo',
       'qwen3-asr-flash',

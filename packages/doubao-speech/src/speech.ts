@@ -28,8 +28,8 @@ export const speechSettings = z.object({
 export type SpeechSettings = z.output<typeof speechSettings>
 
 /**
- * Resolve settings: the host's `ctx.settings` (same field names as plein) first, then the
- * original MCP `VOLC_SPEECH_*` secret/env fallback, then the schema defaults.
+ * Resolve settings: the host's `ctx.settings` first, then the
+ * `VOLC_SPEECH_*` secret/env fallback, then the schema defaults.
  * Explicit overrides win.
  */
 export function resolveSpeechSettings(

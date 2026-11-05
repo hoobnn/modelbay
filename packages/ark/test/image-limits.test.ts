@@ -1,8 +1,7 @@
 /**
  * Seedream 的上限（张数、参考图数量、分辨率档位）来自模型声明。
  *
- * 断言从 plein `packages/providers/src/ark/ark.test.ts` 的生图段搬过来，
- * 只改了 import：上限、提示与请求体都要一致。
+ * 断言上限、提示与请求体。
  */
 import { describe, expect, it } from 'vite-plus/test'
 import type { ModelDeclaration } from '@modelbay/core'

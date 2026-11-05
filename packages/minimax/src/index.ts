@@ -6,6 +6,8 @@ import type { PlatformAdapter } from '@modelbay/core'
 import { createMinimaxAdapter } from './adapter'
 import { all } from './models/index'
 
+/** 本平台的全部模型声明。 */
+export const models = all
 export const minimaxAdapter: PlatformAdapter = createMinimaxAdapter(all)
 
 export { createMinimaxAdapter, defaultModel, fromHex } from './adapter'

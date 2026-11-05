@@ -77,7 +77,7 @@ async function hmac(key: Uint8Array, data: string): Promise<Uint8Array<ArrayBuff
 }
 
 /**
- * 按 Python `urllib.parse.quote` 的规则转义查询参数值。
+ * 按 RFC 3986 转义查询参数值（火山 OpenAPI 签名要求）。
  *
  * 安全字符只有字母、数字与 `_.-~`，其余（含 `/`）都要转义；空格是 `%20` 不是 `+`。
  */
@@ -88,7 +88,7 @@ export function quoteValue(value: string): string {
   )
 }
 
-/** 按 key 排序拼出查询串（与 Python `urlencode(sorted(...), quote_via=quote)` 一致）。 */
+/** 按 key 排序拼出查询串（签名用的规范查询串）。 */
 export function buildQuery(parameters: Record<string, unknown>): string {
   return Object.keys(parameters)
     .sort()
@@ -159,7 +159,7 @@ export interface ConsoleActionOptions {
 /**
  * 控制面动作的路由规则：哪些 Action 走 GET、哪些走别的地域。
  *
- * 与 Python 的 `console_action` 一致：配额/用量监控的旧版本和
+ * 配额/用量监控的旧版本和
  * `ListApplications` 走 `cn-north-1` 的 GET，其余走 `cn-beijing` 的 POST。
  */
 export function consoleRoute(

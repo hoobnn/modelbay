@@ -5,7 +5,7 @@
  * no Node globals. Platform adapters live in `@modelbay/<platform>`.
  */
 
-// 从 plein 的 plugin-sdk 原样搬过来的 provider 类型与输入校验（M1）
+// provider 类型与输入校验
 export * from './provider'
 export * from './model-params'
 export * from './media-requirements'

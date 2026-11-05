@@ -154,7 +154,7 @@ function asRecord(value: unknown): Json {
 
 // ── podcast ────────────────────────────────────────────────────────────────
 
-/** Validate and default a podcast SSE request (mirrors the Python validate_request). */
+/** Validate and default a podcast SSE request. */
 export function buildPodcastRequest(params: Json): Json {
   const body = { ...asRecord(params) }
   const action = typeof body.action === 'number' ? body.action : 0

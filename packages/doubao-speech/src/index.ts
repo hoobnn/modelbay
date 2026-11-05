@@ -8,6 +8,8 @@
 import { createDoubaoAdapter, type DoubaoAdapter } from './adapter'
 import { all } from './models/index'
 
+/** 本平台的全部模型声明。 */
+export const models = all
 export const doubaoAdapter: DoubaoAdapter = createDoubaoAdapter(all)
 
 // Cross-adapter API consumed by @modelbay/ark.

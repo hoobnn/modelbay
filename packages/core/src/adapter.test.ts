@@ -92,7 +92,7 @@ describe('createAdapterContext', () => {
     expect(log).toHaveBeenCalledWith('hello', { a: 1 })
   })
 
-  it('注入 plein 宿主语义：settings / stream / files / 幂等键 / 回执 / socket', () => {
+  it('注入宿主语义：settings / stream / files / 幂等键 / 回执 / socket', () => {
     const stream = vi.fn()
     const files = { read: vi.fn(async () => ({ data: new Uint8Array([1]), mime: 'image/png' })) }
     const submission = { requestId: 'req-1', response: vi.fn() }
@@ -113,7 +113,7 @@ describe('createAdapterContext', () => {
     expect(ctx.socket).toBe(socket)
   })
 
-  it('未注入的 plein 可选字段保持缺省', () => {
+  it('未注入的宿主可选字段保持缺省', () => {
     const ctx = createAdapterContext()
     expect(ctx.settings).toBeUndefined()
     expect(ctx.stream).toBeUndefined()

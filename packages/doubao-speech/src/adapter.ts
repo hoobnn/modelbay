@@ -149,7 +149,7 @@ export interface DoubaoAdapterOptions {
   asr?: AsrRunner
 }
 
-/** 声音复刻 / 音色设计的调用入口，签名与 plein 的 VoiceCloneSpec / VoiceDesignSpec 等价。 */
+/** 声音复刻 / 音色设计的调用入口。 */
 export interface DoubaoVoiceApi {
   voiceClone: {
     clone(input: VoiceCloneInput, ctx: AdapterContext): Promise<VoiceCreationResult>
