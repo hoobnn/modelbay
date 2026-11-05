@@ -49,6 +49,7 @@ export default {
       age: 'mature',
     },
   ],
+  default: true,
   channels: [{ channel: 'ark-plan', id: 'doubao-seed-tts-2.0' }],
   aliases: { official: [], short: [] },
   lifecycle: {

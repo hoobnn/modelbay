@@ -32,7 +32,7 @@ describe('默认模型只能选 active', () => {
     declaration('openai/sunset', 'sunsetting', {
       lifecycle: { status: 'sunsetting', sunsetOn: '2026-11-24', source },
     }),
-    declaration('openai/active', 'active'),
+    declaration('openai/active', 'active', { default: true }),
     declaration('openai/retired', 'retired'),
   ]
 
@@ -42,7 +42,7 @@ describe('默认模型只能选 active', () => {
     expect(canBeDefault(declarations[2]!)).toBe(false)
   })
 
-  it('selectDefaultModel 跳过非 active 模型', () => {
+  it('selectDefaultModel 只认标了 default 的 active 模型', () => {
     expect(selectDefaultModel(declarations, 'text.chat')?.declaration.canonicalId).toBe(
       'openai/active',
     )

@@ -2,6 +2,7 @@
  * inputSchema 的「模型参数部分」全部从这里派生：
  *   - model 字段的可选 ID、说明、默认值、生命周期提示
  *     ← ModelDeclaration + capabilityInputSchema() / selectDefaultModel() / lifecycleNotice()
+ *   - 默认值只在平台的主渠道里选（方舟 MCP 用按量渠道，不能落到套餐渠道）
  *   - 随模型变化的参数范围（时长、分辨率、画幅、张数、种子、语速、字数上限等）
  *     ← ModelDeclaration.limits（ModelLimits / MediaRequirements）
  *   - 工具说明里的模型清单与各模型的上限
@@ -16,7 +17,7 @@ import {
   deriveModelParam,
   lifecycleNotice,
   modelLimitsText,
-  selectUsableDefaultModel,
+  selectDefaultModel,
   type ModelDeclaration,
   type ModelParamKind,
 } from '@modelbay/core'
@@ -99,6 +100,7 @@ export interface ModelParameterPart {
 export function deriveModelParameterPart(
   models: readonly ModelDeclaration[],
   capability: string,
+  channel?: string,
 ): ModelParameterPart {
   const cap = capability as Capability
   const capSchema = capabilityInputSchema(cap)
@@ -135,7 +137,8 @@ export function deriveModelParameterPart(
     }
   }
 
-  const selected = selectUsableDefaultModel(models, cap)
+  // 默认值只认声明里显式标了 default 的 active 模型，并且只在该平台的主渠道里选。
+  const selected = selectDefaultModel(models, cap, channel)
   const defaultModel = selected ? `${selected.channel.channel}:${selected.channel.id}` : null
 
   const descriptionParts: (string | undefined)[] = [
@@ -173,10 +176,11 @@ export function deriveParamProperties(
   models: readonly ModelDeclaration[],
   capability: string,
   modelParams: Record<string, ModelParamKind> | undefined,
+  channel?: string,
 ): Record<string, Record<string, unknown>> {
   if (!modelParams) return {}
   const scoped = modelsForCapability(models, capability)
-  const selected = selectUsableDefaultModel(models, capability as Capability)
+  const selected = selectDefaultModel(models, capability as Capability, channel)
   const out: Record<string, Record<string, unknown>> = {}
   for (const [property, kind] of Object.entries(modelParams)) {
     const derived = deriveModelParam(scoped, kind, selected?.declaration.canonicalId)
@@ -205,6 +209,28 @@ export function deriveModelDetails(
 }
 
 /**
+ * 工具说明里「model 必须显式传」的提示。
+ *
+ * 只有当工具的 model 字段既没有目录给的默认值、又没有声明派生的默认模型时才提示；
+ * 目录显式写 `default: null` 的工具（如百炼 TTS 按音色反推模型）不需要提示。
+ */
+export function deriveDefaultNote(
+  entry: CatalogEntry,
+  models: readonly ModelDeclaration[],
+  capability: string,
+  channel?: string,
+): string {
+  const model = (entry.inputSchema.properties ?? {}).model as Record<string, unknown> | undefined
+  if (!model || 'default' in model) return ''
+  const part = deriveModelParameterPart(models, capability, channel)
+  if (part.defaultModel) return ''
+  const notices = part.notices.join('；')
+  return notices
+    ? `model 必须显式指定：${notices}`
+    : 'model 必须显式指定：声明里没有该能力的默认模型。'
+}
+
+/**
  * 工具的完整说明 = 目录里手写的平台说明 + 运行时派生的模型清单。
  * 模型清单里每个模型一行，带它的上限与生命周期提示。
  */
@@ -223,10 +249,11 @@ export function deriveInputSchema(
   entry: CatalogEntry,
   models: readonly ModelDeclaration[],
   capability: string,
+  channel?: string,
 ): JsonSchema {
   const schema = structuredClone(entry.inputSchema) as JsonSchema
   const properties = (schema.properties ??= {})
-  const part = deriveModelParameterPart(models, capability)
+  const part = deriveModelParameterPart(models, capability, channel)
 
   if ('model' in properties) {
     // 保留平台定的形状（有的工具是 type:string，有的是 anyOf），
@@ -254,7 +281,7 @@ export function deriveInputSchema(
   }
 
   for (const [key, value] of Object.entries(
-    deriveParamProperties(models, capability, entry.modelParams),
+    deriveParamProperties(models, capability, entry.modelParams, channel),
   )) {
     if (!(key in properties)) {
       properties[key] = structuredClone(value)

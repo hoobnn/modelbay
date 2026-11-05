@@ -22,6 +22,7 @@ export default {
       },
     },
   },
+  default: true,
   channels: [{ channel: 'doubao-speech', id: 'bigmodel' }],
   aliases: { official: [], short: [] },
   lifecycle: {

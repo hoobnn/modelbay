@@ -170,30 +170,11 @@ export function customModel(ref: string, capability: NormalizedCapability): { cu
 }
 
 /**
- * 选「可用」的默认模型：优先 active 的默认模型；
- * 该能力没有任何 active 模型时，退回第一个还能选的（`closed-to-new-accounts` 之类）。
+ * 选默认模型：只认声明里显式标了 `default: true` 的 active 模型。
  *
- * 用途：MCP 工具的 model 字段要给出可选值和默认值。
- * 只有 active 才能当默认（见 0003），但某项能力如果只剩 closed-to-new-accounts 的模型，
- * 工具还得能用——这时退回它，并把它的账号限制提示写进说明里，让调用方自己判断。
- */
-export function selectUsableDefaultModel(
-  declarations: readonly ModelDeclaration[],
-  capability: NormalizedCapability,
-  channel?: string,
-): ResolvedModel | null {
-  const preferred = selectDefaultModel(declarations, capability, channel)
-  if (preferred) return preferred
-  for (const declaration of declarations) {
-    if (!isSelectable(declaration) || !declaration.capabilities.includes(capability)) continue
-    const found = declaration.channels.find((item) => !channel || item.channel === channel)
-    if (found) return { declaration, channel: found }
-  }
-  return null
-}
-
-/** 挑默认模型的另一种用法：只看「能不能当默认」，不看有没有 default 标记。
- * 没有标记时按声明顺序取第一个 active 的。默认模型永远不写死在适配器里。
+ * 没有标记就没有默认——调用方必须显式传模型，工具说明里给出原因（生命周期提示）。
+ * 绝不用「声明顺序第一个 active」兜底：那是隐式约定，会随声明增删而漂移，
+ * 也可能挑到非主渠道或非 active 的模型。
  */
 export function selectDefaultModel(
   declarations: readonly ModelDeclaration[],
@@ -201,19 +182,42 @@ export function selectDefaultModel(
   channel?: string,
 ): ResolvedModel | null {
   const candidates = declarations.filter(
-    (declaration) => canBeDefault(declaration) && declaration.capabilities.includes(capability),
-  )
-  const marked = candidates.find(
     (declaration) =>
       declaration.default === true &&
-      declaration.channels.some((item) => !channel || item.channel === channel),
+      canBeDefault(declaration) &&
+      declaration.capabilities.includes(capability),
   )
-  const ordered = marked ? [marked, ...candidates.filter((item) => item !== marked)] : candidates
-  for (const declaration of ordered) {
+  for (const declaration of candidates) {
     const found = declaration.channels.find((item) => !channel || item.channel === channel)
     if (found) return { declaration, channel: found }
   }
   return null
+}
+
+/**
+ * 同一渠道同一能力最多只能有一个默认模型。
+ *
+ * 返回冲突的「渠道:能力」列表；声明自检与单测都用它。
+ */
+export function defaultConflicts(declarations: readonly ModelDeclaration[]): string[] {
+  const seen = new Map<string, string>()
+  const conflicts: string[] = []
+  for (const declaration of declarations) {
+    if (declaration.default !== true) continue
+    for (const channel of declaration.channels) {
+      for (const capability of declaration.capabilities) {
+        const key = `${channel.channel}:${capability}`
+        const owner = seen.get(key)
+        if (owner && owner !== declaration.canonicalId) {
+          const label = `${key}（${owner} 与 ${declaration.canonicalId}）`
+          if (!conflicts.includes(label)) conflicts.push(label)
+        } else {
+          seen.set(key, declaration.canonicalId)
+        }
+      }
+    }
+  }
+  return conflicts
 }
 
 /** plein 的 ModelInfo 视图：从声明 + 渠道派生，不再由消费方自己写 */

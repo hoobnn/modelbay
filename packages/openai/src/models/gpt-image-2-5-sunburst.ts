@@ -21,6 +21,7 @@ export default {
       output_format: { type: 'string', enum: ['png', 'jpeg', 'webp'] },
     },
   },
+  default: true,
   channels: [{ channel: 'openai', id: 'gpt-image-2.5-sunburst' }],
   aliases: { official: [], short: [] },
   lifecycle: {

@@ -19,6 +19,7 @@ export default {
     type: 'object',
     properties: { prompt_optimizer: { type: 'boolean' }, aigc_watermark: { type: 'boolean' } },
   },
+  default: true,
   channels: [{ channel: 'minimax', id: 'image-01' }],
   aliases: { official: [], short: [] },
   lifecycle: {

@@ -18,6 +18,7 @@ export const fakeModels: ModelDeclaration[] = [
     aliases: { official: [], short: ['pro'] },
     lifecycle: { status: 'active', source },
     source,
+    default: true,
     optionsSchema: {
       type: 'object',
       properties: {

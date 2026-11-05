@@ -19,6 +19,8 @@ function videoModel(options: {
   resolutions: string[]
   defaultResolution: string
   status?: 'active' | 'retired' | 'superseded'
+  /** 是否是默认模型（默认模型只能靠声明显式标记）。 */
+  isDefault?: boolean
 }): ModelDeclaration {
   const source = { url: 'https://example.test/docs/video', checkedAt: '2026-11-05' }
   return {
@@ -39,6 +41,7 @@ function videoModel(options: {
       source,
     },
     source,
+    ...(options.isDefault ? { default: true as const } : {}),
   } as ModelDeclaration
 }
 
@@ -55,6 +58,7 @@ describe('工具 schema 由声明派生', () => {
     duration: { min: 4, max: 30 },
     resolutions: ['480p', '720p'],
     defaultResolution: '720p',
+    isDefault: true,
   })
 
   it('model 的默认值来自声明，不是写死的', () => {

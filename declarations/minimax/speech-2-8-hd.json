@@ -2,7 +2,7 @@
   "canonicalId": "minimax/speech-2.8-hd",
   "id": "speech-2.8-hd",
   "title": "speech-2.8-hd",
-  "capabilities": ["audio.speech"],
+  "capabilities": ["audio.speech", "voice.clone"],
   "limits": {
     "speed": {
       "min": 0.5,

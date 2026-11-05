@@ -70,6 +70,21 @@
     "doubaoSpeechTts": "https://docs.volcengine.com/docs/DoubaoVoice/unidirectional-streaming-text-to-speech-http",
     "doubaoSpeechAsr": "https://docs.volcengine.com/docs/6561/1354869"
   },
+  "unverified": {
+    "checkedAt": "2026-11-04",
+    "note": "这些声明的官方页面正文由前端渲染，2026-11-05 没能读到原文，保持原来的核对日期",
+    "declarations": [
+      "volc/ark-code-latest",
+      "volc/custom-chat",
+      "volc/custom-image",
+      "volc/custom-video",
+      "volc/kimi-k2.7-code",
+      "volc/minimax-m3",
+      "volc/doubao-seedream-5-0-260128",
+      "aliyun/qwen3-tts-instruct-flash",
+      "doubao/seed-icl-1.0"
+    ]
+  },
   "skippedMock": [
     "agent",
     "agent-vision",
@@ -1410,20 +1425,5 @@
       ],
       "fieldDiffs": []
     }
-  ],
-  "unverified": {
-    "checkedAt": "2026-11-04",
-    "note": "这些声明的官方页面正文由前端渲染，2026-11-05 没能读到原文，保持原来的核对日期",
-    "declarations": [
-      "volc/ark-code-latest",
-      "volc/custom-chat",
-      "volc/custom-image",
-      "volc/custom-video",
-      "volc/kimi-k2.7-code",
-      "volc/minimax-m3",
-      "volc/doubao-seedream-5-0-260128",
-      "aliyun/qwen3-tts-instruct-flash",
-      "doubao/seed-icl-1.0"
-    ]
-  }
+  ]
 }

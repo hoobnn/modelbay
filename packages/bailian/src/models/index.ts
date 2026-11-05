@@ -10,15 +10,15 @@ import wan30Video from './wan3-0-video'
 import wan30VideoPrime from './wan3-0-video-prime'
 import qwen3TtsFlash from './qwen3-tts-flash'
 import qwen3TtsInstructFlash from './qwen3-tts-instruct-flash'
-import qwenAudio31TtsFlash from './qwen-audio-3-1-tts-flash'
-import qwenAudio31TtsPlus from './qwen-audio-3-1-tts-plus'
+import cosyvoiceV2 from './cosyvoice-v2'
+import cosyvoiceV35Flash from './cosyvoice-v3-5-flash'
+import cosyvoiceV35Plus from './cosyvoice-v3-5-plus'
+import cosyvoiceV3Flash from './cosyvoice-v3-flash'
+import cosyvoiceV3Plus from './cosyvoice-v3-plus'
 import qwenAudio30TtsFlash from './qwen-audio-3-0-tts-flash'
 import qwenAudio30TtsPlus from './qwen-audio-3-0-tts-plus'
-import cosyvoiceV35Plus from './cosyvoice-v3-5-plus'
-import cosyvoiceV35Flash from './cosyvoice-v3-5-flash'
-import cosyvoiceV3Plus from './cosyvoice-v3-plus'
-import cosyvoiceV3Flash from './cosyvoice-v3-flash'
-import cosyvoiceV2 from './cosyvoice-v2'
+import qwenAudio31TtsFlash from './qwen-audio-3-1-tts-flash'
+import qwenAudio31TtsPlus from './qwen-audio-3-1-tts-plus'
 
 export {
   qwen38Max,
@@ -32,15 +32,15 @@ export {
   wan30VideoPrime,
   qwen3TtsFlash,
   qwen3TtsInstructFlash,
-  qwenAudio31TtsFlash,
-  qwenAudio31TtsPlus,
+  cosyvoiceV2,
+  cosyvoiceV35Flash,
+  cosyvoiceV35Plus,
+  cosyvoiceV3Flash,
+  cosyvoiceV3Plus,
   qwenAudio30TtsFlash,
   qwenAudio30TtsPlus,
-  cosyvoiceV35Plus,
-  cosyvoiceV35Flash,
-  cosyvoiceV3Plus,
-  cosyvoiceV3Flash,
-  cosyvoiceV2,
+  qwenAudio31TtsFlash,
+  qwenAudio31TtsPlus,
 }
 
 export const all: ModelDeclaration[] = [
@@ -55,13 +55,13 @@ export const all: ModelDeclaration[] = [
   wan30VideoPrime,
   qwen3TtsFlash,
   qwen3TtsInstructFlash,
-  qwenAudio31TtsFlash,
-  qwenAudio31TtsPlus,
+  cosyvoiceV2,
+  cosyvoiceV35Flash,
+  cosyvoiceV35Plus,
+  cosyvoiceV3Flash,
+  cosyvoiceV3Plus,
   qwenAudio30TtsFlash,
   qwenAudio30TtsPlus,
-  cosyvoiceV35Plus,
-  cosyvoiceV35Flash,
-  cosyvoiceV3Plus,
-  cosyvoiceV3Flash,
-  cosyvoiceV2,
+  qwenAudio31TtsFlash,
+  qwenAudio31TtsPlus,
 ]

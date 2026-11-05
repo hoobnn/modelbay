@@ -6,6 +6,7 @@ export default {
   title: 'MiniMax M3',
   capabilities: ['text.chat'],
   features: ['vision', 'structured'],
+  default: true,
   channels: [{ channel: 'minimax', id: 'MiniMax-M3' }],
   aliases: { official: [], short: [] },
   lifecycle: {

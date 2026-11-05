@@ -122,6 +122,8 @@ if (!existsSync(declDir) || (jsonFiles.length === 0 && tsFiles.length === 0)) {
 
 // ── 1. TS 静态检查（保留原有检查，satisfies 改为 ModelDeclaration）─────
 const tsAliases = new Map()
+/** 同一渠道同一能力的默认模型只能有一个；这里记「渠道:能力」→ 声明。 */
+const tsDefaults = new Map()
 for (const file of tsFiles) {
   const rel = relative(root, file)
   const text = readFileSync(file, 'utf8')
@@ -151,6 +153,28 @@ for (const file of tsFiles) {
       if (current && current !== owner)
         problems.push(`别名 ${alias} 在 ${current} 和 ${owner} 重复`)
       else tsAliases.set(alias, owner)
+    }
+  }
+
+  // 同一渠道同一能力最多一个 default：true
+  if (/^  default:\s*true/m.test(text)) {
+    const owner = /canonicalId:\s*'([^']+)'/.exec(text)?.[1] ?? rel
+    const channelBlock = /channels:\s*\[([\s\S]*?)\]/.exec(text)
+    const capabilityBlock = /capabilities:\s*\[([\s\S]*?)\]/.exec(text)
+    const channels = channelBlock
+      ? [...channelBlock[1].matchAll(/channel:\s*'([^']+)'/g)].map((m) => m[1])
+      : []
+    const capabilities = capabilityBlock
+      ? [...capabilityBlock[1].matchAll(/'([^']+)'/g)].map((m) => m[1])
+      : []
+    for (const channel of channels) {
+      for (const capability of capabilities) {
+        const key = `${channel}:${capability}`
+        const current = tsDefaults.get(key)
+        if (current && current !== owner)
+          problems.push(`默认模型冲突：${key} 同时标在 ${current} 和 ${owner}`)
+        else tsDefaults.set(key, owner)
+      }
     }
   }
 }
@@ -232,6 +256,22 @@ for (const file of jsonFiles) {
   const generated = declarationJsonSchema(decl)
   if (!isValidJsonSchema(generated)) {
     problems.push(`${rel}: 生成的 JSON Schema 不合法（type 应为 object、properties 应为对象）`)
+  }
+}
+
+// ── 2b. JSON 声明的默认模型唯一性（同一渠道同一能力）──────────────────
+const jsonDefaults = new Map()
+for (const { rel, decl } of jsonDecls) {
+  if (decl.default !== true) continue
+  const owner = decl.canonicalId ?? rel
+  for (const channel of decl.channels ?? []) {
+    for (const capability of decl.capabilities ?? []) {
+      const key = `${channel.channel}:${capability}`
+      const current = jsonDefaults.get(key)
+      if (current && current !== owner)
+        problems.push(`默认模型冲突：${key} 同时标在 ${current} 和 ${owner}`)
+      else jsonDefaults.set(key, owner)
+    }
   }
 }
 

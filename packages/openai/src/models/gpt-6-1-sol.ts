@@ -11,6 +11,7 @@ export default {
     type: 'object',
     properties: { reasoning_effort: { type: 'string', enum: ['low', 'medium', 'high'] } },
   },
+  default: true,
   channels: [{ channel: 'openai', id: 'gpt-6.1-sol' }],
   aliases: { official: [], short: [] },
   lifecycle: {

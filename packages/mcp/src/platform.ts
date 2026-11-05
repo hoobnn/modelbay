@@ -9,6 +9,12 @@ export interface PlatformMeta {
   adapterId: string
   title: string
   channels: string[]
+  /**
+   * 主渠道：工具的 model 默认值只在这个渠道里选。
+   * 方舟 MCP 同时服务按量与套餐两个渠道，默认必须落在按量渠道，
+   * 否则只有按量 key 的用户会被打到套餐接口上。
+   */
+  primaryChannel: string
   /** 盘点基线文件（测试逐个对照用）。 */
   inventoryFile: string
   /** createAdapterContext 需要的 key 环境变量名；缺任意一个即视为未配置。 */
@@ -25,6 +31,7 @@ export const PLATFORMS: Record<PlatformKey, PlatformMeta> = {
     adapterId: 'volc/ark',
     title: 'Volcengine Ark',
     channels: ['ark', 'ark-plan'],
+    primaryChannel: 'ark',
     inventoryFile: 'mcp-volcengine-ark.json',
     keyEnvVars: ['ARK_API_KEY'],
     adapterExport: 'arkAdapter',
@@ -35,6 +42,7 @@ export const PLATFORMS: Record<PlatformKey, PlatformMeta> = {
     adapterId: 'minimax/minimax',
     title: 'MiniMax',
     channels: ['minimax'],
+    primaryChannel: 'minimax',
     inventoryFile: 'mcp-minimax.json',
     keyEnvVars: ['MINIMAX_API_KEY'],
     adapterExport: 'minimaxAdapter',
@@ -45,6 +53,7 @@ export const PLATFORMS: Record<PlatformKey, PlatformMeta> = {
     adapterId: 'ali/bailian',
     title: 'Alibaba Bailian',
     channels: ['bailian'],
+    primaryChannel: 'bailian',
     inventoryFile: 'mcp-ali-bailian.json',
     keyEnvVars: ['BAILIAN_API_KEY'],
     adapterExport: 'bailianAdapter',
@@ -55,6 +64,7 @@ export const PLATFORMS: Record<PlatformKey, PlatformMeta> = {
     adapterId: 'volc/doubao-speech',
     title: 'Doubao Speech',
     channels: ['doubao-speech'],
+    primaryChannel: 'doubao-speech',
     inventoryFile: 'mcp-doubao-speech.json',
     keyEnvVars: ['DOUBAO_APP_ID', 'DOUBAO_ACCESS_TOKEN'],
     adapterExport: 'doubaoSpeechAdapter',

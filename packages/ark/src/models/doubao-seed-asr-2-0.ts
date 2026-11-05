@@ -5,6 +5,7 @@ export default {
   id: 'doubao-seed-asr-2.0',
   title: '豆包语音识别 2.0',
   capabilities: ['audio.transcribe'],
+  default: true,
   channels: [{ channel: 'ark-plan', id: 'doubao-seed-asr-2.0' }],
   aliases: { official: [], short: [] },
   lifecycle: {

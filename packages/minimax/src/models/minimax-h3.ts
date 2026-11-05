@@ -48,6 +48,7 @@ export default {
       },
     },
   },
+  default: true,
   channels: [{ channel: 'minimax', id: 'MiniMax-H3' }],
   aliases: { official: [], short: [] },
   lifecycle: {

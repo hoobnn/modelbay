@@ -11,7 +11,11 @@ import { resolveSpeechSettings } from '../src/speech'
 import { nativeOperationSchemas } from '../src/native'
 import { fakeContext, fixture, fixtureReply } from './helpers'
 
-function declaration(id: string, status: 'active' | 'superseded' | 'retired'): ModelDeclaration {
+function declaration(
+  id: string,
+  status: 'active' | 'superseded' | 'retired',
+  extra: Partial<ModelDeclaration> = {},
+): ModelDeclaration {
   return {
     canonicalId: `doubao/${id}`,
     id,
@@ -21,12 +25,13 @@ function declaration(id: string, status: 'active' | 'superseded' | 'retired'): M
     aliases: {},
     lifecycle: { status, source: { url: 'https://docs.volcengine.com/', checkedAt: '2026-11-04' } },
     source: { url: 'https://docs.volcengine.com/', checkedAt: '2026-11-04' },
+    ...extra,
   }
 }
 const models = [
   declaration('retired-model', 'retired'),
   declaration('superseded-model', 'superseded'),
-  declaration('active-model', 'active'),
+  declaration('active-model', 'active', { default: true }),
 ]
 
 describe('createDoubaoAdapter / defineAdapter', () => {

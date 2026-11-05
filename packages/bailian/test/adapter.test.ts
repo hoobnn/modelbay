@@ -11,7 +11,11 @@ import { nativeOperationSchemas } from '../src/native'
 import { all as bailianModels } from '../src/models/index'
 import { fakeContext, fixture } from './helpers'
 
-function declaration(id: string, status: 'active' | 'superseded' | 'retired'): ModelDeclaration {
+function declaration(
+  id: string,
+  status: 'active' | 'superseded' | 'retired',
+  extra: Partial<ModelDeclaration> = {},
+): ModelDeclaration {
   return {
     canonicalId: `aliyun/${id}`,
     id,
@@ -21,13 +25,14 @@ function declaration(id: string, status: 'active' | 'superseded' | 'retired'): M
     aliases: {},
     lifecycle: { status, source: { url: 'https://help.aliyun.com/', checkedAt: '2026-11-04' } },
     source: { url: 'https://help.aliyun.com/', checkedAt: '2026-11-04' },
+    ...extra,
   }
 }
 
 const models = [
   declaration('retired-model', 'retired'),
   declaration('superseded-model', 'superseded'),
-  declaration('active-model', 'active'),
+  declaration('active-model', 'active', { default: true }),
 ]
 
 describe('createBailianAdapter / defineAdapter', () => {

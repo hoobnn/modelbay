@@ -1,7 +1,13 @@
 /** 从 ModelDeclaration + 适配器 + 工具目录生成 MCP 工具集合。 */
 import type { ModelDeclaration, PlatformAdapter } from '@modelbay/core'
 import { cloneCatalog } from './catalog/index'
-import { deriveAnnotations, deriveInputSchema, deriveToolDescription } from './derive'
+import {
+  deriveAnnotations,
+  deriveDefaultNote,
+  deriveInputSchema,
+  deriveToolDescription,
+} from './derive'
+import { PLATFORMS } from './platform'
 import { deriveMeta, EXTRA_TOOL_NAMES } from './tool-meta'
 import type {
   CatalogEntry,
@@ -81,10 +87,14 @@ function buildTool(
   // nodeOnly 是适配器声明的可选 node: 子路径能力，强制归入可选组。
   const group: ToolGroup = route.kind === 'native' && nodeOnly.has(route.op) ? 'node' : meta.group
 
-  const inputSchema = deriveInputSchema(entry, models, capability)
+  const channel = PLATFORMS[platform].primaryChannel
+  const inputSchema = deriveInputSchema(entry, models, capability, channel)
   const annotations = deriveAnnotations(meta.nature)
   // 工具说明里的模型清单与各模型上限由声明派生，改声明这段文字就跟着变。
-  const description = deriveToolDescription(entry.description, models, capability)
+  const note = deriveDefaultNote(entry, models, capability, channel)
+  const description = `${deriveToolDescription(entry.description, models, capability)}${
+    note ? `\n${note}\n` : ''
+  }`
 
   const tool: GeneratedTool = {
     name: entry.name,

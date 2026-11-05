@@ -42,6 +42,7 @@ export default {
       watermark: { type: 'boolean' },
     },
   },
+  default: true,
   channels: [{ channel: 'bailian', id: 'wan3.0-video' }],
   aliases: { official: [], short: [] },
   lifecycle: {

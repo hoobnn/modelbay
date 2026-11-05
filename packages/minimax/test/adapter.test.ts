@@ -4,7 +4,11 @@ import { createMinimaxAdapter, defaultModel, fromHex } from '../src/adapter'
 import { nativeOperationSchemas } from '../src/native'
 import { fakeContext, fixture } from './helpers'
 
-function declaration(id: string, status: 'active' | 'superseded' | 'retired'): ModelDeclaration {
+function declaration(
+  id: string,
+  status: 'active' | 'superseded' | 'retired',
+  extra: Partial<ModelDeclaration> = {},
+): ModelDeclaration {
   return {
     canonicalId: `minimax/${id}`,
     id,
@@ -14,12 +18,13 @@ function declaration(id: string, status: 'active' | 'superseded' | 'retired'): M
     aliases: {},
     lifecycle: { status, source: { url: 'https://platform.minimax.cn/', checkedAt: '2026-11-04' } },
     source: { url: 'https://platform.minimax.cn/', checkedAt: '2026-11-04' },
+    ...extra,
   }
 }
 const models = [
   declaration('retired-model', 'retired'),
   declaration('superseded-model', 'superseded'),
-  declaration('active-model', 'active'),
+  declaration('active-model', 'active', { default: true }),
 ]
 
 describe('createMinimaxAdapter / defineAdapter', () => {

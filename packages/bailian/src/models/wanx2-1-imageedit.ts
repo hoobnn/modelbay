@@ -20,6 +20,7 @@ export default {
       },
     },
   },
+  default: true,
   channels: [{ channel: 'bailian', id: 'wanx2.1-imageedit' }],
   aliases: { official: [], short: [] },
   lifecycle: {

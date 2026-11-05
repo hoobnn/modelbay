@@ -5,7 +5,7 @@
 // 可重复执行、幂等：每次重建上述目录，再调用 compare-inventory 生成 diff 文档。
 // 生成后调用本仓库的 vp fmt 就地格式化 .ts/.json，保证与 vp check 的格式一致。
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { run as compareRun } from './compare-inventory.mjs'
@@ -55,8 +55,33 @@ const SOURCE_CHECKED_AT = {
   'https://www.volcengine.com/docs/6561/79820': '2026-11-04',
 }
 
+// 2026-11-05 没能读到官方正文的模型：保持原来的来源与核对日期。
+// 这里记的是当初那批声明引用的页面，不换成读过但没这个模型的页面。
+const UNVERIFIED_URL = {
+  ark: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+  bailian: 'https://help.aliyun.com/zh/model-studio/models',
+  'doubao-speech': 'https://www.volcengine.com/docs/6561/79820',
+}
+const UNVERIFIED = {
+  ark: new Set([
+    'ark-code-latest',
+    'custom-chat',
+    'custom-image',
+    'custom-video',
+    'kimi-k2.7-code',
+    'minimax-m3',
+  ]),
+  bailian: new Set(['qwen3-tts-instruct-flash']),
+  'doubao-speech': new Set(['seed-icl-1.0']),
+}
+
 // 逐个模型的来源覆盖：平台 + 模型 ID → 来源页。
 const SOURCE_RULES = [
+  {
+    match: (c) => c.platform === 'ark' && UNVERIFIED.ark.has(c.id),
+    url: UNVERIFIED_URL.ark,
+    checkedAt: '2026-11-04',
+  },
   {
     match: (c) =>
       c.platform === 'ark' &&
@@ -88,13 +113,55 @@ const SOURCE_RULES = [
     match: (c) => c.platform === 'doubao-speech' && c.id === 'bigmodel',
     url: SOURCE_URL['doubao-speech-asr'],
   },
+  {
+    match: (c) => c.platform === 'doubao-speech' && UNVERIFIED['doubao-speech'].has(c.id),
+    url: UNVERIFIED_URL['doubao-speech'],
+    checkedAt: '2026-11-04',
+  },
+  {
+    match: (c) => c.platform === 'bailian' && UNVERIFIED.bailian.has(c.id),
+    url: UNVERIFIED_URL.bailian,
+    checkedAt: '2026-11-04',
+  },
 ]
+
+// 每个（平台, 能力）的默认模型：与 Python 版 MCP 的默认值对齐，
+// 写进声明的 default 标记；不再靠声明顺序挑第一个 active 的。
+const DEFAULT_RULES = [
+  { platform: 'ark', id: 'doubao-seed-2-1-pro-260915' },
+  { platform: 'ark', id: 'doubao-seed-2.1-pro' },
+  { platform: 'ark', id: 'doubao-seedream-5-0-pro-260628' },
+  { platform: 'ark', id: 'doubao-seedance-2-5-260628' },
+  { platform: 'ark', id: 'doubao-seed-asr-2.0' },
+  { platform: 'ark', id: 'doubao-seed-tts-2.0' },
+  { platform: 'bailian', id: 'qwen3.8-max' },
+  { platform: 'bailian', id: 'qwen-image-3.0-pro' },
+  { platform: 'bailian', id: 'wan3.0-video' },
+  { platform: 'bailian', id: 'wanx2.1-imageedit' },
+  { platform: 'minimax', id: 'MiniMax-M3' },
+  { platform: 'minimax', id: 'image-01' },
+  { platform: 'minimax', id: 'MiniMax-H3' },
+  { platform: 'minimax', id: 'speech-2.8-hd' },
+  { platform: 'doubao-speech', id: 'seed-tts-2.0' },
+  { platform: 'doubao-speech', id: 'seed-audio-1.0' },
+  { platform: 'doubao-speech', id: 'bigmodel' },
+  { platform: 'openai', id: 'gpt-6.1-sol' },
+  { platform: 'openai', id: 'gpt-image-2.5-sunburst' },
+]
+
+/** 该模型是不是某个（平台, 能力）的默认模型。 */
+function isDefaultModel(platform, id) {
+  return DEFAULT_RULES.some((rule) => rule.platform === platform && rule.id === id)
+}
 
 /** 逐个模型算出 source.url 与 checkedAt：命中规则用规则页，否则用平台页。 */
 function resolveSource(ctx) {
   const rule = SOURCE_RULES.find((r) => r.match(ctx))
   const url = rule?.url ?? PLATFORM_URL[ctx.platform]
-  return { url, checkedAt: SOURCE_CHECKED_AT[url] ?? CHECKED_AT }
+  return {
+    url,
+    checkedAt: rule?.checkedAt ?? SOURCE_CHECKED_AT[url] ?? CHECKED_AT,
+  }
 }
 // docs/inventory.md 第三节已核对的三个官方链接
 const MINIMAX_MUSIC_URL = 'https://platform.minimax.cn/docs/api-reference/music-generation'
@@ -226,6 +293,8 @@ function safeKey(k) {
 function emit(v, indent, col) {
   const inline = inlineValue(v)
   if (col + inline.length <= 100) return inline
+  // 字符串不拆行：拆了会变成按字符索引的对象
+  if (typeof v === 'string') return inline
   if (Array.isArray(v)) {
     const inner = indent + 2
     const lines = v.map((el) => `${' '.repeat(inner)}${emit(el, inner, inner)},`)
@@ -276,7 +345,7 @@ function resolveLifecycle(ctx) {
     if (rule.by) lifecycle.by = rule.by
     if (rule.sunsetOn) lifecycle.sunsetOn = rule.sunsetOn
     if (rule.since) lifecycle.since = rule.since
-    lifecycle.source = { url: rule.url, checkedAt: CHECKED_AT }
+    lifecycle.source = { url: rule.url, checkedAt: SOURCE_CHECKED_AT[rule.url] ?? CHECKED_AT }
     return {
       lifecycle,
       decision: {
@@ -445,8 +514,16 @@ function buildAll() {
     const short = (adoptedShort.get(key) ?? []).filter((w) => !occupied.has(w))
     decl.aliases = { official, short }
 
+    // 默认模型：写进声明数据，不在代码里挑
+    if (isDefaultModel(platform, group.id)) decl.default = true
+
     // lifecycle
-    const { lifecycle, decision } = resolveLifecycle({ platform, id: group.id, deprecated })
+    const { lifecycle, decision } = resolveLifecycle({
+      platform,
+      id: group.id,
+      deprecated,
+      channels: decl.channels.map((c) => c.channel),
+    })
     decl.lifecycle = lifecycle
     decl.source = resolveSource({
       platform,
@@ -538,6 +615,28 @@ function buildAll() {
       minimaxMusic: MINIMAX_MUSIC_URL,
       arkDeprecation: ARK_DEPRECATION_URL,
       bailianTts: BAILIAN_TTS_URL,
+      arkAgentPlan: SOURCE_URL['ark-plan'],
+      bailianImage: SOURCE_URL['bailian-image'],
+      bailianVideo: SOURCE_URL['bailian-video'],
+      minimaxVideo: SOURCE_URL['minimax-video'],
+      doubaoSpeechTts: SOURCE_URL['doubao-speech-tts'],
+      doubaoSpeechAsr: SOURCE_URL['doubao-speech-asr'],
+    },
+    // 2026-11-05 没能读到官方正文的页面：这些声明保持原来的核对日期。
+    unverified: {
+      checkedAt: '2026-11-04',
+      note: '这些声明的官方页面正文由前端渲染，2026-11-05 没能读到原文，保持原来的核对日期',
+      declarations: [
+        'volc/ark-code-latest',
+        'volc/custom-chat',
+        'volc/custom-image',
+        'volc/custom-video',
+        'volc/kimi-k2.7-code',
+        'volc/minimax-m3',
+        'volc/doubao-seedream-5-0-260128',
+        'aliyun/qwen3-tts-instruct-flash',
+        'doubao/seed-icl-1.0',
+      ],
     },
     skippedMock,
     merged,
@@ -617,24 +716,38 @@ function formatGenerated(paths) {
 function writeAll() {
   const { declarations, meta } = buildAll()
 
-  // 幂等：清空并重建产物目录
-  for (const platform of PLATFORMS) {
-    rmSync(join(root, 'packages', platform, 'src', 'models'), { recursive: true, force: true })
-  }
-  rmSync(DECL_DIR, { recursive: true, force: true })
-  mkdirSync(DECL_DIR, { recursive: true })
-
+  // 不清空目录：M3 之后声明都是手工维护的（补来源、补默认标记、补 MCP 独有的模型），
+  // 抽取只补齐缺失的文件，不覆盖已经存在的声明。
   const generated = []
+  for (const platform of PLATFORMS) {
+    mkdirSync(join(root, 'packages', platform, 'src', 'models'), { recursive: true })
+    mkdirSync(join(DECL_DIR, platform), { recursive: true })
+  }
   for (const { platform, slug, decl } of declarations) {
     const tsPath = join(root, 'packages', platform, 'src', 'models', `${slug}.ts`)
     const jsonPath = join(DECL_DIR, platform, `${slug}.json`)
-    writeFile(tsPath, renderTs(decl))
-    writeFile(jsonPath, `${JSON.stringify(decl, null, 2)}\n`)
-    generated.push(tsPath, jsonPath)
+    if (!existsSync(tsPath)) {
+      writeFile(tsPath, renderTs(decl))
+      writeFile(jsonPath, `${JSON.stringify(decl, null, 2)}\n`)
+      generated.push(tsPath, jsonPath)
+    } else if (!existsSync(jsonPath)) {
+      writeFile(jsonPath, `${JSON.stringify(decl, null, 2)}\n`)
+      generated.push(jsonPath)
+    }
   }
   for (const platform of PLATFORMS) {
-    const items = declarations.filter((d) => d.platform === platform)
-    const indexPath = join(root, 'packages', platform, 'src', 'models', 'index.ts')
+    const dir = join(root, 'packages', platform, 'src', 'models')
+    const items = declarations
+      .filter((d) => d.platform === platform)
+      .map((d) => ({ slug: d.slug, exportName: d.exportName }))
+    // 目录里已有的手写声明也列进 index.ts
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith('.ts') || name === 'index.ts') continue
+      const slug = name.replace(/\.ts$/, '')
+      if (items.some((item) => item.slug === slug)) continue
+      items.push({ slug, exportName: toExportName(slug) })
+    }
+    const indexPath = join(dir, 'index.ts')
     writeFile(indexPath, renderIndex(items))
     generated.push(indexPath)
   }

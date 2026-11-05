@@ -4,7 +4,7 @@ export default {
   canonicalId: 'minimax/speech-2.8-hd',
   id: 'speech-2.8-hd',
   title: 'speech-2.8-hd',
-  capabilities: ['audio.speech'],
+  capabilities: ['audio.speech', 'voice.clone'],
   limits: { speed: { min: 0.5, max: 2 }, instruction: false, promptMaxLength: 9999 },
   optionsSchema: {
     type: 'object',
@@ -15,6 +15,7 @@ export default {
       },
     },
   },
+  default: true,
   channels: [{ channel: 'minimax', id: 'speech-2.8-hd' }],
   aliases: { official: [], short: ['hd'] },
   lifecycle: {

@@ -18,6 +18,7 @@ function declaration(
   capability: NormalizedCapability,
   status: LifecycleStatus,
   channel = 'test',
+  extra: Partial<ModelDeclaration> = {},
 ): ModelDeclaration {
   const id = canonicalId.split('/')[1] ?? canonicalId
   return {
@@ -29,6 +30,7 @@ function declaration(
     aliases: {},
     lifecycle: { status, source: { ...SOURCE } },
     source: { ...SOURCE },
+    ...extra,
   }
 }
 
@@ -54,7 +56,7 @@ function makeImageAdapter(rec: Recorder): PlatformAdapter {
     title: 'Test Image',
     channels: ['test'],
     models: [
-      declaration('test/active-image', 'image.generate', 'active'),
+      declaration('test/active-image', 'image.generate', 'active', 'test', { default: true }),
       declaration('test/sunsetting-image', 'image.generate', 'sunsetting'),
     ],
     async submit(request, ctx) {
@@ -73,7 +75,9 @@ function makeAsyncAdapter(rec: Recorder): PlatformAdapter {
     id: 'test/async',
     title: 'Test Async Video',
     channels: ['async'],
-    models: [declaration('test/active-video', 'video.generate', 'active', 'async')],
+    models: [
+      declaration('test/active-video', 'video.generate', 'active', 'async', { default: true }),
+    ],
     async submit() {
       return { state: 'pending', remoteId: 'remote-1', pollAfterMs: 0 }
     },

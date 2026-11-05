@@ -6,6 +6,7 @@ export default {
   title: 'qwen3.8-max',
   capabilities: ['text.chat'],
   features: ['tools', 'vision', 'structured'],
+  default: true,
   channels: [{ channel: 'bailian', id: 'qwen3.8-max' }],
   aliases: { official: [], short: [] },
   lifecycle: {

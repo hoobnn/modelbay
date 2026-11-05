@@ -6,6 +6,7 @@ export default {
   title: 'Doubao Seed 2.1 Pro（260915）',
   capabilities: ['text.chat'],
   features: ['tools', 'vision', 'structured'],
+  default: true,
   channels: [{ channel: 'ark', id: 'doubao-seed-2-1-pro-260915' }],
   aliases: { official: [], short: [] },
   lifecycle: {

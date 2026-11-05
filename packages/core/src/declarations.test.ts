@@ -7,6 +7,7 @@ import {
   validateDeclaration,
   resolveModel,
   customModel,
+  defaultConflicts,
   selectDefaultModel,
   toModelInfo,
   ModelRegistry,
@@ -196,14 +197,41 @@ describe('customModel / selectDefaultModel', () => {
     capabilities: ['image.generate'],
     channels: [{ channel: 'minimax', id: 'image-1' }],
   })
-  const list = [retired, base(), imageModel]
+  const list = [retired, patch({ default: true }), imageModel]
 
-  it('只选 active 且具备该能力的模型', () => {
+  it('只选标了 default 且 active、具备该能力的模型', () => {
     expect(selectDefaultModel(list, 'audio.speech')).toMatchObject({
       declaration: { canonicalId: 'minimax/speech-2.8-hd' },
       channel: { channel: 'minimax' },
     })
     expect(selectDefaultModel(list, 'video.generate')).toBeNull()
+  })
+
+  it('没有 default 标记就没有默认模型，不再按声明顺序兜底', () => {
+    expect(selectDefaultModel([base()], 'audio.speech')).toBeNull()
+    expect(selectDefaultModel(list, 'image.generate')).toBeNull()
+  })
+
+  it('非 active 的默认标记不生效', () => {
+    const retiredDefault = patch({
+      default: true,
+      lifecycle: { status: 'retired', source },
+    })
+    expect(selectDefaultModel([retiredDefault], 'audio.speech')).toBeNull()
+  })
+
+  it('defaultConflicts 找出同一渠道同一能力的重复默认', () => {
+    const single = patch({
+      default: true,
+      channels: [{ channel: 'minimax', id: 'speech-2.8-hd' }],
+    })
+    const other = patch({
+      canonicalId: 'minimax/speech-2.8-turbo',
+      channels: [{ channel: 'minimax', id: 'speech-2.8-turbo' }],
+      default: true,
+    })
+    expect(defaultConflicts([single, other])).toHaveLength(1)
+    expect(defaultConflicts([single])).toEqual([])
   })
 
   it('按渠道筛选', () => {
@@ -286,7 +314,8 @@ describe('ModelRegistry', () => {
     aliases: { short: ['old'] },
     lifecycle: { status: 'retired', source },
   })
-  const registry = (): ModelRegistry => new ModelRegistry().add(a, imageModel, retired)
+  const registry = (): ModelRegistry =>
+    new ModelRegistry().add(patch({ default: true }), imageModel, retired)
 
   it('add 可链式、校验非法声明并抛错', () => {
     const reg = new ModelRegistry()

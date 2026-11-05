@@ -88,6 +88,7 @@ export default {
       draft: { type: 'boolean' },
     },
   },
+  default: true,
   channels: [
     { channel: 'ark', id: 'doubao-seedance-2-5-260628' },
     { channel: 'ark-plan', id: 'doubao-seedance-2-5-260628' },

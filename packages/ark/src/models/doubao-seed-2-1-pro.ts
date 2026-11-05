@@ -8,6 +8,7 @@ export default {
   description: 'Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位',
   features: ['tools', 'structured', 'vision'],
   agentOnly: true,
+  default: true,
   channels: [{ channel: 'ark-plan', id: 'doubao-seed-2.1-pro' }],
   aliases: { official: [], short: [] },
   lifecycle: {

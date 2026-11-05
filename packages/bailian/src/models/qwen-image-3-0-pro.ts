@@ -28,6 +28,7 @@ export default {
       watermark: { type: 'boolean' },
     },
   },
+  default: true,
   channels: [{ channel: 'bailian', id: 'qwen-image-3.0-pro' }],
   aliases: { official: [], short: [] },
   lifecycle: {
