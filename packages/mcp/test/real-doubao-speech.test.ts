@@ -75,12 +75,12 @@ describe('工具目录', () => {
       'receive_realtime_events',
       'close_realtime_session',
       'upgrade_voice',
-      'get_voice',
       'get_job',
       'recover_job',
       'list_jobs',
     ])
       expect(names).not.toContain(gone)
+    expect(set.byName.get('get_voice')?.route).toMatchObject({ kind: 'native', op: 'voice-query' })
   })
 
   it('每个 native 工具的操作名适配器都实现了', async () => {
@@ -236,9 +236,9 @@ describe('声音复刻 / 设计 / 查询走 native', () => {
     })
   })
 
-  it('query_voice', async () => {
+  it('get_voice：走 native voice-query', async () => {
     const { handlers, captured } = await setup(voiceReply)
-    await handlers.callTool('query_voice', { speaker_id: 'S_abc123' })
+    await handlers.callTool('get_voice', { speaker_id: 'S_abc123' })
     expect(captured[0]!.url).toContain('/api/v3/tts/get_voice')
     expect(captured[0]!.body).toEqual({ speaker_id: 'S_abc123' })
   })

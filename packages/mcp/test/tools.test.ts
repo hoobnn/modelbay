@@ -7,7 +7,7 @@ const EXPECTED_COUNTS: Record<McpKey, number> = {
   ark: 8,
   minimax: 17,
   bailian: 18,
-  'doubao-speech': 15,
+  'doubao-speech': 16,
 }
 
 function propertyType(prop: Record<string, unknown>): string {

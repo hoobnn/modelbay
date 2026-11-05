@@ -38,7 +38,7 @@
 
 `test/real-adapter.test.ts` 和 `test/real-<平台>.test.ts` 用真实适配器加注入的 fetch 断言 MCP 参数真的进了上游请求体；其余测试用假适配器，测不出字段名对不上。
 
-`src/tool-meta.ts` 只放跨平台通用的工具名约定（同名工具在各平台语义一致）。平台独有的工具在自己的 `tools.ts` 里写 `native` / `nature` / `group`，优先于通用约定，所以新增平台独有工具不需要改 `@modelbay/mcp`。
+`src/tool-meta.ts` 只放跨平台通用的工具名约定（同名工具在各平台语义一致）。平台独有的工具在自己的 `tools.ts` 里写 `native` / `nature` / `group`，优先于通用约定（写了 `native` 的同名工具也不再走本地处理器，如豆包语音的 `get_voice`），所以新增平台独有工具不需要改 `@modelbay/mcp`。
 
 ## annotations
 
@@ -61,7 +61,7 @@
 | 组           | 默认   | 放什么                                                      |
 | ------------ | ------ | ----------------------------------------------------------- |
 | `core`       | 启用   | 生成、查询、本地只读工具                                    |
-| `realtime`   | 不启用 | 实时会话（豆包语音 `*_realtime_*`）                         |
+| `realtime`   | 不启用 | 实时会话（目前没有工具：豆包语音的实时会话适配器未实现）    |
 | `management` | 不启用 | 删除任务、控制台、热词表、原始请求、2K 再生成等管理操作     |
 | `node`       | 不启用 | 需要本地文件 I/O 的工具；适配器 `nodeOnly` 里的操作强制归入 |
 
@@ -77,4 +77,6 @@
 
 ## 工具清单快照
 
-`packages/mcp/test/baselines/<平台>.json` 是 2026-11-04 冻结的工具清单快照（方舟 9、MiniMax 18、百炼 19、豆包语音 24，共 70 个）。`test/tools.test.ts` 打开全部工具组后逐个对照：快照里的工具名都在，`inputSchema` 的关键字段和 `required` 都保留，四个 hint 齐全，防止重构时工具或字段悄悄丢失。新增平台不需要快照。
+`packages/mcp/test/baselines/<平台>.json` 是工具清单快照（2026-11-04 冻结，2026-11-06 删去适配器没有实现的工具和参数后为方舟 8、MiniMax 17、百炼 18、豆包语音 16，共 59 个）。`test/tools.test.ts` 打开全部工具组后逐个对照：快照里的工具名都在，`inputSchema` 的关键字段和 `required` 都保留，四个 hint 齐全，防止重构时工具或字段悄悄丢失。新增平台不需要快照。删工具或参数时同步改快照，并在 PR 里说明原因。
+
+2026-11-06 删掉的工具：方舟 `embed`（适配器不支持 `text.embed`）、百炼 `edit_video`（需要新的 native 操作）、MiniMax `query_video_generation`（由 `get_job` 代替）、豆包语音的实时会话四件套、`upgrade_voice` 和 `get_job` / `recover_job` / `list_jobs`（适配器没有对应实现或 `poll`）。

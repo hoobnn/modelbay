@@ -42,7 +42,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
       '声音复刻：用一段录音训练音色。speaker_id 是控制台已分配的 S_ 音色 ID（不支持自定义音色 ID）。\n' +
       'audio_file：本地录音路径或 URL（wav/mp3/ogg/m4a/aac/pcm，10MB 内），清晰单人、少噪音。\n' +
       'language：zh（默认）或 en。demo_text：试听文本 4–300 字。\n' +
-      '会消耗训练次数，不自动重试。之后用 query_voice 查训练状态，合成时把 speaker_id 作为 text_to_speech 的 voice；复刻的音色只能用于豆包合成。\n' +
+      '会消耗训练次数，不自动重试。之后用 get_voice 查训练状态，合成时把 speaker_id 作为 text_to_speech 的 voice；复刻的音色只能用于豆包合成。\n' +
       "录音技巧见 get_speech_usage_examples(product='voice')。\n",
     inputSchema: {
       type: 'object',
@@ -78,14 +78,14 @@ export const doubaoSpeechTools: ToolSpec[] = [
     outputSchema: okOutput,
   },
   {
-    name: 'query_voice',
+    name: 'get_voice',
     native: 'voice-query',
     nature: 'query',
     description:
       '查询复刻 / 设计音色的训练状态和试听信息（speaker_id 为 S_ 音色 ID）。不计费。clone_voice / design_voice 之后用它确认音色是否可用。',
     inputSchema: {
       type: 'object',
-      title: 'query_voiceArguments',
+      title: 'get_voiceArguments',
       properties: { speaker_id: string },
       required: ['speaker_id'],
     },
