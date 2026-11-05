@@ -326,22 +326,25 @@ importers:
 
   packages/mcp:
     dependencies:
+      '@modelbay/core':
+        specifier: workspace:*
+        version: link:../core
+      modelbay:
+        specifier: workspace:*
+        version: link:../modelbay
+    devDependencies:
       '@modelbay/ark':
         specifier: workspace:*
         version: link:../ark
       '@modelbay/bailian':
         specifier: workspace:*
         version: link:../bailian
-      '@modelbay/core':
-        specifier: workspace:*
-        version: link:../core
       '@modelbay/doubao-speech':
         specifier: workspace:*
         version: link:../doubao-speech
       '@modelbay/minimax':
         specifier: workspace:*
         version: link:../minimax
-    devDependencies:
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6

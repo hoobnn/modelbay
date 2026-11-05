@@ -12,7 +12,7 @@ import {
   createArkPlanAdapter,
   models,
 } from '../src/index'
-import { nodeArkOptions, uploadReferenceVideo } from '../src/node/index'
+import { nodeOptions, uploadReferenceVideo } from '../src/node/index'
 import { fakeContext } from './helpers'
 
 const IMAGE = 'ark:doubao-seedream-5-0-pro-260628'
@@ -299,7 +299,7 @@ describe('视频校验', () => {
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 
-  it('经 nodeArkOptions 注入 TOS 上传：读 settings，对象 key 前缀可配', async () => {
+  it('经 nodeOptions 注入 TOS 上传：读 settings，对象 key 前缀可配', async () => {
     const f = setup(
       [new Response(null, { status: 200 }), { id: 'accepted' }],
       {},
@@ -313,7 +313,7 @@ describe('视频校验', () => {
       referenceBucket: 'test-bucket',
       referenceKeyPrefix: 'plein/video-references',
     }
-    await createArkAdapter(models, nodeArkOptions).submit(
+    await createArkAdapter(models, nodeOptions).submit(
       gen('video.generate', V25, { prompt: 'p', references: [video] }),
       f.ctx,
     )
@@ -464,7 +464,7 @@ describe('套餐 ASR 与目录接线', () => {
         ),
       )
     f.ctx.socket = vi.fn(async () => ({ send, receive, close }))
-    const result = await createArkPlanAdapter(models, nodeArkOptions).submit(asr, f.ctx)
+    const result = await createArkPlanAdapter(models, nodeOptions).submit(asr, f.ctx)
     expect(f.ctx.socket).toHaveBeenCalledWith(
       'wss://openspeech.bytedance.com/api/v3/plan/sauc/bigmodel_nostream',
       expect.objectContaining({
@@ -497,7 +497,7 @@ describe('套餐 ASR 与目录接线', () => {
       receive: vi.fn().mockResolvedValueOnce(reply({})).mockRejectedValueOnce(new Error('closed')),
     }))
     await expect(
-      createArkPlanAdapter(models, nodeArkOptions).submit(asr, f.ctx),
+      createArkPlanAdapter(models, nodeOptions).submit(asr, f.ctx),
     ).rejects.toMatchObject({
       code: 'unavailable',
       outcome: 'unknown',
@@ -508,7 +508,7 @@ describe('套餐 ASR 与目录接线', () => {
 
   it('缺少 socket 的宿主明确报错；没注入 Node 实现时 unavailable', async () => {
     const f = setup([], {}, planSecret)
-    await expect(createArkPlanAdapter(models, nodeArkOptions).submit(asr, f.ctx)).rejects.toThrow(
+    await expect(createArkPlanAdapter(models, nodeOptions).submit(asr, f.ctx)).rejects.toThrow(
       '不支持',
     )
     await expect(arkPlanAdapter.submit(asr, f.ctx)).rejects.toMatchObject({ code: 'unavailable' })
@@ -542,7 +542,7 @@ describe('套餐 ASR 与目录接线', () => {
       {},
       { ...planSecret, ARK_PLAN_ACCESS_KEY: 'access', ARK_PLAN_SECRET_KEY: 'secret' },
     )
-    const list = await createArkPlanAdapter(models, nodeArkOptions).native!('listModels', {}, f.ctx)
+    const list = await createArkPlanAdapter(models, nodeOptions).native!('listModels', {}, f.ctx)
     expect(list).toEqual([
       { id: 'new-chat', kind: 'llm', agentOnly: true, features: ['tools', 'structured'] },
       { id: 'doubao-seedance-2-5-260628' },

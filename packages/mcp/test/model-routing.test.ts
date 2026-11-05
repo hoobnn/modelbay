@@ -10,24 +10,23 @@ import { bailianAdapter } from '@modelbay/bailian'
 import { doubaoAdapter } from '@modelbay/doubao-speech'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { generateTools } from '../src/generate'
-import { PLATFORMS } from '../src/platform'
 import { createHandlers } from '../src/routing'
-import { MCP_TOOL_GROUPS, type CallToolResult, type PlatformKey } from '../src/types'
-import { fakeAdapter, fakeContext } from './fixtures'
+import { MCP_TOOL_GROUPS, type CallToolResult } from '../src/types'
+import { fakeAdapter, fakeContext, type McpKey, platformOf } from './fixtures'
 
-function setup(platform: PlatformKey, adapter: PlatformAdapter, replies: Response[]) {
+function setup(platform: McpKey, adapter: PlatformAdapter, replies: Response[]) {
   const fetchImpl = vi.fn<typeof fetch>(async () => replies.shift() ?? new Response('{}'))
-  const meta = PLATFORMS[platform]
+  const meta = platformOf(platform)
   const handlers = createHandlers({
     set: generateTools(platform, { adapter }),
     adapter,
     context: createAdapterContext({
       fetchImpl,
-      secrets: Object.fromEntries(meta.keyEnvVars.map((key) => [key, 'secret'])),
+      secrets: Object.fromEntries((meta.secrets.required[0] ?? []).map((key) => [key, 'secret'])),
       log: () => {},
     }),
     groups: MCP_TOOL_GROUPS.all,
-    keyEnvVars: meta.keyEnvVars,
+    secrets: meta.secrets,
     primaryChannel: meta.primaryChannel,
     serverInfo: { name: 'test', version: '1.0.0' },
   })
@@ -105,7 +104,7 @@ describe('渠道前缀的剥离范围', () => {
       adapter,
       context: fakeContext({ ARK_API_KEY: 'k' }),
       groups: MCP_TOOL_GROUPS.all,
-      keyEnvVars: PLATFORMS.ark.keyEnvVars,
+      secrets: platformOf('ark').secrets,
       primaryChannel: 'ark',
       serverInfo: { name: 'test', version: '1.0.0' },
     })

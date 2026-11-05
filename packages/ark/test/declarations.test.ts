@@ -5,7 +5,7 @@ import {
   type ModelDeclaration,
   type ModelSource,
 } from '@modelbay/core'
-import { allModels as all } from '../src/declarations'
+import { all } from '../src/models/index'
 import { synthesizePlanSpeech } from '../src/speech'
 import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
 

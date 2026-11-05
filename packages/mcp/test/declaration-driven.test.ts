@@ -3,14 +3,13 @@
  *
  * 这是 G1「一处修改，处处生效」在 MCP 侧的守卫：
  * 工具的 model 取值、默认值、时长 / 分辨率等上下限、说明里的模型清单，
- * 全部来自 `ModelDeclaration`，不来自 `docs/inventory/*.json` 的快照。
+ * 全部来自 `ModelDeclaration`，不来自 `test/baselines/*.json` 的快照。
  */
 import { describe, expect, it } from 'vite-plus/test'
 import type { ModelDeclaration } from '@modelbay/core'
 import { generateTools } from '../src/generate'
 import { MCP_TOOL_GROUPS } from '../src/types'
-import { loadCatalog } from '../src/catalog/index'
-import { fakeModels } from './fixtures'
+import { fakeModels, toolsOf } from './fixtures'
 
 /** 造一份视频模型声明，范围与默认值由参数决定，方便测试里改。 */
 function videoModel(options: {
@@ -136,7 +135,7 @@ describe('工具 schema 由声明派生', () => {
 describe('目录里不含模型相关字面量', () => {
   it('catalog 的 model 字段没有硬编码的模型 ID 默认值', () => {
     for (const platform of ['ark', 'minimax', 'bailian', 'doubao-speech'] as const) {
-      for (const entry of loadCatalog(platform)) {
+      for (const entry of toolsOf(platform)) {
         const model = entry.inputSchema.properties?.model
         if (!model) continue
         // default 只允许 undefined（由声明派生）或 null（不传由平台自己判断）

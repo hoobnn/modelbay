@@ -17,7 +17,7 @@ import {
   type TaskOptions,
 } from '../src/media'
 import type { TransportMessages } from '../src/http'
-import { allModels as all } from '../src/declarations'
+import { all } from '../src/models/index'
 import type { ModelLimits } from '@modelbay/core'
 import { fakeContext, fixture, jsonResponse, type RecordedCall } from './helpers'
 

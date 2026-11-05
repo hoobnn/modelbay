@@ -14,7 +14,7 @@ import {
   type AdapterContext,
   type AssetRef,
 } from '@modelbay/core'
-import { allModels } from '../declarations'
+import { all as allModels } from '../models/index'
 import { editRequestBody } from '../media'
 import type { EditMaskPreparer, ImageBytes, PreparedEdit } from '../mask'
 import type { Json } from '../http'

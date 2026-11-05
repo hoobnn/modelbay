@@ -4,12 +4,13 @@
  *   submit → adapter.submit；native → adapter.native；local → 本地只读回答。
  * 未配置 key / 适配器未就绪时返回清晰错误（isError 结果），绝不抛到 stdio 循环里。
  */
-import { lifecycleNotice, selectDefaultModel } from '@modelbay/core'
+import { lifecycleNotice, missingSecrets, selectDefaultModel } from '@modelbay/core'
 import type {
   AdapterContext,
   AdapterRequest,
   ModelDeclaration,
   PlatformAdapter,
+  PlatformSecrets,
 } from '@modelbay/core'
 import { listTools } from './generate'
 import type {
@@ -26,7 +27,8 @@ export interface RoutingOptions {
   adapter?: PlatformAdapter
   context: AdapterContext
   groups: readonly ToolGroup[]
-  keyEnvVars: readonly string[]
+  /** 平台的密钥要求；缺必填密钥时 tools/call 返回清晰错误。 */
+  secrets: PlatformSecrets
   serverInfo: ServerInfo
   /** 未传 model 时在哪个渠道里选默认模型；缺省取适配器的第一个渠道。 */
   primaryChannel?: string
@@ -155,7 +157,7 @@ function localResult(
 }
 
 export function createHandlers(options: RoutingOptions): ServerHandlers {
-  const { set, adapter, context, groups, keyEnvVars, serverInfo, primaryChannel } = options
+  const { set, adapter, context, groups, secrets, serverInfo, primaryChannel } = options
   const models: readonly ModelDeclaration[] = adapter?.models ?? []
   const fallbackCapability = firstCapability(set)
 
@@ -169,7 +171,7 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     }
 
     // 未配置 key：返回清晰错误而不是崩溃；log 走 stderr（由 context.log 决定是否输出）。
-    const missing = keyEnvVars.filter((env) => !context.secret(env))
+    const missing = missingSecrets(secrets, (name) => Boolean(context.secret(name)))
     if (missing.length > 0 || !adapter) {
       const reason = !adapter ? '平台适配器尚未就绪' : `未配置访问密钥：${missing.join('、')}`
       context.log('modelbay-mcp: 调用被拒绝', { tool: name, reason })

@@ -54,3 +54,4 @@ export {
   minimaxVoiceDesign,
   VOICE_PREVIEW_MODEL,
 } from './voice'
+export { minimaxPlatform } from './platform'

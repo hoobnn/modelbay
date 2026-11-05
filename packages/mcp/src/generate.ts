@@ -1,23 +1,19 @@
 /** 从 ModelDeclaration + 适配器 + 工具目录生成 MCP 工具集合。 */
-import type { ModelDeclaration, PlatformAdapter } from '@modelbay/core'
-import { cloneCatalog } from './catalog/index'
+import type {
+  ModelDeclaration,
+  PlatformAdapter,
+  PlatformDescriptor,
+  ToolSpec,
+} from '@modelbay/core'
+import { findPlatform } from 'modelbay'
 import {
   deriveAnnotations,
   deriveDefaultNote,
   deriveInputSchema,
   deriveToolDescription,
 } from './derive'
-import { PLATFORMS } from './platform'
 import { deriveMeta, EXTRA_TOOL_NAMES } from './tool-meta'
-import type {
-  CatalogEntry,
-  GeneratedTool,
-  GeneratedToolSet,
-  MCPTool,
-  PlatformKey,
-  ToolGroup,
-  ToolRoute,
-} from './types'
+import type { GeneratedTool, GeneratedToolSet, MCPTool, ToolGroup, ToolRoute } from './types'
 
 export interface GenerateOptions {
   /** 平台适配器：提供 models 与 nodeOnly；缺省时用空声明集合（tools/list 仍可用）。 */
@@ -45,19 +41,22 @@ export function listTools(set: GeneratedToolSet, groups: readonly ToolGroup[]): 
 
 /** 生成全量工具（含所有组与别名）；实际 tools/list 由 listTools 按组过滤。 */
 export function generateTools(
-  platform: PlatformKey,
+  target: PlatformDescriptor | string,
   options: GenerateOptions = {},
 ): GeneratedToolSet {
+  const platform = typeof target === 'string' ? findPlatform(target) : target
+  if (!platform?.mcp) throw new Error(`平台「${String(target)}」没有 MCP 工具目录`)
   const models: readonly ModelDeclaration[] = options.models ?? options.adapter?.models ?? []
   const nodeOnly = new Set(options.adapter?.nodeOnly ?? [])
   const capabilities = models.flatMap((model) => model.capabilities)
   // 兜底能力仅用于派生无明确能力映射的工具；不是模型参数/上下限/默认值/生命周期。
   const defaultCapability = capabilities[0] ?? 'text.chat'
-  const entries = cloneCatalog(platform)
+  // 深拷贝，生成过程不改动平台包里的工具定义
+  const entries = structuredClone(platform.mcp.tools)
 
   const all: GeneratedTool[] = []
   for (const entry of entries) {
-    all.push(...buildTool(entry, platform, models, defaultCapability, nodeOnly))
+    all.push(...buildTool(entry, platform.primaryChannel, models, defaultCapability, nodeOnly))
   }
   for (const name of EXTRA_TOOL_NAMES) {
     all.push(buildExtraTool(name))
@@ -69,17 +68,17 @@ export function generateTools(
     routes.set(tool.name, tool.route)
     byName.set(tool.name, tool)
   }
-  return { platform, all, routes, byName }
+  return { platform: platform.key, all, routes, byName }
 }
 
 function buildTool(
-  entry: CatalogEntry,
-  platform: PlatformKey,
+  entry: ToolSpec,
+  channel: string,
   models: readonly ModelDeclaration[],
   defaultCapability: string,
   nodeOnly: Set<string>,
 ): GeneratedTool[] {
-  const meta = deriveMeta(platform, entry.name)
+  const meta = deriveMeta(entry.name)
   // 目录里写的能力优先；没写就用工具元数据映射的能力。
   const capability = entry.capability ?? meta.capability ?? defaultCapability
   const route = buildRoute(meta, capability)
@@ -87,7 +86,6 @@ function buildTool(
   // nodeOnly 是适配器声明的可选 node: 子路径能力，强制归入可选组。
   const group: ToolGroup = route.kind === 'native' && nodeOnly.has(route.op) ? 'node' : meta.group
 
-  const channel = PLATFORMS[platform].primaryChannel
   const nativeOp = route.kind === 'native' ? route.op : undefined
   const inputSchema = deriveInputSchema(entry, models, capability, channel, nativeOp)
   const annotations = deriveAnnotations(meta.nature)
@@ -108,7 +106,7 @@ function buildTool(
   }
 
   const result: GeneratedTool[] = [tool]
-  for (const alias of meta.aliases) {
+  for (const alias of entry.aliases ?? []) {
     result.push({
       ...structuredClone(tool),
       name: alias,

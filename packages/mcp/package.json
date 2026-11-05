@@ -15,14 +15,10 @@
     }
   },
   "bin": {
-    "modelbay-ark-mcp": "./dist/bin/ark-mcp.mjs",
-    "modelbay-minimax-mcp": "./dist/bin/minimax-mcp.mjs",
-    "modelbay-bailian-mcp": "./dist/bin/bailian-mcp.mjs",
-    "modelbay-doubao-speech-mcp": "./dist/bin/doubao-speech-mcp.mjs"
+    "modelbay-mcp": "./dist/bin/modelbay-mcp.mjs"
   },
   "scripts": {
     "typecheck": "tsc -p .",
-    "gen:catalog": "node scripts/gen-catalog.mjs",
     "build": "vp pack"
   },
   "peerDependencies": {
@@ -30,12 +26,13 @@
   },
   "dependencies": {
     "@modelbay/core": "workspace:*",
-    "@modelbay/ark": "workspace:*",
-    "@modelbay/bailian": "workspace:*",
-    "@modelbay/minimax": "workspace:*",
-    "@modelbay/doubao-speech": "workspace:*"
+    "modelbay": "workspace:*"
   },
   "devDependencies": {
+    "@modelbay/ark": "workspace:*",
+    "@modelbay/bailian": "workspace:*",
+    "@modelbay/doubao-speech": "workspace:*",
+    "@modelbay/minimax": "workspace:*",
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
     "zod": "catalog:"

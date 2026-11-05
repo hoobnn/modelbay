@@ -2,8 +2,22 @@
 import { readFileSync } from 'node:fs'
 import { createAdapterContext } from '@modelbay/core'
 import type { ModelDeclaration, PlatformAdapter, SubmitResult } from '@modelbay/core'
-import { PLATFORMS } from '../src/platform'
-import type { PlatformKey } from '../src/types'
+import type { PlatformDescriptor } from '@modelbay/core'
+import { resolvePlatform } from '../src/launch'
+
+/** 有 MCP 工具目录、并有 Python 版基线可对照的平台。 */
+export const MCP_KEYS = ['ark', 'minimax', 'bailian', 'doubao-speech'] as const
+export type McpKey = (typeof MCP_KEYS)[number]
+
+/** 按平台键取注册表里的描述对象。 */
+export function platformOf(key: string): PlatformDescriptor {
+  return resolvePlatform(key)
+}
+
+/** 平台的 MCP 工具定义。 */
+export function toolsOf(key: string) {
+  return platformOf(key).mcp?.tools ?? []
+}
 
 const source = { url: 'https://example.com/docs/model', checkedAt: '2026-11-04' }
 
@@ -91,9 +105,10 @@ export interface InventoryTool {
   annotations?: Record<string, boolean>
 }
 
-/** 直接读盘点基线（不是 catalog 生成物），逐个平台对照用。 */
-export function readInventory(platform: PlatformKey): InventoryTool[] {
-  const file = PLATFORMS[platform].inventoryFile
-  const url = new URL(`../../../docs/inventory/${file}`, import.meta.url)
+/**
+ * 读 Python 版 MCP 的工具快照（2026-11-04 冻结，见 docs/mcp.md），逐个平台对照「能力不缩水」。
+ */
+export function readInventory(platform: McpKey): InventoryTool[] {
+  const url = new URL(`./baselines/${platform}.json`, import.meta.url)
   return JSON.parse(readFileSync(url, 'utf8')) as InventoryTool[]
 }

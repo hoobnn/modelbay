@@ -16,6 +16,8 @@ import {
   ProviderError,
   adapterCapabilities,
   createAdapterContext,
+  missingSecrets,
+  readSecrets,
   runJob,
 } from '@modelbay/core'
 import type {
@@ -29,6 +31,7 @@ import type {
   ModelbayHooks,
   NormalizedCapability,
   PlatformAdapter,
+  PlatformDescriptor,
 } from '@modelbay/core'
 
 import * as ark from '@modelbay/ark'
@@ -36,79 +39,32 @@ import * as bailian from '@modelbay/bailian'
 import * as minimax from '@modelbay/minimax'
 import * as doubaoSpeech from '@modelbay/doubao-speech'
 import * as openai from '@modelbay/openai'
+import { PLATFORMS } from './platforms'
 
 // core 的公共 API 全部再导出：外部项目只装 modelbay 即可用到全部类型与校验函数
 export * from '@modelbay/core'
 
-// 五个平台包以命名空间再导出，消费方可访问各平台特有的导出（含适配器对象）
+// 平台包以命名空间再导出，消费方可访问各平台特有的导出
 export { ark, bailian, minimax, doubaoSpeech, openai }
+export { PLATFORMS, findPlatform } from './platforms'
 
-/** 各平台鉴权所用的规范环境变量名；doctor 只报告是否配置，绝不打印值。 */
-export const MODELBAY_SECRET_ENV_VARS: Readonly<Record<string, readonly string[]>> = {
-  ark: ['ARK_API_KEY'],
-  bailian: ['DASHSCOPE_API_KEY'],
-  minimax: ['MINIMAX_API_KEY'],
-  'doubao-speech': ['VOLC_SPEECH_APP_ID', 'VOLC_SPEECH_ACCESS_TOKEN'],
-  openai: ['OPENAI_API_KEY'],
-}
-
-// 适配器可能用到的其它官方 key 名，一并从环境读进 secrets，便于 ctx.secret() 命中
-const EXTRA_SECRET_ENV_VARS: readonly string[] = [
-  'VOLC_SPEECH_API_KEY',
-  'VOLC_ACCESS_KEY_ID',
-  'VOLC_SECRET_ACCESS_KEY',
-]
-
-const SECRET_ENV_VARS: readonly string[] = [
-  ...new Set([...Object.values(MODELBAY_SECRET_ENV_VARS).flat(), ...EXTRA_SECRET_ENV_VARS]),
-]
-
-function readEnvSecrets(): Record<string, string> {
-  const secrets: Record<string, string> = {}
-  if (typeof process === 'undefined') return secrets
-  for (const name of SECRET_ENV_VARS) {
-    const value = process.env[name]
-    if (value) secrets[name] = value
-  }
-  return secrets
-}
-
-/** 按结构识别适配器对象，不绑定平台包的具体导出名 */
-function isPlatformAdapter(value: unknown): value is PlatformAdapter {
-  if (typeof value !== 'object' || value === null) return false
-  const candidate = value as Partial<PlatformAdapter>
-  return (
-    typeof candidate.id === 'string' &&
-    Array.isArray(candidate.channels) &&
-    Array.isArray(candidate.models) &&
-    typeof candidate.submit === 'function'
+/** 从环境读取所有平台用得到的密钥（含别名与可选配置）。 */
+function readEnvSecrets(platforms: readonly PlatformDescriptor[]): Record<string, string> {
+  if (typeof process === 'undefined') return {}
+  return Object.assign(
+    {},
+    ...platforms.map((platform) => readSecrets(platform.secrets, process.env)),
   )
 }
 
-function pickAdapters(values: unknown[], packageName: string): PlatformAdapter[] {
-  const found = values.filter(isPlatformAdapter)
-  if (found.length === 0) {
-    throw new ProviderError(
-      'unavailable',
-      `@modelbay/${packageName} 未导出 PlatformAdapter，平台包尚未就绪`,
-    )
-  }
-  return found
-}
-
 /**
- * 默认注册的五个平台适配器；逐个按结构识别全部适配器，不绑定具体导出名。
- * 有的平台包会导出多个适配器（例如方舟按量 / 套餐、OpenAI 官方 / 兼容渠道），
- * 全部注册进来，渠道才不会漏。
+ * 默认注册的适配器：注册表里每个平台的全部适配器（运行时无关版本）。
+ * 需要 Node 专属能力时，用 `modelbay/node` 的 `nodeAdapters()`。
  */
-export function defaultAdapters(): PlatformAdapter[] {
-  return [
-    ...pickAdapters(Object.values(ark), 'ark'),
-    ...pickAdapters(Object.values(bailian), 'bailian'),
-    ...pickAdapters(Object.values(minimax), 'minimax'),
-    ...pickAdapters(Object.values(doubaoSpeech), 'doubao-speech'),
-    ...pickAdapters(Object.values(openai), 'openai'),
-  ]
+export function defaultAdapters(
+  platforms: readonly PlatformDescriptor[] = PLATFORMS,
+): PlatformAdapter[] {
+  return platforms.flatMap((platform) => platform.createAdapters())
 }
 
 /** key 由宿主传入，SDK 不存储；fetch 可注入（夹具测试不联网）。 */
@@ -141,8 +97,10 @@ export interface GenerateRequest<C extends Capability = Capability> {
 
 export interface DoctorEntry {
   platform: string
-  /** 该平台需要的密钥名；只给名字，不给值 */
+  /** 该平台的必填密钥名（任选一组配齐即可）；只给名字，不给值 */
   names: readonly string[]
+  /** 还缺的密钥名；已配置时为空 */
+  missing: readonly string[]
   configured: boolean
 }
 
@@ -180,7 +138,7 @@ export function createModelbay(options: ModelbayOptions = {}): Modelbay {
     for (const channel of adapter.channels) byChannel.set(channel, adapter)
   }
 
-  const secrets = options.secrets ?? readEnvSecrets()
+  const secrets = options.secrets ?? readEnvSecrets(PLATFORMS)
 
   function contextFor(signal?: AbortSignal): AdapterContext {
     return createAdapterContext({
@@ -264,13 +222,15 @@ export function createModelbay(options: ModelbayOptions = {}): Modelbay {
   }
 
   function doctor(): DoctorReport {
-    const entries: DoctorEntry[] = Object.entries(MODELBAY_SECRET_ENV_VARS).map(
-      ([platform, names]) => ({
-        platform,
-        names,
-        configured: names.every((name) => Boolean(secrets[name]?.trim())),
-      }),
-    )
+    const entries: DoctorEntry[] = PLATFORMS.map((platform) => {
+      const missing = missingSecrets(platform.secrets, (name) => Boolean(secrets[name]?.trim()))
+      return {
+        platform: platform.key,
+        names: platform.secrets.required.flat(),
+        missing,
+        configured: missing.length === 0,
+      }
+    })
     return { entries, ok: entries.some((entry) => entry.configured) }
   }
 

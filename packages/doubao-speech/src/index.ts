@@ -131,3 +131,4 @@ export type {
   RealtimeSocketFactory,
   RealtimeSessionHandle,
 } from './session'
+export { doubaoSpeechPlatform } from './platform'

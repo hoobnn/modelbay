@@ -46,7 +46,7 @@ import {
   withRetry,
   type Json,
 } from './http'
-import { liftMcpArguments, passthroughParameters } from './mcp-args'
+import { liftMcpArguments, passthroughParameters } from './mcp/arguments'
 import { optionsProblem, optionKeys } from './options'
 import type { ImageEditPreparer, ImageProcessPreparer } from './image-edit'
 import {

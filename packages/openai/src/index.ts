@@ -21,7 +21,7 @@ import {
   type PlatformAdapter,
   type SubmitResult,
 } from '@modelbay/core'
-import { allModels as all } from './declarations'
+import { all } from './models/index'
 import { classifyOpenAI, compatibleChat, responsesChat } from './chat'
 import { asJson, request, type Json, type TransportMessages } from './http'
 import { normalizedBase } from './config'
@@ -270,3 +270,4 @@ export function createOpenAICompatibleAdapter(
 export const openaiAdapter: PlatformAdapter = createOpenAIAdapter(models)
 /** OpenAI-compatible channel adapter (channel `openai-compatible`). */
 export const openaiCompatibleAdapter: PlatformAdapter = createOpenAICompatibleAdapter(models)
+export { openaiPlatform } from './platform'

@@ -2,16 +2,16 @@
  * Node 子路径的 native 实现注入。
  *
  * 有些 native 操作（豆包语音的同传）要连 WebSocket、用 Node 专属依赖，
- * 实现放在 Node 子路径里，由 launch.ts 加载后注入适配器。
+ * 实现放在 `@modelbay/<平台>/node` 的 `nodeOptions` 里，由 `modelbay/node` 加载后注入适配器。
  */
 import { describe, expect, it } from 'vite-plus/test'
 import type { AdapterContext } from '@modelbay/core'
 import { loadAdapter } from '../src/launch'
-import { PLATFORMS } from '../src/platform'
+import { platformOf } from './fixtures'
 
 describe('Node 子路径的 native 实现注入', () => {
   it('豆包语音的适配器能加载，同传实现从 Node 子路径注入', async () => {
-    const adapter = await loadAdapter('doubao-speech')
+    const adapter = await loadAdapter(platformOf('doubao-speech'))
     expect(adapter).toBeDefined()
     expect(adapter?.nativeOperations).toContain('simultaneous-interpretation')
     // 注入了真实实现：缺凭证时按真实实现报错，而不是返回「请求计划」
@@ -28,23 +28,8 @@ describe('Node 子路径的 native 实现注入', () => {
     ).rejects.toMatchObject({ code: 'auth' })
   })
 
-  it('平台元数据声明了 Node 子路径', () => {
-    expect(PLATFORMS['doubao-speech'].nodeNatives).toMatchObject([
-      {
-        subpath: 'interpretation',
-        export: 'interpretAudio',
-        option: 'interpretation',
-      },
-      {
-        subpath: 'asr',
-        export: 'runAsrStream',
-        option: 'asr',
-      },
-    ])
-  })
-
   it('流式识别实现也从 Node 子路径注入', async () => {
-    const adapter = await loadAdapter('doubao-speech')
+    const adapter = await loadAdapter(platformOf('doubao-speech'))
     // 注入了真实实现：缺凭证时按真实实现报错，而不是返回「请求计划」
     const ctx = {
       secret: () => undefined,
@@ -56,7 +41,7 @@ describe('Node 子路径的 native 实现注入', () => {
   })
 
   it('asr_websocket 走同一份流式识别实现', async () => {
-    const adapter = await loadAdapter('doubao-speech')
+    const adapter = await loadAdapter(platformOf('doubao-speech'))
     const ctx = {
       secret: () => undefined,
       log: () => undefined,
@@ -69,7 +54,7 @@ describe('Node 子路径的 native 实现注入', () => {
 
 describe('Node 子路径的适配器注入点', () => {
   it('方舟的参考视频上传实现被注入', async () => {
-    const adapter = await loadAdapter('ark')
+    const adapter = await loadAdapter(platformOf('ark'))
     expect(adapter?.id).toBe('volc/ark')
     // 注入了真实上传实现：缺存储配置时按真实实现报错，而不是「没有注入」
     const ctx = {
@@ -97,7 +82,7 @@ describe('Node 子路径的适配器注入点', () => {
   })
 
   it('百炼的局部重绘与精修实现被注入', async () => {
-    const adapter = await loadAdapter('bailian')
+    const adapter = await loadAdapter(platformOf('bailian'))
     expect(adapter?.id).toBe('aliyun/bailian')
     const ctx = {
       secret: () => undefined,
@@ -133,15 +118,5 @@ describe('Node 子路径的适配器注入点', () => {
       .catch((cause: unknown) => cause)
     expect(process).toMatchObject({ code: 'invalid_input' })
     expect((process as Error).message).not.toContain('@modelbay/bailian/node')
-  })
-
-  it('平台元数据声明了各家 Node 子路径', () => {
-    expect(PLATFORMS.ark.nodeNatives).toMatchObject([
-      { subpath: 'tos', export: 'uploadReferenceVideo', option: 'uploadVideo' },
-    ])
-    expect(PLATFORMS.bailian.nodeNatives).toMatchObject([
-      { subpath: 'image-edit', export: 'prepareImageEditRequest', option: 'edit' },
-      { subpath: 'image-edit', export: 'prepareImageProcessRequest', option: 'process' },
-    ])
   })
 })

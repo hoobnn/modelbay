@@ -12,21 +12,19 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vite-plus/test'
 import { generateTools, listTools } from '../src/generate'
 import { FramedReader, encodeMessage, type Framing } from '../src/framing'
-import { PLATFORMS } from '../src/platform'
 import {
   MCP_TOOL_GROUPS,
   type JsonRpcRequest,
   type JsonRpcResponse,
   type MCPTool,
-  type PlatformKey,
 } from '../src/types'
-import { fakeAdapter } from './fixtures'
+import { fakeAdapter, type McpKey } from './fixtures'
 
 const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const CHILD = fileURLToPath(new URL('../scripts/stdio-smoke-child.ts', import.meta.url))
 const VPX = fileURLToPath(new URL('../../../node_modules/.bin/vpx', import.meta.url))
 
-function toolsFor(platform: PlatformKey): MCPTool[] {
+function toolsFor(platform: McpKey): MCPTool[] {
   const { adapter } = fakeAdapter()
   return listTools(generateTools(platform, { adapter }), MCP_TOOL_GROUPS.all)
 }
@@ -50,7 +48,7 @@ async function runSmoke(framing: Framing, requests: JsonRpcRequest[]): Promise<S
   writeFileSync(
     payloadFile,
     JSON.stringify({
-      serverInfo: { name: PLATFORMS.ark.command, version: '0.1.0' },
+      serverInfo: { name: 'modelbay-mcp-ark', version: '0.1.0' },
       tools: toolsFor('ark'),
     }),
   )
@@ -103,7 +101,7 @@ function assertValid(smoke: SmokeResult): void {
   const init = smoke.responses.get(1)
   expect(init?.result).toMatchObject({
     protocolVersion: '2024-11-05',
-    serverInfo: { name: 'modelbay-ark-mcp' },
+    serverInfo: { name: 'modelbay-mcp-ark' },
   })
   const list = smoke.responses.get(2)
   const tools = (list?.result as { tools?: MCPTool[] })?.tools ?? []

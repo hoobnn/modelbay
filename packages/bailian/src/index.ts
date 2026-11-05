@@ -107,3 +107,4 @@ export {
   digitalHumanLipsync,
   runBailianNative,
 } from './native'
+export { bailianPlatform } from './platform'

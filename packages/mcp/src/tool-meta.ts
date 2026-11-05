@@ -3,10 +3,10 @@
  * 这里只放「结构性」映射，不含任何模型 ID、上下限、默认值或生命周期字符串：
  * 那部分一律由 src/derive.ts 从 ModelDeclaration + core schema 函数派生。
  *
- * 工具名跨平台统一；MiniMax 的历史别名通过 ALIASES 额外注册一个统一命名的工具，
- * 既满足「同名统一」又保留兼容（见 docs/mcp-tool-diff.md）。
+ * 这些是按工具名的跨平台通用约定；同名工具在各平台语义一致。
+ * 平台独有的同义名（如 MiniMax 的历史工具名）写在工具定义的 `aliases` 上，见 docs/mcp.md。
  */
-import type { LocalHandler, PlatformKey, ToolGroup, ToolNature } from './types'
+import type { LocalHandler, ToolGroup, ToolNature } from './types'
 
 /** 归一化能力（0003），用于模型参数派生与 submit 路由。 */
 const TOOL_CAPABILITY: Record<string, string> = {
@@ -114,17 +114,6 @@ const GROUP_OVERRIDES: Record<string, ToolGroup> = {
   upload_file: 'node',
 }
 
-/** 平台特有的组覆盖（同名工具在不同平台可归不同组）。 */
-const PLATFORM_GROUP_OVERRIDES: Partial<Record<PlatformKey, Record<string, ToolGroup>>> = {}
-
-/** MiniMax 历史别名：保留兼容，并补足一份跨平台统一命名的工具。 */
-export const ALIASES: Record<string, string[]> = {
-  text_to_audio: ['text_to_speech'],
-  text_to_image: ['generate_image'],
-  voice_clone: ['clone_voice'],
-  voice_design: ['design_voice'],
-}
-
 /**
  * 超出基线的新工具：从声明派生可用模型与生命周期，避免客户端硬编码模型清单。
  * 名字要符合 MCP 客户端的工具名约束 `^[a-zA-Z0-9_-]{1,64}$`（Claude 会拒绝带冒号的名字），
@@ -138,18 +127,15 @@ export interface ToolMeta {
   localHandler?: LocalHandler
   nature: ToolNature
   group: ToolGroup
-  aliases: string[]
 }
 
-export function deriveMeta(platform: PlatformKey, name: string): ToolMeta {
-  const platformGroup = PLATFORM_GROUP_OVERRIDES[platform]?.[name]
+export function deriveMeta(name: string): ToolMeta {
   return {
     ...(TOOL_CAPABILITY[name] ? { capability: TOOL_CAPABILITY[name] } : {}),
     ...(TOOL_NATIVE[name] ? { nativeOp: TOOL_NATIVE[name] } : {}),
     ...(TOOL_LOCAL[name] ? { localHandler: TOOL_LOCAL[name] } : {}),
     nature: NATURE_OVERRIDES[name] ?? 'generate',
-    group: platformGroup ?? GROUP_OVERRIDES[name] ?? 'core',
-    aliases: ALIASES[name] ?? [],
+    group: GROUP_OVERRIDES[name] ?? 'core',
   }
 }
 

@@ -11,7 +11,7 @@
  *
  * Those Node pieces are injection points: `createArkAdapter(models, { uploadVideo })`
  * and `createArkPlanAdapter(models, { uploadVideo, transcribePlan, listPlanModels })`
- * take them from the `@modelbay/ark/node` subpath (`nodeArkOptions` bundles all three),
+ * take them from the `@modelbay/ark/node` subpath (`nodeOptions` bundles all three),
  * so the root entry never pulls in the object-storage SDK, `ws` or `node:crypto`.
  */
 import {
@@ -28,7 +28,7 @@ import {
   type RemoteModel,
   type SubmitResult,
 } from '@modelbay/core'
-import { allModels as all } from './declarations'
+import { all } from './models/index'
 import { chatCompletion } from './chat'
 import {
   cancelVideo,
@@ -271,7 +271,7 @@ async function submit(
     if (!options.transcribePlan)
       throw new ProviderError(
         'unavailable',
-        'Agent Plan 流式语音识别需要 Node 子路径：用 createArkPlanAdapter(models, nodeArkOptions) 注入（@modelbay/ark/node，需要 ws）',
+        'Agent Plan 流式语音识别需要 Node 子路径：用 createArkPlanAdapter(models, nodeOptions) 注入（@modelbay/ark/node，需要 ws）',
       )
     return options.transcribePlan(req.input as CapabilityInput<'audio.transcribe'>, ctx)
   }
@@ -398,3 +398,4 @@ export function createArkPlanAdapter(
 export const arkAdapter: PlatformAdapter = createArkAdapter(models)
 /** Agent Plan Ark adapter (channel `ark-plan`). */
 export const arkPlanAdapter: PlatformAdapter = createArkPlanAdapter(models)
+export { arkPlatform } from './platform'

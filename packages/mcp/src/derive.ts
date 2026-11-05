@@ -7,7 +7,7 @@
  *     ← ModelDeclaration.limits（ModelLimits / MediaRequirements）
  *   - 工具说明里的模型清单与各模型的上限
  *
- * 平台特有字段（web_search、out_dir、previous_response_id 等）来自 `src/catalog/*.ts`，
+ * 平台特有字段（web_search、out_dir、previous_response_id 等）来自各平台包的 `src/mcp/tools.ts`，
  * 那里是手写的源码，不含任何模型 ID、上下限数值或生命周期字符串。
  * 本文件也不出现这些字面量（AGENTS.md 硬规则）。
  */
@@ -22,7 +22,7 @@ import {
   type ModelDeclaration,
   type ModelParamKind,
 } from '@modelbay/core'
-import type { CatalogEntry } from './catalog/types'
+import type { ToolSpec } from '@modelbay/core'
 import type { JsonSchema, ToolAnnotations, ToolNature } from './types'
 
 type Capability = Parameters<typeof capabilityInputSchema>[0]
@@ -222,7 +222,7 @@ export function deriveModelDetails(
  * 目录显式写 `default: null` 的工具（如百炼 TTS 按音色反推模型）不需要提示。
  */
 export function deriveDefaultNote(
-  entry: CatalogEntry,
+  entry: ToolSpec,
   models: readonly ModelDeclaration[],
   capability: string,
   channel?: string,
@@ -254,7 +254,7 @@ export function deriveToolDescription(
 
 /** 合并 catalog 的平台特有字段 + 派生的模型参数部分，生成最终 inputSchema。 */
 export function deriveInputSchema(
-  entry: CatalogEntry,
+  entry: ToolSpec,
   models: readonly ModelDeclaration[],
   capability: string,
   channel?: string,

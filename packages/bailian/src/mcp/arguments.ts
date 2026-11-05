@@ -6,7 +6,7 @@
  * 之后走与宿主相同的校验与白名单过滤。`extra` 里已有的同名键优先；
  * 白名单之外的平铺字段不处理（与宿主行为一致）。
  */
-import type { Json } from './http'
+import type { Json } from '../http'
 
 const isObject = (value: unknown): value is Json =>
   value !== null && typeof value === 'object' && !Array.isArray(value)

@@ -6,14 +6,13 @@ import { attachStdioTransport } from '../src/stdio-transport'
 import { createHandlers } from '../src/routing'
 import { generateTools } from '../src/generate'
 import { loadAdapter, resolveGroups, startServer } from '../src/launch'
-import { PLATFORMS } from '../src/platform'
 import {
   MCP_TOOL_GROUPS,
   type CallToolResult,
   type MCPTool,
   type ServerHandlers,
 } from '../src/types'
-import { fakeAdapter, fakeContext } from './fixtures'
+import { fakeAdapter, fakeContext, platformOf } from './fixtures'
 
 const sampleTool: MCPTool = {
   name: 'chat',
@@ -271,15 +270,15 @@ describe('createHandlers tools/call 路由', () => {
     adapter = fakeAdapter().adapter,
     secrets?: Record<string, string>,
   ) {
-    const keyEnvVars = PLATFORMS[platform].keyEnvVars
-    const defaultSecrets = Object.fromEntries(keyEnvVars.map((key) => [key, 'k']))
+    const spec = platformOf(platform).secrets
+    const defaultSecrets = Object.fromEntries((spec.required[0] ?? []).map((key) => [key, 'k']))
     const set = generateTools(platform, { adapter })
     return createHandlers({
       set,
       adapter,
       context: fakeContext(secrets ?? defaultSecrets),
       groups: MCP_TOOL_GROUPS.all,
-      keyEnvVars,
+      secrets: spec,
       serverInfo: { name: 'test', version: '1.0.0' },
     })
   }
@@ -339,7 +338,7 @@ describe('createHandlers tools/call 路由', () => {
       adapter,
       context: fakeContext({}),
       groups: MCP_TOOL_GROUPS.all,
-      keyEnvVars: PLATFORMS['doubao-speech'].keyEnvVars,
+      secrets: platformOf('doubao-speech').secrets,
       serverInfo: { name: 'test', version: '1.0.0' },
     })
     const examples = (await handlers.callTool('get_speech_usage_examples', {})) as CallToolResult
@@ -363,7 +362,7 @@ describe('createHandlers tools/call 路由', () => {
       set,
       context: fakeContext({ ARK_API_KEY: 'k' }),
       groups: MCP_TOOL_GROUPS.all,
-      keyEnvVars: PLATFORMS.ark.keyEnvVars,
+      secrets: platformOf('ark').secrets,
       serverInfo: { name: 'test', version: '1.0.0' },
     })
     expect(((await noAdapter.callTool('chat', {})) as CallToolResult).content[0]?.text).toContain(
@@ -393,7 +392,7 @@ describe('launch', () => {
   })
 
   it('loadAdapter 在平台包未就绪时安全回退（不抛）', async () => {
-    const result = await loadAdapter('ark')
+    const result = await loadAdapter(platformOf('ark'))
     expect(result === undefined || typeof result === 'object').toBe(true)
   })
 

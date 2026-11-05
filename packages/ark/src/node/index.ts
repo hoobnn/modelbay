@@ -13,10 +13,10 @@ export * from './plan-directory'
 export * from './asr'
 
 /**
- * 一次注入全部 Node 专属能力：`createArkPlanAdapter(models, nodeArkOptions)`
- * （按量渠道用 `createArkAdapter(models, nodeArkOptions)` 也行，多出的项会被忽略）。
+ * 一次注入全部 Node 专属能力：`createArkPlanAdapter(models, nodeOptions)`
+ * （按量渠道用 `createArkAdapter(models, nodeOptions)` 也行，多出的项会被忽略）。
  */
-export const nodeArkOptions: ArkAdapterOptions = {
+export const nodeOptions: ArkAdapterOptions = {
   uploadVideo: uploadReferenceVideo,
   transcribePlan: transcribePlanAudio,
   listPlanModels,

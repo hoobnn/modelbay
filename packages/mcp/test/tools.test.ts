@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { MCP_TOOL_GROUPS, PLATFORM_KEYS, type MCPTool, type PlatformKey } from '../src/types'
+import { MCP_TOOL_GROUPS, type MCPTool } from '../src/types'
 import { generateTools, listTools, toolNames } from '../src/generate'
-import { fakeAdapter, readInventory } from './fixtures'
+import { fakeAdapter, readInventory, MCP_KEYS, type McpKey } from './fixtures'
 
-const EXPECTED_COUNTS: Record<PlatformKey, number> = {
+const EXPECTED_COUNTS: Record<McpKey, number> = {
   ark: 9,
   minimax: 18,
   bailian: 19,
@@ -16,7 +16,7 @@ function propertyType(prop: Record<string, unknown>): string {
   return 'unknown'
 }
 
-describe.each(PLATFORM_KEYS)('M4 基线对照：%s', (platform) => {
+describe.each(MCP_KEYS)('M4 基线对照：%s', (platform) => {
   const baseline = readInventory(platform)
   const { adapter } = fakeAdapter()
   const set = generateTools(platform, { adapter })
@@ -134,7 +134,7 @@ describe('annotations 修正与跨平台统一', () => {
     const { adapter } = fakeAdapter()
     const names = ['chat', 'generate_image', 'generate_video', 'get_job']
     const snapshots: Record<string, string> = {}
-    for (const platform of PLATFORM_KEYS) {
+    for (const platform of MCP_KEYS) {
       const byName = new Map(
         listTools(generateTools(platform, { adapter }), MCP_TOOL_GROUPS.all).map((tool) => [
           tool.name,
@@ -158,7 +158,7 @@ describe('工具组开关 MCP_TOOL_GROUPS', () => {
     expect(MCP_TOOL_GROUPS.default).toEqual(['core'])
     expect(MCP_TOOL_GROUPS.optional).toEqual(['realtime', 'management', 'node'])
     const { adapter } = fakeAdapter()
-    for (const platform of PLATFORM_KEYS) {
+    for (const platform of MCP_KEYS) {
       const set = generateTools(platform, { adapter })
       const optional = set.all.filter((tool) => tool.group !== 'core').map((tool) => tool.name)
       const defaultNames = new Set(toolNames(set, MCP_TOOL_GROUPS.default))
@@ -168,7 +168,7 @@ describe('工具组开关 MCP_TOOL_GROUPS', () => {
 
   it('启用全部组后基线工具一个不少', () => {
     const { adapter } = fakeAdapter()
-    for (const platform of PLATFORM_KEYS) {
+    for (const platform of MCP_KEYS) {
       const baseline = readInventory(platform)
       const names = new Set(toolNames(generateTools(platform, { adapter }), MCP_TOOL_GROUPS.all))
       for (const tool of baseline) expect(names.has(tool.name)).toBe(true)

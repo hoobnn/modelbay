@@ -1,7 +1,7 @@
 /**
  * 基线覆盖测试：盘点基线里出现的模型 ID 必须都有声明。
  *
- * `docs/inventory/mcp-*.json` 是 Python 版 MCP 的工具快照。每个带 `model` 字段的工具，
+ * `test/baselines/*.json` 是 Python 版 MCP 的工具快照。每个带 `model` 字段的工具，
  * 它的 `default` 与 `enum` 里出现的模型 ID（简称按别名解析）都必须在声明里找得到——
  * 否则要么是漏声明，要么是代码里硬编码了一个没有声明的型号。
  */
@@ -11,11 +11,9 @@ import { bailianAdapter } from '@modelbay/bailian'
 import { doubaoAdapter } from '@modelbay/doubao-speech'
 import { minimaxAdapter } from '@modelbay/minimax'
 import type { ModelDeclaration, PlatformAdapter } from '@modelbay/core'
-import { PLATFORMS } from '../src/platform'
-import type { PlatformKey } from '../src/types'
-import { readInventory } from './fixtures'
+import { readInventory, MCP_KEYS, type McpKey } from './fixtures'
 
-const ADAPTERS: Record<PlatformKey, PlatformAdapter> = {
+const ADAPTERS: Record<McpKey, PlatformAdapter> = {
   ark: arkAdapter,
   minimax: minimaxAdapter,
   bailian: bailianAdapter,
@@ -35,7 +33,7 @@ function resolves(declarations: readonly ModelDeclaration[], id: string): boolea
 }
 
 describe('基线里的模型 ID 都有声明', () => {
-  for (const platform of Object.keys(PLATFORMS) as PlatformKey[]) {
+  for (const platform of MCP_KEYS) {
     it(`${platform}：每个工具 model 字段的 default / enum 都能在声明里找到`, () => {
       const declarations = ADAPTERS[platform].models ?? []
       const missing: string[] = []

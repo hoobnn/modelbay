@@ -3,9 +3,9 @@
  *
  * 这里只写与模型无关的平台特有部分：字段形状、平台开关、参数含义。
  * 与模型有关的部分（可选模型 ID、默认值、时长 / 分辨率 / 画幅等上下限、生命周期提示）
- * 由 `src/derive.ts` 在运行时从 `ModelDeclaration` 派生，改声明就跟着变。
+ * 由 `@modelbay/mcp` 在运行时从 `ModelDeclaration` 派生，改声明就跟着变。
  */
-import type { CatalogEntry } from './types'
+import type { ToolSpec } from '@modelbay/core'
 
 const okOutput = {
   type: 'object',
@@ -14,7 +14,7 @@ const okOutput = {
   additionalProperties: true,
 }
 
-export default [
+export const minimaxTools: ToolSpec[] = [
   {
     name: 'create_h3_context_ir_task',
     description:
@@ -299,6 +299,8 @@ export default [
   },
   {
     name: 'text_to_audio',
+    // 历史工具名保留兼容，同时注册跨平台统一命名
+    aliases: ['text_to_speech'],
     description:
       '同步语音合成，按字符计费。voice_id用list_voices获取；speed=0.5–2，vol=(0,10]，pitch=-12–12，format=mp3/wav/flac/pcm。\n' +
       'parameters深度合并voice_setting/audio_setting等官方选项，不支持stream；结果持久保存，可recover_job补下载。\n',
@@ -332,6 +334,8 @@ export default [
   },
   {
     name: 'text_to_image',
+    // 历史工具名保留兼容，同时注册跨平台统一命名
+    aliases: ['generate_image'],
     description:
       'MiniMax文生图/人物参考图生图，按张计费。subject_reference为单人人像公网URL/data URI或本地JPG/PNG(<10MB)。\n' +
       'parameters支持官方高级字段（如style、seed、aigc_watermark），不能覆盖model/response_format/subject_reference。\n' +
@@ -377,6 +381,8 @@ export default [
   },
   {
     name: 'voice_clone',
+    // 历史工具名保留兼容，同时注册跨平台统一命名
+    aliases: ['clone_voice'],
     description:
       '音色快速复刻，file（本地绝对路径）或已上传file_id二选一；mp3/m4a/wav，10秒–5分钟，<=20MB。\n' +
       'voice_id须8–256字符且字母开头，仅字母数字-_且不能以-_结尾。可选试听text<=1000字符，试听按合成计费。\n',
@@ -403,6 +409,8 @@ export default [
   },
   {
     name: 'voice_design',
+    // 历史工具名保留兼容，同时注册跨平台统一命名
+    aliases: ['design_voice'],
     description: '按文字描述设计音色，preview_text为试听文本。生成的音色用于text_to_audio。',
     capability: 'voice.design',
     inputSchema: {
@@ -422,4 +430,4 @@ export default [
     },
     outputSchema: okOutput,
   },
-] satisfies CatalogEntry[]
+]

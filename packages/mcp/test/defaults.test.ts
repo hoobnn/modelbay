@@ -1,7 +1,7 @@
 /**
  * 默认模型的回归测试：四个 MCP 里每个带 `model` 字段的工具，默认值必须等于预期表。
  *
- * 预期表对齐 Python 版 MCP 的默认值（`docs/inventory/mcp-*.json` 里各工具 `model`
+ * 预期表对齐 Python 版 MCP 的默认值（`test/baselines/*.json` 里各工具 `model`
  * 字段的 `default` 与 `hoobnn-mcps/servers/*` 的别名表）：
  * - 方舟 chat 的 `pro` → `doubao-seed-2-1-pro-260915`（按量渠道，不是套餐渠道）；
  * - 百炼 chat 的 `max` → `qwen3.8-max`，生图的 `qwen` → `qwen-image-3.0-pro`，
@@ -12,15 +12,14 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { canBeDefault, type ModelDeclaration } from '@modelbay/core'
 import { generateTools } from '../src/generate'
-import { PLATFORMS } from '../src/platform'
-import type { PlatformKey } from '../src/types'
 import type { PlatformAdapter } from '@modelbay/core'
 import { arkAdapter } from '@modelbay/ark'
 import { bailianAdapter } from '@modelbay/bailian'
 import { doubaoAdapter } from '@modelbay/doubao-speech'
 import { minimaxAdapter } from '@modelbay/minimax'
+import { type McpKey, platformOf } from './fixtures'
 
-const ADAPTERS: Record<PlatformKey, PlatformAdapter> = {
+const ADAPTERS: Record<McpKey, PlatformAdapter> = {
   ark: arkAdapter,
   minimax: minimaxAdapter,
   bailian: bailianAdapter,
@@ -28,7 +27,7 @@ const ADAPTERS: Record<PlatformKey, PlatformAdapter> = {
 }
 
 /** 每个平台每个带 model 字段的工具的预期默认值；undefined = 不给默认值。 */
-const EXPECTED: Record<PlatformKey, Record<string, string | null | undefined>> = {
+const EXPECTED: Record<McpKey, Record<string, string | null | undefined>> = {
   ark: {
     chat: 'ark:doubao-seed-2-1-pro-260915',
     embed: undefined,
@@ -61,7 +60,7 @@ const EXPECTED: Record<PlatformKey, Record<string, string | null | undefined>> =
   },
 }
 
-function toolDefaults(platform: PlatformKey): Record<string, unknown> {
+function toolDefaults(platform: McpKey): Record<string, unknown> {
   const set = generateTools(platform, { adapter: ADAPTERS[platform] })
   const out: Record<string, unknown> = {}
   for (const tool of set.all) {
@@ -73,15 +72,15 @@ function toolDefaults(platform: PlatformKey): Record<string, unknown> {
 }
 
 describe('MCP 工具的 model 默认值', () => {
-  for (const platform of Object.keys(EXPECTED) as PlatformKey[]) {
+  for (const platform of Object.keys(EXPECTED) as McpKey[]) {
     it(`${platform} 的默认值等于预期表`, () => {
       expect(toolDefaults(platform)).toEqual(EXPECTED[platform])
     })
   }
 
   it('默认值只能落在平台的主渠道里', () => {
-    for (const platform of Object.keys(EXPECTED) as PlatformKey[]) {
-      const primary = PLATFORMS[platform].primaryChannel
+    for (const platform of Object.keys(EXPECTED) as McpKey[]) {
+      const primary = platformOf(platform).primaryChannel
       for (const [name, value] of Object.entries(toolDefaults(platform))) {
         if (typeof value !== 'string') continue
         expect(`${name}: ${value.split(':')[0]}`).toBe(`${name}: ${primary}`)
@@ -90,7 +89,7 @@ describe('MCP 工具的 model 默认值', () => {
   })
 
   it('默认值不会是非 active 的模型', () => {
-    for (const platform of Object.keys(EXPECTED) as PlatformKey[]) {
+    for (const platform of Object.keys(EXPECTED) as McpKey[]) {
       const models = ADAPTERS[platform].models ?? []
       for (const [name, value] of Object.entries(toolDefaults(platform))) {
         if (typeof value !== 'string') continue

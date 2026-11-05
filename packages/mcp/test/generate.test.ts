@@ -1,51 +1,50 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { loadCatalog, cloneCatalog, isCatalogEntry } from '../src/catalog/index'
 import { deriveAnnotations, deriveInputSchema, deriveModelParameterPart } from '../src/derive'
 import { generateTools, listTools, toMCPTool, toolNames } from '../src/generate'
-import { ALIASES, EXTRA_TOOL_NAMES, deriveMeta, isOptionalGroup } from '../src/tool-meta'
-import { MCP_TOOL_GROUPS, TOOL_GROUPS, TOOL_NATURES, PLATFORM_KEYS } from '../src/types'
-import { fakeAdapter, fakeModels } from './fixtures'
+import { EXTRA_TOOL_NAMES, deriveMeta, isOptionalGroup } from '../src/tool-meta'
+import { MCP_TOOL_GROUPS, TOOL_GROUPS, TOOL_NATURES } from '../src/types'
+import { fakeAdapter, fakeModels, MCP_KEYS, toolsOf } from './fixtures'
 
 describe('工具目录解析', () => {
   it('四个平台目录数量与盘点一致（共 70）', () => {
-    const counts = PLATFORM_KEYS.map((platform) => loadCatalog(platform).length)
+    const counts = MCP_KEYS.map((platform) => toolsOf(platform).length)
     expect(counts).toEqual([9, 18, 19, 24])
     expect(counts.reduce((a, b) => a + b, 0)).toBe(70)
   })
 
   it('目录条目只含 name/description/inputSchema/outputSchema（无 annotations）', () => {
-    for (const entry of loadCatalog('ark')) {
+    for (const entry of toolsOf('ark')) {
       expect(entry.name).toBeTruthy()
       expect(entry.inputSchema.type).toBe('object')
       expect('annotations' in entry).toBe(false)
     }
   })
 
-  it('cloneCatalog 深拷贝，改副本不影响原目录', () => {
-    const clone = cloneCatalog('ark')
-    const original = loadCatalog('ark')
-    const before = JSON.stringify(original[0]?.inputSchema)
-    clone[0]!.inputSchema.title = 'MUTATED'
-    clone[0]!.inputSchema.properties = {}
-    expect(JSON.stringify(loadCatalog('ark')[0]?.inputSchema)).toBe(before)
+  it('生成工具时深拷贝，改生成结果不影响平台包里的工具定义', () => {
+    const before = JSON.stringify(toolsOf('ark')[0]?.inputSchema)
+    const set = generateTools('ark', { models: fakeModels })
+    set.all[0]!.inputSchema.title = 'MUTATED'
+    set.all[0]!.inputSchema.properties = {}
+    expect(JSON.stringify(toolsOf('ark')[0]?.inputSchema)).toBe(before)
   })
 })
 
 describe('工具元数据', () => {
   it('归一化能力 / 本地处理器 / 可选组派生正确', () => {
-    expect(deriveMeta('ark', 'chat').capability).toBe('text.chat')
-    expect(deriveMeta('ark', 'chat').nature).toBe('generate')
-    expect(deriveMeta('ark', 'chat').group).toBe('core')
-    expect(deriveMeta('ark', 'get_tool_help').localHandler).toBe('tool-help')
-    expect(deriveMeta('doubao-speech', 'open_realtime_session').group).toBe('realtime')
-    expect(deriveMeta('doubao-speech', 'open_realtime_session').nature).toBe('realtime')
-    expect(deriveMeta('doubao-speech', 'open_realtime_session').nativeOp).toBe('realtime-open')
-    expect(deriveMeta('minimax', 'upload_file').group).toBe('node')
+    expect(deriveMeta('chat').capability).toBe('text.chat')
+    expect(deriveMeta('chat').nature).toBe('generate')
+    expect(deriveMeta('chat').group).toBe('core')
+    expect(deriveMeta('get_tool_help').localHandler).toBe('tool-help')
+    expect(deriveMeta('open_realtime_session').group).toBe('realtime')
+    expect(deriveMeta('open_realtime_session').nature).toBe('realtime')
+    expect(deriveMeta('open_realtime_session').nativeOp).toBe('realtime-open')
+    expect(deriveMeta('upload_file').group).toBe('node')
   })
 
   it('MiniMax 别名表与超出基线工具表', () => {
-    expect(ALIASES.text_to_audio).toContain('text_to_speech')
-    expect(ALIASES.voice_clone).toContain('clone_voice')
+    const aliases = Object.fromEntries(toolsOf('minimax').map((tool) => [tool.name, tool.aliases]))
+    expect(aliases.text_to_audio).toContain('text_to_speech')
+    expect(aliases.voice_clone).toContain('clone_voice')
     expect(EXTRA_TOOL_NAMES).toContain('list_declared_models')
   })
 
@@ -110,7 +109,7 @@ describe('模型参数部分从声明 + core schema 派生', () => {
 })
 
 describe('deriveInputSchema 合并', () => {
-  const entry = loadCatalog('ark').find((item) => item.name === 'chat')!
+  const entry = toolsOf('ark').find((item) => item.name === 'chat')!
   const schema = deriveInputSchema(entry, fakeModels, 'text.chat')
 
   it('目录里不写死模型默认值，改用声明派生', () => {
@@ -173,43 +172,5 @@ describe('generateTools / listTools / toMCPTool', () => {
     expect(set.routes.size).toBe(set.all.length)
     expect(set.byName.size).toBe(set.all.length)
     expect(set.routes.get('text_to_speech')).toEqual(set.routes.get('text_to_audio'))
-  })
-})
-
-describe('isCatalogEntry 运行时校验', () => {
-  it('目录里的全部条目都通过校验', () => {
-    for (const platform of PLATFORM_KEYS) {
-      for (const entry of loadCatalog(platform)) expect(isCatalogEntry(entry)).toBe(true)
-    }
-  })
-
-  it('非法条目被拒绝（无 name / 无 inputSchema / 非对象 / 数组）', () => {
-    expect(isCatalogEntry(null)).toBe(false)
-    expect(isCatalogEntry(undefined)).toBe(false)
-    expect(isCatalogEntry('x')).toBe(false)
-    expect(isCatalogEntry([])).toBe(false)
-    expect(isCatalogEntry({ description: 'd', inputSchema: { type: 'object' } })).toBe(false)
-    expect(isCatalogEntry({ name: 'n', inputSchema: { type: 'object' } })).toBe(false)
-    expect(isCatalogEntry({ name: 'n', description: 'd' })).toBe(false)
-    expect(isCatalogEntry({ name: 'n', description: 'd', inputSchema: [] })).toBe(false)
-    expect(
-      isCatalogEntry({
-        name: 'n',
-        description: 'd',
-        inputSchema: { type: 'object' },
-        outputSchema: 'bad',
-      }),
-    ).toBe(false)
-  })
-
-  it('合法条目（含可选 outputSchema）通过', () => {
-    expect(
-      isCatalogEntry({
-        name: 'n',
-        description: 'd',
-        inputSchema: { type: 'object', properties: {} },
-        outputSchema: { type: 'object' },
-      }),
-    ).toBe(true)
   })
 })

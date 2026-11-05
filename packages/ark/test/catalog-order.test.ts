@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { selectDefaultModel, toModelInfo } from '@modelbay/core'
-import { allModels } from '../src/declarations'
+import { all as allModels } from '../src/models/index'
 
 const idsIn = (channel: string, capability: string) =>
   allModels

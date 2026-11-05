@@ -270,7 +270,7 @@ const PLAN_AUDIO_CHUNK = 32000
  * （末片序号为负），收到终包后把分句毫秒转成秒。
  *
  * 断流、错误帧、不完整终包都不会当作成功；POST 语义下结果标 `outcome: 'unknown'`，不自动重试。
- * 作为 `createArkPlanAdapter` 的 `transcribePlan` 选项注入（`nodeArkOptions` 已包含）。
+ * 作为 `createArkPlanAdapter` 的 `transcribePlan` 选项注入（`nodeOptions` 已包含）。
  */
 export async function transcribePlanAudio(
   input: CapabilityInput<'audio.transcribe'>,

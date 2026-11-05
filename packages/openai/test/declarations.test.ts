@@ -5,7 +5,7 @@ import {
   type ModelDeclaration,
   type ModelSource,
 } from '@modelbay/core'
-import { allModels as all } from '../src/declarations'
+import { all } from '../src/models/index'
 
 const source: ModelSource = { url: 'https://example.test/docs', checkedAt: '2026-11-04' }
 

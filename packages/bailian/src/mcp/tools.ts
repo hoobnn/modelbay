@@ -3,9 +3,9 @@
  *
  * 这里只写与模型无关的平台特有部分：字段形状、平台开关、参数含义。
  * 与模型有关的部分（可选模型 ID、默认值、时长 / 分辨率 / 画幅等上下限、生命周期提示）
- * 由 `src/derive.ts` 在运行时从 `ModelDeclaration` 派生，改声明就跟着变。
+ * 由 `@modelbay/mcp` 在运行时从 `ModelDeclaration` 派生，改声明就跟着变。
  */
-import type { CatalogEntry } from './types'
+import type { ToolSpec } from '@modelbay/core'
 
 const okOutput = {
   type: 'object',
@@ -14,7 +14,7 @@ const okOutput = {
   additionalProperties: true,
 }
 
-export default [
+export const bailianTools: ToolSpec[] = [
   {
     name: 'animate_portrait',
     description:
@@ -526,4 +526,4 @@ export default [
     },
     outputSchema: okOutput,
   },
-] satisfies CatalogEntry[]
+]

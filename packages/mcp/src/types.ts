@@ -1,8 +1,8 @@
-/** M4 生成器与 stdio server 的公共类型。此文件不依赖 @modelbay/core，可被纯 stdio 子进程直接加载。 */
+/** MCP 生成器与 stdio server 的公共类型。 */
+import type { ToolSpec } from '@modelbay/core'
 
-/** 四个平台，顺序按 goals.md 的迁移顺序：方舟 → MiniMax → 百炼 → 豆包语音。 */
-export const PLATFORM_KEYS = ['ark', 'minimax', 'bailian', 'doubao-speech'] as const
-export type PlatformKey = (typeof PLATFORM_KEYS)[number]
+/** 打开哪些工具组的环境变量（逗号分隔）。 */
+export const GROUP_ENV_VAR = 'MODELBAY_MCP_GROUPS'
 
 /** 工具组开关。默认只暴露 core；其余三组默认不启用。 */
 export const TOOL_GROUPS = ['core', 'realtime', 'management', 'node'] as const
@@ -50,11 +50,8 @@ export interface MCPTool {
   annotations: ToolAnnotations
 }
 
-/**
- * 目录条目：手写的平台特有工具定义。
- * 形状见 `src/catalog/types.ts`（那里还有 `modelParams` 等模型映射字段）。
- */
-export type { CatalogEntry } from './catalog/types'
+/** 工具定义由各平台包的 `src/mcp/tools.ts` 提供，类型在 core。 */
+export type { ToolSpec }
 
 /** tools/call 的路由描述。 */
 export type ToolRoute =
@@ -79,7 +76,8 @@ export interface GeneratedTool extends MCPTool {
 }
 
 export interface GeneratedToolSet {
-  platform: PlatformKey
+  /** 平台键（`PlatformDescriptor.key`）。 */
+  platform: string
   /** 全量工具（含所有组、含别名）。 */
   all: GeneratedTool[]
   routes: Map<string, ToolRoute>
