@@ -6,7 +6,7 @@ import { createAdapterContext, readSecrets } from '@modelbay/core'
 import type { PlatformAdapter, PlatformDescriptor } from '@modelbay/core'
 import { PLATFORMS, findPlatform } from 'modelbay'
 import { createNodeAdapters } from 'modelbay/node'
-import { generateTools } from './generate'
+import { generateTools, listTools } from './generate'
 import { createHandlers } from './routing'
 import { createServer } from './server'
 import { attachStdioTransport } from './stdio-transport'
@@ -104,7 +104,7 @@ export async function startServer(key: string, options: StartOptions = {}): Prom
   })
   const server = createServer(handlers)
   process.stderr.write(
-    `[${name}] ready: ${set.all.length} tools, groups=${groups.join(',')}, adapter=${adapter?.id ?? 'none'}\n`,
+    `[${name}] ready: ${listTools(set, groups).length}/${set.all.length} tools, groups=${groups.join(',')}, adapter=${adapter?.id ?? 'none'}\n`,
   )
   const detach = attachStdioTransport(server, input, output, {
     onError: options.onError ?? ((error) => process.stderr.write(`[${name}] ${String(error)}\n`)),

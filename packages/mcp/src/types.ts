@@ -97,13 +97,20 @@ export interface GeneratedToolSet {
   byName: Map<string, GeneratedTool>
 }
 
-export interface CallToolContent {
+/** tools/call 的内容块：文本，或 MCP 标准的 base64 图片 / 音频 / 内嵌资源。 */
+export interface TextContent {
   type: 'text'
   text: string
 }
 
+export type CallToolContent =
+  | TextContent
+  | { type: 'image' | 'audio'; data: string; mimeType: string }
+  | { type: 'resource'; resource: { uri: string; mimeType: string; blob: string } }
+
 export interface CallToolResult {
-  content: CallToolContent[]
+  /** 第一个块总是文本说明；字节结果跟在后面 */
+  content: [TextContent, ...CallToolContent[]]
   isError?: boolean
   structuredContent?: unknown
 }

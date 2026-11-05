@@ -4,7 +4,7 @@
  *   submit → adapter.submit；native → adapter.native；local → 本地只读回答。
  * 未配置 key / 适配器未就绪时返回清晰错误（isError 结果），绝不抛到 stdio 循环里。
  */
-import { lifecycleNotice, missingSecrets, selectDefaultModel } from '@modelbay/core'
+import { lifecycleNotice, missingSecrets, selectDefaultModel, toBase64 } from '@modelbay/core'
 import type {
   AdapterContext,
   AdapterRequest,
@@ -12,8 +12,10 @@ import type {
   PlatformAdapter,
   PlatformSecrets,
 } from '@modelbay/core'
+import { normalizeArguments } from './arguments'
 import { listTools } from './generate'
 import type {
+  CallToolContent,
   CallToolResult,
   GeneratedToolSet,
   LocalHandler,
@@ -38,12 +40,44 @@ function toText(value: unknown): string {
   return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
 }
 
+/**
+ * 把结果里的字节（`Uint8Array`）拆成 MCP 标准内容块：图片 / 音频用 base64 的 image / audio 块，
+ * 其他文件用内嵌资源。文本和结构化结果里只留 `bytes` 与内容块序号，不把字节序列化成 JSON。
+ */
+function splitBinary(value: unknown, blocks: CallToolContent[]): unknown {
+  if (value instanceof Uint8Array) return { bytes: value.byteLength }
+  if (Array.isArray(value)) return value.map((item) => splitBinary(item, blocks))
+  if (typeof value !== 'object' || value === null) return value
+  const record = value as Record<string, unknown>
+  if (record.data instanceof Uint8Array) {
+    const data = toBase64(record.data)
+    const mimeType = typeof record.mime === 'string' ? record.mime : 'application/octet-stream'
+    const kind = record.kind
+    blocks.push(
+      kind === 'image' || kind === 'audio'
+        ? { type: kind, data, mimeType }
+        : {
+            type: 'resource',
+            resource: {
+              uri: `modelbay://output/${blocks.length}/${String(record.name ?? 'file')}`,
+              mimeType,
+              blob: data,
+            },
+          },
+    )
+    const { data: _bytes, ...rest } = record
+    return { ...rest, bytes: record.data.byteLength, content: blocks.length }
+  }
+  return Object.fromEntries(Object.entries(record).map(([k, v]) => [k, splitBinary(v, blocks)]))
+}
+
 function result(value: unknown): CallToolResult {
-  const text = toText(value)
+  const blocks: CallToolContent[] = []
+  const plain = splitBinary(value, blocks)
   const structured =
-    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
+    typeof plain === 'object' && plain !== null ? (plain as Record<string, unknown>) : undefined
   return {
-    content: [{ type: 'text', text }],
+    content: [{ type: 'text', text: toText(plain) }, ...blocks],
     ...(structured ? { structuredContent: structured } : {}),
   }
 }
@@ -195,8 +229,9 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     }
 
     // 工具 schema 里 `default: null` 表示「不指定」：null 不算传值，否则会被当成显式参数去校验
-    const input: Record<string, unknown> = Object.fromEntries(
-      Object.entries(args).filter(([, value]) => value !== null),
+    const input: Record<string, unknown> = normalizeArguments(
+      route.capability,
+      Object.fromEntries(Object.entries(args).filter(([, value]) => value !== null)),
     )
     delete input.model
     const model = modelFor(args, route.capability, adapter, primaryChannel)
