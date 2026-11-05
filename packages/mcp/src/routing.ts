@@ -192,7 +192,10 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       return result(value)
     }
 
-    const input: Record<string, unknown> = { ...args }
+    // 工具 schema 里 `default: null` 表示「不指定」：null 不算传值，否则会被当成显式参数去校验
+    const input: Record<string, unknown> = Object.fromEntries(
+      Object.entries(args).filter(([, value]) => value !== null),
+    )
     delete input.model
     const model = modelFor(args, route.capability, adapter, primaryChannel)
     const request = {

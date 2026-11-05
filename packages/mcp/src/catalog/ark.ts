@@ -185,7 +185,12 @@ export default [
         duration: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         audio: { type: 'boolean', default: true },
         watermark: { type: 'boolean', default: false },
-        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        seed: {
+          anyOf: [{ type: 'integer' }, { type: 'null' }],
+          default: null,
+          description:
+            '随机种子，仅部分模型支持；声明里的 Seedance 系列均不支持，传整数会被拒绝，不传或 null 表示不指定',
+        },
         wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
         out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {

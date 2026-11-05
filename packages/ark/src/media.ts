@@ -76,7 +76,8 @@ export async function imageBody(
 ): Promise<Json> {
   if (!input.prompt.trim()) invalid('图片提示词不能为空')
   if (input.negativePrompt) invalid('Seedream 不支持独立 negativePrompt，请合并到 prompt')
-  if (input.seed !== undefined && limits.seed === false) invalid('所选模型不支持 seed')
+  if (input.seed !== undefined && limits.seed === false)
+    invalid('所选图片模型不支持 seed 参数，请去掉 seed')
   const count = input.count ?? 1
   const maxCount = limits.count?.max ?? DEFAULT_MAX_COUNT
   if (!Number.isInteger(count) || count < 1) invalid(`图片数量必须为 1–${maxCount} 的整数`)
@@ -421,7 +422,8 @@ export async function videoBody(opts: VideoBodyOptions): Promise<Json> {
     body.ratio = 'adaptive'
   }
 
-  if (input.seed !== undefined && limits.seed === false) invalid(`${title} 不支持 seed`)
+  if (input.seed !== undefined && limits.seed === false)
+    invalid(`${title} 不支持 seed 参数，请去掉 seed`)
   if (input.duration !== undefined) {
     if (
       !Number.isInteger(input.duration) ||

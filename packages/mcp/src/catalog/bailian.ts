@@ -488,19 +488,24 @@ export default [
   {
     name: 'text_to_speech',
     description:
-      '用百炼非实时 TTS 把文字合成语音，保存为 wav（24kHz 单声道），返回文件路径。按模型名自动选择协议。\n' +
+      '用百炼非实时 TTS 把文字合成语音，返回音频文件的 24 小时有效链接（不下载到本地）。按模型名自动选择协议。\n' +
       '中文系统音色、方言、SRT 字幕、超长文本也可用 doubao-speech 的 text_to_speech。\n' +
-      '\n- model（别名或完整 ID）：不传时按音色 ID 前缀（{target_model}- 开头）自动推断；' +
-      'voice 是复刻/设计生成的自定义音色 ID 时用该 target_model；其余情况见下面的模型清单与默认说明。\n' +
-      '- text：要朗读的文字。长文本自动按句切成 250 字以内的段合成再拼接（url 交付方式下不拼接，需自己分段）。\n' +
-      '- voice：系统音色或自定义音色 ID；各模型可选的系统音色见官方音色列表，不能跨模型混用。\n' +
+      '\n- model（别名或完整 ID）：不传用默认模型 qwen-audio-3.1-tts-flash；用复刻/设计生成的自定义音色时，' +
+      '须同时传生成该音色的 target_model，音色只能用于该模型。其余情况见下面的模型清单。\n' +
+      '- text：要朗读的文字。CosyVoice 与 Qwen-Audio-TTS 一次合成一段，不超过 250 字符，更长的文本需自己分段多次调用；' +
+      'qwen3-tts-flash 不超过 600 字符。\n' +
+      '- voice：系统音色或自定义音色 ID；各模型可选的系统音色见官方音色列表，不能跨模型混用。' +
+      'CosyVoice 与 Qwen-Audio-TTS 必须指定 voice，没有默认音色。\n' +
       '- instructions：语气/情感/方言指令（官方字段 instruction），如「用温柔的语气，语速稍慢」「请讲上海话。」。\n' +
-      '  CosyVoice 不超过 100 字符（汉字按 2 计）；Qwen-Audio-TTS 官方未公布同一上限，交服务端校验。\n' +
-      '- language：qwen3-tts-flash 写 Chinese、English、Japanese 等；Qwen-Audio-TTS/CosyVoice 写语种代码（zh、en、ja…，对应 language_hints）。不传自动识别。\n' +
-      '- out_dir：输出目录，默认 BAILIAN_OUT_DIR 下按时间戳新建。\n' +
-      '- parameters：qwen3-tts-flash 合并进官方 parameters 对象；Qwen-Audio-TTS/CosyVoice 合并进官方 input 对象' +
-      '  （如 rate、pitch、volume、seed、hot_fix），不能覆盖 text/voice/model，local 交付时 format 只能是 wav。\n' +
-      '\n按字符计费。返回 job_id、job_state、artifacts、request_id、ok、model、files、chunks（分了几段）、usage、error。url 交付方式下 files 是 24 小时内有效的链接。\n',
+      '  仅 Qwen-Audio-TTS 与 CosyVoice 3 / 3.5 系列（cosyvoice-v3-flash、v3.5-flash、v3.5-plus）支持，' +
+      'cosyvoice-v2、cosyvoice-v3-plus 与 qwen3-tts-flash 传了会直接报错；CosyVoice 不超过 100 字符（汉字按 2 计），' +
+      'Qwen-Audio-TTS 官方未公布同一上限，交服务端校验。\n' +
+      '- language：仅对 qwen3-tts-flash 生效，写 Chinese、English、Japanese 等，不传自动识别；' +
+      'CosyVoice / Qwen-Audio-TTS 请把语种代码放进 parameters.language_hints（如 ["zh"]）。\n' +
+      '- out_dir：本工具不下载音频，此参数无效果。\n' +
+      '- parameters：合并进官方 input 对象（如 Qwen-Audio-TTS/CosyVoice 的 rate、pitch、volume、seed、hot_fix、language_hints），' +
+      '不能覆盖 text/voice/model；不会写入官方顶层 parameters。\n' +
+      '\n按字符计费。返回 job_id、job_state、artifacts、request_id、ok、model、files、usage、error。\n',
     capability: 'audio.speech',
     inputSchema: {
       type: 'object',

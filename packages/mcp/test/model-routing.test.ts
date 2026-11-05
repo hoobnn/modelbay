@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { createAdapterContext } from '@modelbay/core'
 import type { PlatformAdapter } from '@modelbay/core'
+import { arkAdapter } from '@modelbay/ark'
 import { bailianAdapter } from '@modelbay/bailian'
 import { doubaoAdapter } from '@modelbay/doubao-speech'
 import { describe, expect, it, vi } from 'vite-plus/test'
@@ -116,5 +117,75 @@ describe('渠道前缀的剥离范围', () => {
       'ark-plan:chat-pro',
       'chat-pro',
     ])
+  })
+})
+
+describe('方舟 seed 参数', () => {
+  const videoReply = () => Response.json({ id: 'cgt-1' })
+
+  it('generate_video 的 seed 为 null（schema 默认值）时不当作显式参数', async () => {
+    const { handlers, fetchImpl, bodyOf } = setup('ark', arkAdapter, [videoReply()])
+    const result = (await handlers.callTool('generate_video', {
+      prompt: '海浪',
+      seed: null,
+    })) as CallToolResult
+    expect(result.isError).toBeUndefined()
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(bodyOf()).not.toHaveProperty('seed')
+  })
+
+  it('默认模型不支持 seed 时，传整数得到中文说明且不联网', async () => {
+    const { handlers, fetchImpl } = setup('ark', arkAdapter, [])
+    await expect(handlers.callTool('generate_video', { prompt: '海浪', seed: 7 })).rejects.toThrow(
+      /不支持 seed 参数，请去掉 seed/,
+    )
+    expect(fetchImpl).not.toHaveBeenCalled()
+    await expect(handlers.callTool('generate_image', { prompt: '猫', seed: 7 })).rejects.toThrow(
+      /不支持 seed 参数，请去掉 seed/,
+    )
+  })
+
+  it('工具说明注明 seed 仅部分模型支持', () => {
+    const tool = generateTools('ark', { adapter: arkAdapter }).byName.get('generate_video')!
+    expect(JSON.stringify(tool.inputSchema.properties?.seed)).toContain('仅部分模型支持')
+  })
+})
+
+describe('百炼 text_to_speech 说明与适配器行为一致', () => {
+  const tool = generateTools('bailian', { adapter: bailianAdapter }).byName.get('text_to_speech')!
+
+  it('不再声称自动分段拼接、保存 wav 或按音色前缀推断模型', () => {
+    expect(tool.description).not.toContain('自动按句切成')
+    expect(tool.description).not.toContain('按音色 ID 前缀')
+    expect(tool.description).toContain('不超过 250 字符')
+  })
+
+  it('cosyvoice-v2 不支持指令：说明与适配器报错一致', async () => {
+    expect(tool.description).toContain(
+      'cosyvoice-v2、cosyvoice-v3-plus 与 qwen3-tts-flash 传了会直接报错',
+    )
+    const { handlers, fetchImpl } = setup('bailian', bailianAdapter, [])
+    await expect(
+      handlers.callTool('text_to_speech', {
+        text: '你好',
+        voice: 'longanyang',
+        model: 'cosyvoice-v2',
+        instructions: '温柔一点',
+      }),
+    ).rejects.toThrow(/不支持语气指令/)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('parameters 合并进 input 对象（CosyVoice 的 language_hints）', async () => {
+    const { handlers, bodyOf } = setup('bailian', bailianAdapter, [
+      Response.json({ output: { audio: { url: 'https://example.com/a.wav' } } }),
+    ])
+    await handlers.callTool('text_to_speech', {
+      text: '你好',
+      voice: 'longanyang',
+      model: 'cosyvoice-v3-flash',
+      parameters: { language_hints: ['zh'] },
+    })
+    expect((bodyOf().input as Record<string, unknown>).language_hints).toEqual(['zh'])
   })
 })
