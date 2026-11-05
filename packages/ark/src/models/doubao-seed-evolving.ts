@@ -11,6 +11,7 @@ export default {
     {
       channel: 'ark-plan',
       id: 'doubao-seed-evolving',
+      agentOnly: true,
       source: {
         url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
         checkedAt: '2026-11-05',

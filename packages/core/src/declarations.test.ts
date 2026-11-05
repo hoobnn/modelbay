@@ -312,6 +312,35 @@ describe('toModelInfo', () => {
     expect(toModelInfo(superseded).deprecated).toBeUndefined()
     expect(toModelInfo(base()).deprecated).toBeUndefined()
   })
+
+  it('渠道级 agentOnly 与 omitOptions 只作用于该渠道', () => {
+    const declaration = patch({
+      optionsSchema: {
+        type: 'object',
+        properties: { draft: { type: 'boolean' }, seed: { type: 'number' } },
+        required: ['draft', 'seed'],
+      },
+      channels: [
+        { channel: 'minimax', id: 'a' },
+        { channel: 'bailian', id: 'b', agentOnly: true, omitOptions: ['draft'] },
+      ],
+    })
+    const [open, restricted] = declaration.channels
+    const plain = toModelInfo(declaration, open)
+    expect(plain.agentOnly).toBeUndefined()
+    expect(Object.keys((plain.optionsSchema as { properties: object }).properties)).toEqual([
+      'draft',
+      'seed',
+    ])
+    const scoped = toModelInfo(declaration, restricted)
+    expect(scoped.agentOnly).toBe(true)
+    expect(scoped.optionsSchema).toEqual({
+      type: 'object',
+      properties: { seed: { type: 'number' } },
+      required: ['seed'],
+    })
+    expect(toModelInfo(patch({ agentOnly: true }), open).agentOnly).toBe(true)
+  })
 })
 
 describe('ModelRegistry', () => {

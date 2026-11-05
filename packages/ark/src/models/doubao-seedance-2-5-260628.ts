@@ -119,6 +119,8 @@ export default {
     {
       channel: 'ark-plan',
       id: 'doubao-seedance-2.5',
+      // 套餐视频接口不支持草稿模式
+      omitOptions: ['draft'],
       source: {
         url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
         checkedAt: '2026-11-05',

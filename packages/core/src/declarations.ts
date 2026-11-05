@@ -43,6 +43,10 @@ export interface ChannelRef {
    * 套餐渠道在套餐概览页），渠道级来源让每个 ID 都能指回自己核对过的那一页。
    */
   source?: ModelSource
+  /** 这个渠道里该模型只给内置 Agent 用（同一模型在别的渠道可以是普通生成模型）。 */
+  agentOnly?: true
+  /** 这个渠道不支持 `optionsSchema` 里的这些参数：派生出的模型信息里不展示。 */
+  omitOptions?: string[]
 }
 
 /** 官方别名（同模型的多个官方 ID）与简称（pro / flash / wan） */
@@ -261,6 +265,7 @@ const DEPRECATED_STATUSES: readonly LifecycleStatus[] = [
 
 /** plein 的 ModelInfo 视图：从声明 + 渠道派生，不再由消费方自己写 */
 export function toModelInfo(declaration: ModelDeclaration, channel?: ChannelRef): ModelInfo {
+  const optionsSchema = channelOptionsSchema(declaration.optionsSchema, channel?.omitOptions)
   const capabilities = declaration.capabilities.filter((item): item is Capability =>
     isLegacyCapability(item),
   )
@@ -274,11 +279,29 @@ export function toModelInfo(declaration: ModelDeclaration, channel?: ChannelRef)
       ? { limits: { ...declaration.limits, ...channel?.limits } }
       : {}),
     ...(declaration.voices ? { voices: declaration.voices } : {}),
-    ...(declaration.optionsSchema ? { optionsSchema: declaration.optionsSchema } : {}),
+    ...(optionsSchema ? { optionsSchema } : {}),
+    ...(declaration.agentOnly || channel?.agentOnly ? { agentOnly: true } : {}),
     ...(DEPRECATED_STATUSES.includes(declaration.lifecycle.status)
       ? { deprecated: true as const }
       : {}),
   }
+}
+
+/** 去掉渠道不支持的参数（含 required 里的同名项）。 */
+function channelOptionsSchema(
+  schema: Record<string, unknown> | undefined,
+  omit: string[] | undefined,
+): Record<string, unknown> | undefined {
+  if (!schema || !omit?.length) return schema
+  const properties = Object.fromEntries(
+    Object.entries((schema.properties ?? {}) as Record<string, unknown>).filter(
+      ([key]) => !omit.includes(key),
+    ),
+  )
+  const required = Array.isArray(schema.required)
+    ? schema.required.filter((key) => !omit.includes(String(key)))
+    : undefined
+  return { ...schema, properties, ...(required ? { required } : {}) }
 }
 
 function isLegacyCapability(value: string): value is Capability {
