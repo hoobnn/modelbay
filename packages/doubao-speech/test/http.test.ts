@@ -217,11 +217,11 @@ describe('宿主对未声明密钥名抛错', () => {
     const { ctx } = fakeContext()
     ctx.secret = (name: string) => {
       if (name !== 'VOLC_SPEECH_API_KEY') throw new Error(`没有声明密钥 ${name}`)
-      return 'k'
+      return 'sekret-1'
     }
     expect(readSecret(ctx, 'DOUBAO_API_KEY')).toBeUndefined()
-    expect(firstSecret(ctx, API_KEY_NAMES)).toBe('k')
+    expect(firstSecret(ctx, API_KEY_NAMES)).toBe('sekret-1')
     expect(hasCredentials(ctx)).toBe(true)
-    expect(scrub('key k', ctx)).toBe('key [redacted]')
+    expect(scrub('token sekret-1', ctx)).toBe('token [redacted]')
   })
 })
