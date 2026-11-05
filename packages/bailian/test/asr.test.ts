@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { ProviderError } from '@modelbay/core'
 import {
-  ASR_MODEL,
+  asrModels,
   ASR_PATH,
   buildAsrRequest,
   checkAsrModel,
@@ -10,17 +10,21 @@ import {
   transcribeAudio,
 } from '../src/asr'
 import { fakeContext, fixture } from './helpers'
+import { all } from '../src/models/index'
+
+const models = asrModels(all)
+const ASR_MODEL = models.default
 
 describe('checkAsrModel', () => {
   it('accepts the current model', () => {
-    expect(checkAsrModel(ASR_MODEL)).toBeNull()
+    expect(checkAsrModel(ASR_MODEL, models)).toBeNull()
   })
   it('rejects retired date snapshots', () => {
-    expect(checkAsrModel('qwen3-asr-flash-2026-10-01')).toMatch(/retired/)
-    expect(checkAsrModel('qwen3-asr-flash-2026-10-01-filetrans')).toMatch(/retired/)
+    expect(checkAsrModel('qwen3-asr-flash-2026-10-01', models)).toMatch(/retired/)
+    expect(checkAsrModel('qwen3-asr-flash-2026-10-01-filetrans', models)).toMatch(/retired/)
   })
   it('rejects other protocols', () => {
-    expect(checkAsrModel('fun-asr')).toMatch(/Only/)
+    expect(checkAsrModel('fun-asr', models)).toMatch(/Only/)
   })
 })
 
@@ -29,6 +33,7 @@ describe('buildAsrRequest', () => {
     const { path, body } = buildAsrRequest(
       { audio: 'https://example.com/a.wav', context: '会议录音', language: 'zh', itn: true },
       'https://example.com/a.wav',
+      models,
     )
     expect(path).toBe(ASR_PATH)
     expect(body).toEqual({
@@ -47,16 +52,17 @@ describe('buildAsrRequest', () => {
     const { body } = buildAsrRequest(
       { audio: 'https://x', parameters: { top_p: 0.9 } },
       'https://x',
+      models,
     )
     expect(body.top_p).toBe(0.9)
     expect(() =>
-      buildAsrRequest({ audio: 'https://x', parameters: { model: 'x' } }, 'https://x'),
+      buildAsrRequest({ audio: 'https://x', parameters: { model: 'x' } }, 'https://x', models),
     ).toThrow(ProviderError)
   })
   it('rejects a non-supported model', () => {
-    expect(() => buildAsrRequest({ audio: 'https://x', model: 'fun-asr' }, 'https://x')).toThrow(
-      ProviderError,
-    )
+    expect(() =>
+      buildAsrRequest({ audio: 'https://x', model: 'fun-asr' }, 'https://x', models),
+    ).toThrow(ProviderError)
   })
 })
 
@@ -113,12 +119,16 @@ describe('transcribeAudio (recorded fixture)', () => {
   it('constructs the recorded request and parses the response', async () => {
     const f = fixture('asr-success')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await transcribeAudio(ctx, {
-      audio: 'https://example.com/a.wav',
-      context: '会议录音',
-      language: 'zh',
-      itn: true,
-    })
+    const result = await transcribeAudio(
+      ctx,
+      {
+        audio: 'https://example.com/a.wav',
+        context: '会议录音',
+        language: 'zh',
+        itn: true,
+      },
+      all,
+    )
     expect(calls()[0]?.url).toBe(f.request.url)
     expect(calls()[0]?.body).toEqual(f.request.body)
     expect(result.text).toBe('今天讨论模型迁移。')

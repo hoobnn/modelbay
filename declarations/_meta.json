@@ -324,12 +324,36 @@
         "short": ["hd"]
       },
       {
+        "canonicalId": "aliyun/qwen3.8-max",
+        "short": ["max"]
+      },
+      {
         "canonicalId": "aliyun/qwen3.7-plus",
         "short": ["plus"]
       },
       {
+        "canonicalId": "aliyun/qwen-image-3.0-pro",
+        "short": ["qwen"]
+      },
+      {
+        "canonicalId": "aliyun/wan3.0-video",
+        "short": ["wan"]
+      },
+      {
+        "canonicalId": "volc/doubao-seedream-5-0-pro-260628",
+        "short": ["seedream-pro"]
+      },
+      {
+        "canonicalId": "volc/doubao-seedance-2-5-260628",
+        "short": ["seedance"]
+      },
+      {
         "canonicalId": "volc/doubao-seed-2.0-mini",
         "short": ["mini"]
+      },
+      {
+        "canonicalId": "volc/doubao-seed-2-1-pro-260915",
+        "short": ["pro"]
       }
     ],
     "omitted": [

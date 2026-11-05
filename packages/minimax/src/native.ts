@@ -2,7 +2,8 @@
  * MiniMax-only native operations and their parameter schemas (declared by the adapter).
  */
 import { ProviderError, toBase64 } from '@modelbay/core'
-import type { AdapterContext } from '@modelbay/core'
+import { selectDefaultModel } from '@modelbay/core'
+import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
 import { asJson, arr, requestJson, type Json } from './http'
 
 export const CONTEXT_IR_PATH = '/v2/h3_context_ir'
@@ -202,7 +203,11 @@ const CLONE_FORMATS: Record<string, string> = {
 }
 
 /** Voice cloning: upload the sample, then create the voice. */
-export async function voiceClone(ctx: AdapterContext, params: Json): Promise<Json> {
+export async function voiceClone(
+  ctx: AdapterContext,
+  params: Json,
+  models: readonly ModelDeclaration[],
+): Promise<Json> {
   const voiceId = asString(params.voice_id)
   if (!/^[A-Za-z][A-Za-z0-9_-]{6,254}[A-Za-z0-9]$/.test(voiceId))
     throw new ProviderError('invalid_input', 'Invalid MiniMax voice_id')
@@ -225,7 +230,15 @@ export async function voiceClone(ctx: AdapterContext, params: Json): Promise<Jso
     voice_id: voiceId,
     need_noise_reduction: params.noise_reduction === true,
     need_volume_normalization: params.volume_normalization === true,
-    ...(asString(params.text) ? { text: asString(params.text), model: 'speech-2.8-hd' } : {}),
+    ...(asString(params.text)
+      ? {
+          text: asString(params.text),
+          model:
+            asString(params.model) ||
+            selectDefaultModel(models, 'audio.speech', 'minimax')?.channel.id ||
+            '',
+        }
+      : {}),
   }
   const data = await requestJson(ctx, VOICE_CLONE_PATH, body)
   if (Number(asJson(data.base_resp).status_code ?? 0) !== 0)
@@ -291,6 +304,7 @@ export async function runMinimaxNative(
   op: string,
   params: Record<string, unknown>,
   ctx: AdapterContext,
+  models: readonly ModelDeclaration[],
 ): Promise<unknown> {
   const p = asJson(params)
   switch (op) {
@@ -299,7 +313,7 @@ export async function runMinimaxNative(
     case 'video-2k-rerender':
       return submitNativeTask(ctx, 'video-2k-rerender', p)
     case 'voice-clone':
-      return voiceClone(ctx, p)
+      return voiceClone(ctx, p, models)
     case 'voice-design':
       return voiceDesign(ctx, p)
     case 'upload-file':

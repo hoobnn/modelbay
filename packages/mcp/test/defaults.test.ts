@@ -48,11 +48,11 @@ const EXPECTED: Record<PlatformKey, Record<string, string | null | undefined>> =
   },
   bailian: {
     chat: 'bailian:qwen3.8-max',
-    embed: undefined,
+    embed: 'bailian:text-embedding-v4',
     generate_image: 'bailian:qwen-image-3.0-pro',
     generate_video: 'bailian:wan3.0-video',
-    rerank: undefined,
-    speech_to_text: undefined,
+    rerank: 'bailian:qwen3.7-text-rerank',
+    speech_to_text: 'bailian:qwen3-asr-flash',
     text_to_speech: null,
   },
   'doubao-speech': {

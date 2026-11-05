@@ -31,6 +31,7 @@ import doubaoSeed21Pro260915 from './doubao-seed-2-1-pro-260915'
 import doubaoSeed21Lite260915 from './doubao-seed-2-1-lite-260915'
 import doubaoSeed21Turbo260628 from './doubao-seed-2-1-turbo-260628'
 import doubaoSeedream50260128 from './doubao-seedream-5-0-260128'
+import doubaoEmbeddingVision from './doubao-embedding-vision'
 
 export {
   doubaoSeedream50Pro260628,
@@ -65,6 +66,7 @@ export {
   doubaoSeed21Lite260915,
   doubaoSeed21Turbo260628,
   doubaoSeedream50260128,
+  doubaoEmbeddingVision,
 }
 
 export const all: ModelDeclaration[] = [
@@ -100,4 +102,5 @@ export const all: ModelDeclaration[] = [
   doubaoSeed21Lite260915,
   doubaoSeed21Turbo260628,
   doubaoSeedream50260128,
+  doubaoEmbeddingVision,
 ]

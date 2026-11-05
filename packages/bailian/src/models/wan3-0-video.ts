@@ -44,7 +44,7 @@ export default {
   },
   default: true,
   channels: [{ channel: 'bailian', id: 'wan3.0-video' }],
-  aliases: { official: [], short: [] },
+  aliases: { official: [], short: ['wan'] },
   lifecycle: {
     status: 'active',
     source: {

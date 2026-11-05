@@ -2,11 +2,10 @@
  * Qwen ASR (HTTP, non-streaming), ported from the Python MCP
  * `ali_bailian_mcp/media.py::speech_to_text`. Uses `/compatible-mode/v1/chat/completions`.
  */
-import { ProviderError, toBase64, type AssetRef } from '@modelbay/core'
-import type { AdapterContext } from '@modelbay/core'
+import { ProviderError, selectDefaultModel, toBase64, type AssetRef } from '@modelbay/core'
+import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
 import { asJson, arr, requestJson, type Json } from './http'
 
-export const ASR_MODEL = 'qwen3-asr-flash'
 export const ASR_PATH = '/compatible-mode/v1/chat/completions'
 
 const AUDIO_MIME: Record<string, string> = {
@@ -37,18 +36,43 @@ export interface AsrRequest {
   body: Json
 }
 
+/** 该平台支持的 ASR 模型与默认模型，都从声明读。 */
+export interface AsrModels {
+  /** 声明里 audio.transcribe 能力的模型 ID */
+  allowed: string[]
+  /** 默认模型 */
+  default: string
+}
+
+export function asrModels(declarations: readonly ModelDeclaration[]): AsrModels {
+  const scoped = declarations.filter((declaration) =>
+    declaration.capabilities.includes('audio.transcribe'),
+  )
+  const allowed = scoped.map(
+    (declaration) =>
+      declaration.channels.find((channel) => channel.channel === 'bailian')?.id ?? declaration.id,
+  )
+  const picked = selectDefaultModel(declarations, 'audio.transcribe', 'bailian')
+  return { allowed, default: picked?.channel.id ?? allowed[0] ?? '' }
+}
+
 /** Reject retired date-snapshot IDs and protocols that use a different ASR endpoint. */
-export function checkAsrModel(model: string): string | null {
-  if (/^qwen3-asr-flash-\d{4}-\d{2}-\d{2}(?:-[a-z]+)?$/.test(model))
-    return `${model} is a retired date snapshot; use qwen3-asr-flash`
-  if (model !== ASR_MODEL) return 'Only qwen3-asr-flash is supported by this HTTP ASR endpoint'
+export function checkAsrModel(model: string, models: AsrModels): string | null {
+  if (/-\d{4}-\d{2}-\d{2}(?:-[a-z]+)?$/.test(model) && !models.allowed.includes(model))
+    return `${model} is a retired date snapshot; use ${models.default}`
+  if (!models.allowed.includes(model))
+    return `Only ${models.allowed.join('、')} are supported by this HTTP ASR endpoint`
   return null
 }
 
 /** Build the chat/completions body; `data` is already a URL or data URI. */
-export function buildAsrRequest(opts: AsrOptions, audioData: string): AsrRequest {
-  const model = opts.model ?? ASR_MODEL
-  const problem = checkAsrModel(model)
+export function buildAsrRequest(
+  opts: AsrOptions,
+  audioData: string,
+  models: AsrModels,
+): AsrRequest {
+  const model = opts.model ?? models.default
+  const problem = checkAsrModel(model, models)
   if (problem) throw new ProviderError('invalid_input', problem)
   const messages: Json[] = []
   if (opts.context)
@@ -114,9 +138,13 @@ export async function resolveAudio(src: string | AssetRef, ctx: AdapterContext):
   return `data:audio/${encoded};base64,${toBase64(loaded.data)}`
 }
 
-export async function transcribeAudio(ctx: AdapterContext, opts: AsrOptions): Promise<AsrResult> {
+export async function transcribeAudio(
+  ctx: AdapterContext,
+  opts: AsrOptions,
+  models: readonly ModelDeclaration[],
+): Promise<AsrResult> {
   const audioData = await resolveAudio(opts.audio, ctx)
-  const { path, body } = buildAsrRequest(opts, audioData)
+  const { path, body } = buildAsrRequest(opts, audioData, asrModels(models))
   const data = await requestJson(ctx, path, body)
   return parseAsrResponse(data)
 }

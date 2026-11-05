@@ -8,7 +8,7 @@ export default {
   features: ['tools', 'vision', 'structured'],
   default: true,
   channels: [{ channel: 'ark', id: 'doubao-seed-2-1-pro-260915' }],
-  aliases: { official: [], short: [] },
+  aliases: { official: [], short: ['pro'] },
   lifecycle: {
     status: 'active',
     source: {

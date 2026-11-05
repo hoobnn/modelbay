@@ -14,8 +14,8 @@
 | 静态模型（待抽取）   | 76                                       |
 | 生成声明文件         | 66                                       |
 | 数量差异             | -10（方舟按量/套餐同 id 合并，见第七节） |
-| 逐字段完全一致的声明 | 64                                       |
-| 内容/顺序差异条目    | 7（见第六节，全部逐条说明）              |
+| 逐字段完全一致的声明 | 63                                       |
+| 内容/顺序差异条目    | 8（见第六节，全部逐条说明）              |
 
 平台分布：
 
@@ -145,12 +145,18 @@
 
 采用的 `short` 别名（从模型 id 末段识别、全局唯一）：
 
-| canonicalId                  | short       |
-| ---------------------------- | ----------- |
-| minimax/MiniMax-H3-Highspeed | `highspeed` |
-| minimax/speech-2.8-hd        | `hd`        |
-| aliyun/qwen3.7-plus          | `plus`      |
-| volc/doubao-seed-2.0-mini    | `mini`      |
+| canonicalId                         | short          |
+| ----------------------------------- | -------------- |
+| minimax/MiniMax-H3-Highspeed        | `highspeed`    |
+| minimax/speech-2.8-hd               | `hd`           |
+| aliyun/qwen3.8-max                  | `max`          |
+| aliyun/qwen3.7-plus                 | `plus`         |
+| aliyun/qwen-image-3.0-pro           | `qwen`         |
+| aliyun/wan3.0-video                 | `wan`          |
+| volc/doubao-seedream-5-0-pro-260628 | `seedream-pro` |
+| volc/doubao-seedance-2-5-260628     | `seedance`     |
+| volc/doubao-seed-2.0-mini           | `mini`         |
+| volc/doubao-seed-2-1-pro-260915     | `pro`          |
 
 `official` 别名：
 
@@ -182,21 +188,22 @@
 比对字段：`id`、`title`、`capabilities`、`limits`、`voices`、`features`、`description`、`agentOnly`。
 基准取 `plein-models.json` 中同 id 的原始模型；方舟同 id 在 `volc/ark-plan` 与 `volc/ark` 各有一条，声明取按量侧（`volc/ark`）为主来源。
 
-- 逐字段完全一致的声明：64 / 66。
+- 逐字段完全一致的声明：63 / 66。
 - 基准中含 `options` 的模型：28；生成 `optionsSchema` 的声明：22；因转不出而省略：0；其余差额 6 来自方舟两渠道同 id 合并（两条原始记录合成一条声明）。
 - 基准中含 `deprecated` 的模型：6。
 
 ### 6.2 差异明细（逐条）
 
-| 平台 | 模型 id              | 字段          | 基准值                                                          | 声明值                           | 来源 provider | 原因                                                                         |
-| ---- | -------------------- | ------------- | --------------------------------------------------------------- | -------------------------------- | ------------- | ---------------------------------------------------------------------------- |
-| ark  | custom-chat          | `title`       | 自定义套餐对话模型                                              | 自定义对话模型（设置中填写）     | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
-| ark  | custom-chat          | `features`    | ["tools","structured"]                                          | ["structured"]                   | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
-| ark  | custom-chat          | `agentOnly`   | true                                                            | （无）                           | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
-| ark  | doubao-seed-evolving | `title`       | doubao-seed-evolving                                            | Doubao Seed Evolving（快速迭代） | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
-| ark  | doubao-seed-evolving | `features`    | ["tools","structured","vision"]                                 | ["tools","vision","structured"]  | volc/ark-plan | 方舟两渠道合并：features 集合相同、顺序写法不同，取按量侧顺序                |
-| ark  | doubao-seed-evolving | `description` | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位 | （无）                           | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
-| ark  | doubao-seed-evolving | `agentOnly`   | true                                                            | （无）                           | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
+| 平台    | 模型 id              | 字段           | 基准值                                                          | 声明值                           | 来源 provider | 原因                                                                         |
+| ------- | -------------------- | -------------- | --------------------------------------------------------------- | -------------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| ark     | custom-chat          | `title`        | 自定义套餐对话模型                                              | 自定义对话模型（设置中填写）     | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
+| ark     | custom-chat          | `features`     | ["tools","structured"]                                          | ["structured"]                   | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
+| ark     | custom-chat          | `agentOnly`    | true                                                            | （无）                           | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
+| ark     | doubao-seed-evolving | `title`        | doubao-seed-evolving                                            | Doubao Seed Evolving（快速迭代） | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
+| ark     | doubao-seed-evolving | `features`     | ["tools","structured","vision"]                                 | ["tools","vision","structured"]  | volc/ark-plan | 方舟两渠道合并：features 集合相同、顺序写法不同，取按量侧顺序                |
+| ark     | doubao-seed-evolving | `description`  | Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位 | （无）                           | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
+| ark     | doubao-seed-evolving | `agentOnly`    | true                                                            | （无）                           | volc/ark-plan | 方舟两渠道合并：同一 id 在两个渠道字段不同，声明取按量侧（volc/ark）为主来源 |
+| minimax | speech-2.8-hd        | `capabilities` | ["audio.speech"]                                                | ["audio.speech","voice.clone"]   | minimax/api   | 与主来源不一致（需排查）                                                     |
 
 ### 6.3 字段转换与新增（结构性差异）
 

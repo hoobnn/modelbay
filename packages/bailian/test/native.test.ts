@@ -29,13 +29,14 @@ describe('rerank (recorded fixture)', () => {
     const { ctx, calls } = fakeContext([f.response.body])
     const result = await rerank(
       {
-        model: 'qwen3-rerank',
+        model: 'qwen3.7-text-rerank',
         query: 'apple',
         documents: ['苹果', '香蕉'],
         top_n: 2,
         return_documents: false,
       },
       ctx,
+      models,
     )
     expect(calls()[0]?.url).toBe(f.request.url)
     expect(calls()[0]?.body).toEqual(f.request.body)
@@ -43,13 +44,15 @@ describe('rerank (recorded fixture)', () => {
   })
   it('validates query, documents and top_n', async () => {
     const { ctx } = fakeContext([])
-    await expect(rerank({ query: '', documents: ['a'] }, ctx)).rejects.toMatchObject({
+    await expect(rerank({ query: '', documents: ['a'] }, ctx, models)).rejects.toMatchObject({
       code: 'invalid_input',
     })
-    await expect(rerank({ query: 'q', documents: [] }, ctx)).rejects.toMatchObject({
+    await expect(rerank({ query: 'q', documents: [] }, ctx, models)).rejects.toMatchObject({
       code: 'invalid_input',
     })
-    await expect(rerank({ query: 'q', documents: ['a'], top_n: 5 }, ctx)).rejects.toMatchObject({
+    await expect(
+      rerank({ query: 'q', documents: ['a'], top_n: 5 }, ctx, models),
+    ).rejects.toMatchObject({
       code: 'invalid_input',
     })
   })
@@ -59,25 +62,33 @@ describe('textEmbed (recorded fixture)', () => {
   it('builds the compatible embeddings body', async () => {
     const f = fixture('text-embed')
     const { ctx, calls } = fakeContext([f.response.body])
-    const result = await textEmbed({ texts: ['你好'], dimensions: 1024 }, ctx)
+    const result = await textEmbed({ texts: ['你好'], dimensions: 1024 }, ctx, models)
     expect(calls()[0]?.url).toBe(f.request.url)
     expect(calls()[0]?.body).toEqual(f.request.body)
     expect(result.model).toBe('text-embedding-v4')
   })
   it('routes multimodal contents to the multimodal endpoint', async () => {
     const { ctx, calls } = fakeContext([{ data: [], usage: {} }])
-    await textEmbed({ contents: [{ text: 'a' }], dimensions: 512 }, ctx)
+    await textEmbed(
+      { model: 'qwen3-vl-embedding', contents: [{ text: 'a' }], dimensions: 512 },
+      ctx,
+      models,
+    )
     expect(calls()[0]?.url).toContain(EMBED_MULTIMODAL_PATH)
     expect((calls()[0]!.body as Record<string, unknown>).parameters).toEqual({ dimension: 512 })
   })
   it('requires exactly one of texts/contents and rejects protected parameters', async () => {
     const { ctx } = fakeContext([])
-    await expect(textEmbed({}, ctx)).rejects.toMatchObject({ code: 'invalid_input' })
-    await expect(textEmbed({ texts: ['a'], contents: [{ text: 'a' }] }, ctx)).rejects.toMatchObject(
-      { code: 'invalid_input' },
-    )
+    await expect(textEmbed({}, ctx, models)).rejects.toMatchObject({ code: 'invalid_input' })
+    // 多模态向量化要显式指定模型（与 Python 版一致）
+    await expect(textEmbed({ contents: [{ text: 'a' }] }, ctx, models)).rejects.toMatchObject({
+      code: 'invalid_input',
+    })
     await expect(
-      textEmbed({ texts: ['a'], parameters: { model: 'x' } }, ctx),
+      textEmbed({ texts: ['a'], contents: [{ text: 'a' }] }, ctx, models),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    await expect(
+      textEmbed({ texts: ['a'], parameters: { model: 'x' } }, ctx, models),
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 })
@@ -89,6 +100,7 @@ describe('digitalHumanLipsync (recorded fixture)', () => {
     const result = await digitalHumanLipsync(
       { image_url: 'https://example.com/face.png', audio_url: 'https://example.com/voice.wav' },
       ctx,
+      models,
     )
     expect(calls()[0]?.url).toBe(f.request.url)
     expect(calls()[0]?.body).toEqual(f.request.body)
@@ -100,17 +112,24 @@ describe('digitalHumanLipsync (recorded fixture)', () => {
   })
   it('rejects missing urls, bad resolution and data URIs', async () => {
     const { ctx } = fakeContext([])
-    await expect(digitalHumanLipsync({ image_url: 'https://x' }, ctx)).rejects.toMatchObject({
+    await expect(
+      digitalHumanLipsync({ image_url: 'https://x' }, ctx, models),
+    ).rejects.toMatchObject({
       code: 'invalid_input',
     })
     await expect(
       digitalHumanLipsync(
         { image_url: 'https://x', audio_url: 'https://y', resolution: '4K' },
         ctx,
+        models,
       ),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     await expect(
-      digitalHumanLipsync({ image_url: 'data:image/png;base64,AA', audio_url: 'https://y' }, ctx),
+      digitalHumanLipsync(
+        { image_url: 'data:image/png;base64,AA', audio_url: 'https://y' },
+        ctx,
+        models,
+      ),
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 })

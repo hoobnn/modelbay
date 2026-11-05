@@ -279,7 +279,7 @@ export function createMinimaxAdapter(models: ModelDeclaration[]): PlatformAdapte
       params: Record<string, unknown>,
       ctx: AdapterContext,
     ): Promise<unknown> {
-      return runMinimaxNative(op, params, ctx)
+      return runMinimaxNative(op, params, ctx, models)
     },
   }
   return defineAdapter(adapter)

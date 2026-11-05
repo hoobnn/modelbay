@@ -5,10 +5,10 @@
  * Schema itself (see `nativeOperationSchemas`) instead of deriving it from a declaration.
  * 与模型有关的取值（可用的 TTS 模型、复刻/设计的目标模型）从声明派生。
  */
-import { ProviderError } from '@modelbay/core'
+import { ProviderError, selectDefaultModel, selectNativeModel } from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
 import { asJson, arr, requestJson, type Json } from './http'
-import { ASR_MODEL, buildAsrRequest, parseAsrResponse, resolveAudio } from './asr'
+import { asrModels, buildAsrRequest, parseAsrResponse, resolveAudio } from './asr'
 import {
   buildCloneRequest,
   buildDesignRequest,
@@ -58,12 +58,15 @@ export function nativeOperationSchemas(
 ): Record<string, Record<string, unknown>> {
   const tts = ttsModels(models)
   const targets = voiceTargets(models)
+  const asr = asrModels(models)
+  const rerankModel = selectNativeModel(models, 'rerank', 'bailian')?.channel.id
+  const embedModel = selectDefaultModel(models, 'text.embed', 'bailian')?.channel.id
   return {
     rerank: {
       type: 'object',
       required: ['query', 'documents'],
       properties: {
-        model: { type: 'string', default: 'qwen3-rerank' },
+        model: { type: 'string', ...(rerankModel ? { default: rerankModel } : {}) },
         query: { type: 'string' },
         documents: { type: 'array', items: { type: 'string' } },
         top_n: { type: 'integer' },
@@ -73,7 +76,7 @@ export function nativeOperationSchemas(
     'text-embed': {
       type: 'object',
       properties: {
-        model: { type: 'string', default: 'text-embedding-v4' },
+        model: { type: 'string', ...(embedModel ? { default: embedModel } : {}) },
         texts: { type: 'array', items: { type: 'string' } },
         contents: { type: 'array', items: { type: 'object' } },
         dimensions: { type: 'integer' },
@@ -97,7 +100,7 @@ export function nativeOperationSchemas(
       required: ['audio'],
       properties: {
         audio: { type: 'string', description: 'Public URL or data URI' },
-        model: { type: 'string', default: ASR_MODEL },
+        model: { type: 'string', ...(asr.default ? { default: asr.default } : {}) },
         context: { type: 'string' },
         language: { type: 'string' },
         itn: { type: 'boolean' },
@@ -177,7 +180,11 @@ function asStringArray(value: unknown): string[] {
 }
 
 /** Text rerank: native `/services/rerank/text-rerank/text-rerank`. */
-export async function rerank(params: Json, ctx: AdapterContext): Promise<Json> {
+export async function rerank(
+  params: Json,
+  ctx: AdapterContext,
+  models: readonly ModelDeclaration[],
+): Promise<Json> {
   const query = asString(params.query)
   const documents = asStringArray(params.documents)
   const topN = params.top_n
@@ -194,7 +201,8 @@ export async function rerank(params: Json, ctx: AdapterContext): Promise<Json> {
   const parameters: Json = { return_documents: params.return_documents === true }
   if (topN !== undefined) parameters.top_n = topN
   const body: Json = {
-    model: asString(params.model, 'qwen3-rerank'),
+    model:
+      asString(params.model) || selectNativeModel(models, 'rerank', 'bailian')?.channel.id || '',
     input: { query, documents },
     parameters,
   }
@@ -204,7 +212,11 @@ export async function rerank(params: Json, ctx: AdapterContext): Promise<Json> {
 }
 
 /** Text or multimodal embedding; exactly one of `texts` / `contents` is required. */
-export async function textEmbed(params: Json, ctx: AdapterContext): Promise<Json> {
+export async function textEmbed(
+  params: Json,
+  ctx: AdapterContext,
+  models: readonly ModelDeclaration[],
+): Promise<Json> {
   const texts = asStringArray(params.texts)
   const contents = arr(params.contents).map(asJson)
   if (texts.length === contents.length)
@@ -214,10 +226,11 @@ export async function textEmbed(params: Json, ctx: AdapterContext): Promise<Json
     if (contents.length) options.dimension = params.dimensions
     else options.dimensions = params.dimensions
   }
-  const model = asString(
-    params.model,
-    contents.length ? 'multimodal-embedding-v1' : 'text-embedding-v4',
-  )
+  // 多模态向量化要显式指定模型（默认的文本向量模型不支持图文输入）。
+  const model =
+    asString(params.model) ||
+    (contents.length ? '' : (selectDefaultModel(models, 'text.embed', 'bailian')?.channel.id ?? ''))
+  if (!model) throw new ProviderError('invalid_input', '多模态向量化请显式指定 model')
   let body: Json
   let path: string
   if (contents.length) {
@@ -241,7 +254,11 @@ export async function textEmbed(params: Json, ctx: AdapterContext): Promise<Json
 }
 
 /** Digital-human portrait animation (wan2.2-s2v), returns an async task id. */
-export async function digitalHumanLipsync(params: Json, ctx: AdapterContext): Promise<Json> {
+export async function digitalHumanLipsync(
+  params: Json,
+  ctx: AdapterContext,
+  models: readonly ModelDeclaration[],
+): Promise<Json> {
   const imageUrl = asString(params.image_url)
   const audioUrl = asString(params.audio_url)
   const resolution = asString(params.resolution, '720P')
@@ -253,7 +270,10 @@ export async function digitalHumanLipsync(params: Json, ctx: AdapterContext): Pr
   if ([imageUrl, audioUrl].some((src) => src.startsWith('data:')))
     throw new ProviderError('invalid_input', 'Portrait inputs must be public URLs, not data URIs')
   const body: Json = {
-    model: 'wan2.2-s2v',
+    model:
+      asString(params.model) ||
+      selectNativeModel(models, 'digital-human-lipsync', 'bailian')?.channel.id ||
+      '',
     input: { image_url: imageUrl, audio_url: audioUrl },
     parameters: { resolution, ...asRecord(params.parameters) },
   }
@@ -276,9 +296,9 @@ export async function runBailianNative(
   const targets = voiceTargets(models)
   switch (op) {
     case 'rerank':
-      return rerank(p, ctx)
+      return rerank(p, ctx, models)
     case 'text-embed':
-      return textEmbed(p, ctx)
+      return textEmbed(p, ctx, models)
     case 'qwen-audio-tts': {
       const model = resolveTtsModel(tts, {
         model: asString(p.model) || undefined,
@@ -313,6 +333,7 @@ export async function runBailianNative(
           parameters: asRecord(p.parameters),
         },
         audioData,
+        asrModels(models),
       )
       return parseAsrResponse(await requestJson(ctx, path, body))
     }
@@ -398,7 +419,7 @@ export async function runBailianNative(
       return { ...parseVoiceResult(data), voiceId }
     }
     case 'digital-human-lipsync':
-      return digitalHumanLipsync(p, ctx)
+      return digitalHumanLipsync(p, ctx, models)
     case 'raw-request': {
       const path = asString(p.path)
       if (!path.startsWith('/'))

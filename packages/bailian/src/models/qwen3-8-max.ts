@@ -8,7 +8,7 @@ export default {
   features: ['tools', 'vision', 'structured'],
   default: true,
   channels: [{ channel: 'bailian', id: 'qwen3.8-max' }],
-  aliases: { official: [], short: [] },
+  aliases: { official: [], short: ['max'] },
   lifecycle: {
     status: 'active',
     source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-05' },

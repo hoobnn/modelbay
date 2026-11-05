@@ -30,7 +30,7 @@ export default {
   },
   default: true,
   channels: [{ channel: 'bailian', id: 'qwen-image-3.0-pro' }],
-  aliases: { official: [], short: [] },
+  aliases: { official: [], short: ['qwen'] },
   lifecycle: {
     status: 'active',
     source: { url: 'https://help.aliyun.com/zh/model-studio/image-model', checkedAt: '2026-11-05' },

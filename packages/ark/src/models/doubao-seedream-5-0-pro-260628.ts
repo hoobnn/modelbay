@@ -46,7 +46,7 @@ export default {
     { channel: 'ark', id: 'doubao-seedream-5-0-pro-260628' },
     { channel: 'ark-plan', id: 'doubao-seedream-5-0-pro-260628' },
   ],
-  aliases: { official: [], short: [] },
+  aliases: { official: [], short: ['seedream-pro'] },
   lifecycle: {
     status: 'active',
     source: {

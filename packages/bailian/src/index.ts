@@ -59,7 +59,7 @@ export type {
   TtsModelRequest,
 } from './tts'
 export {
-  ASR_MODEL,
+  asrModels,
   ASR_PATH,
   buildAsrRequest,
   parseAsrResponse,
@@ -67,7 +67,7 @@ export {
   resolveAudio,
   transcribeAudio,
 } from './asr'
-export type { AsrOptions, AsrRequest, AsrResult } from './asr'
+export type { AsrModels, AsrOptions, AsrRequest, AsrResult } from './asr'
 export {
   CUSTOMIZATION,
   ENROLLMENT,

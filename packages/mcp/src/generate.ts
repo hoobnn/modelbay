@@ -88,10 +88,11 @@ function buildTool(
   const group: ToolGroup = route.kind === 'native' && nodeOnly.has(route.op) ? 'node' : meta.group
 
   const channel = PLATFORMS[platform].primaryChannel
-  const inputSchema = deriveInputSchema(entry, models, capability, channel)
+  const nativeOp = route.kind === 'native' ? route.op : undefined
+  const inputSchema = deriveInputSchema(entry, models, capability, channel, nativeOp)
   const annotations = deriveAnnotations(meta.nature)
   // 工具说明里的模型清单与各模型上限由声明派生，改声明这段文字就跟着变。
-  const note = deriveDefaultNote(entry, models, capability, channel)
+  const note = deriveDefaultNote(entry, models, capability, channel, nativeOp)
   const description = `${deriveToolDescription(entry.description, models, capability)}${
     note ? `\n${note}\n` : ''
   }`

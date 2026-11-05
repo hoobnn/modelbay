@@ -149,6 +149,17 @@ const DEFAULT_RULES = [
   { platform: 'openai', id: 'gpt-image-2.5-sunburst' },
 ]
 
+// 显式别名：Python 版 MCP 的简称在多个族里同名（如图片与对话都叫 pro），
+// 别名又是全局唯一的，所以这里按族指定一个，���余族用完整 ID 或族内别名。
+const ALIAS_RULES = [
+  { platform: 'ark', id: 'doubao-seed-2-1-pro-260915', alias: 'pro' },
+  { platform: 'ark', id: 'doubao-seedance-2-5-260628', alias: 'seedance' },
+  { platform: 'ark', id: 'doubao-seedream-5-0-pro-260628', alias: 'seedream-pro' },
+  { platform: 'bailian', id: 'qwen3.8-max', alias: 'max' },
+  { platform: 'bailian', id: 'qwen-image-3.0-pro', alias: 'qwen' },
+  { platform: 'bailian', id: 'wan3.0-video', alias: 'wan' },
+]
+
 /** 该模型是不是某个（平台, 能力）的默认模型。 */
 function isDefaultModel(platform, id) {
   return DEFAULT_RULES.some((rule) => rule.platform === platform && rule.id === id)
@@ -512,6 +523,10 @@ function buildAll() {
       })
     }
     const short = (adoptedShort.get(key) ?? []).filter((w) => !occupied.has(w))
+    for (const rule of ALIAS_RULES) {
+      if (rule.platform === platform && rule.id === group.id && !short.includes(rule.alias))
+        short.push(rule.alias)
+    }
     decl.aliases = { official, short }
 
     // 默认模型：写进声明数据，不在代码里挑

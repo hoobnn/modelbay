@@ -18,6 +18,7 @@ import {
   lifecycleNotice,
   modelLimitsText,
   selectDefaultModel,
+  selectNativeModel,
   type ModelDeclaration,
   type ModelParamKind,
 } from '@modelbay/core'
@@ -101,6 +102,8 @@ export function deriveModelParameterPart(
   models: readonly ModelDeclaration[],
   capability: string,
   channel?: string,
+  /** native 操作的专用模型（声明里用 native 字段标记），优先于能力默认。 */
+  nativeOp?: string,
 ): ModelParameterPart {
   const cap = capability as Capability
   const capSchema = capabilityInputSchema(cap)
@@ -138,7 +141,11 @@ export function deriveModelParameterPart(
   }
 
   // 默认值只认声明里显式标了 default 的 active 模型，并且只在该平台的主渠道里选。
-  const selected = selectDefaultModel(models, cap, channel)
+  // native 操作（重排序、数字人、视频编辑……）用声明里 native 字段标记的专用模型。
+  const selected = nativeOp
+    ? (selectNativeModel(models, nativeOp as never, channel) ??
+      selectDefaultModel(models, cap, channel))
+    : selectDefaultModel(models, cap, channel)
   const defaultModel = selected ? `${selected.channel.channel}:${selected.channel.id}` : null
 
   const descriptionParts: (string | undefined)[] = [
@@ -219,10 +226,11 @@ export function deriveDefaultNote(
   models: readonly ModelDeclaration[],
   capability: string,
   channel?: string,
+  nativeOp?: string,
 ): string {
   const model = (entry.inputSchema.properties ?? {}).model as Record<string, unknown> | undefined
   if (!model || 'default' in model) return ''
-  const part = deriveModelParameterPart(models, capability, channel)
+  const part = deriveModelParameterPart(models, capability, channel, nativeOp)
   if (part.defaultModel) return ''
   const notices = part.notices.join('；')
   return notices
@@ -250,10 +258,11 @@ export function deriveInputSchema(
   models: readonly ModelDeclaration[],
   capability: string,
   channel?: string,
+  nativeOp?: string,
 ): JsonSchema {
   const schema = structuredClone(entry.inputSchema) as JsonSchema
   const properties = (schema.properties ??= {})
-  const part = deriveModelParameterPart(models, capability, channel)
+  const part = deriveModelParameterPart(models, capability, channel, nativeOp)
 
   if ('model' in properties) {
     // 保留平台定的形状（有的工具是 type:string，有的是 anyOf），

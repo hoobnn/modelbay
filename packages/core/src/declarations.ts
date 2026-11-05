@@ -195,6 +195,27 @@ export function selectDefaultModel(
 }
 
 /**
+ * 某个 native 操作专用的模型。
+ *
+ * 只有一家平台有的能力（重排序、数字人、视频编辑……）在 0003 里没有归一化能力，
+ * 声明用 `native` 字段标记它属于哪个操作，适配器与 MCP 从这里取默认模型。
+ */
+export function selectNativeModel(
+  declarations: readonly ModelDeclaration[],
+  op: NativeOperationName,
+  channel?: string,
+): ResolvedModel | null {
+  const candidates = declarations.filter(
+    (declaration) => declaration.native?.includes(op) && canBeDefault(declaration),
+  )
+  for (const declaration of candidates) {
+    const found = declaration.channels.find((item) => !channel || item.channel === channel)
+    if (found) return { declaration, channel: found }
+  }
+  return null
+}
+
+/**
  * 同一渠道同一能力最多只能有一个默认模型。
  *
  * 返回冲突的「渠道:能力」列表；声明自检与单测都用它。

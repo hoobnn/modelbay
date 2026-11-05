@@ -15,10 +15,17 @@ import cosyvoiceV35Flash from './cosyvoice-v3-5-flash'
 import cosyvoiceV35Plus from './cosyvoice-v3-5-plus'
 import cosyvoiceV3Flash from './cosyvoice-v3-flash'
 import cosyvoiceV3Plus from './cosyvoice-v3-plus'
+import happyhorse10VideoEdit from './happyhorse-1-0-video-edit'
 import qwenAudio30TtsFlash from './qwen-audio-3-0-tts-flash'
 import qwenAudio30TtsPlus from './qwen-audio-3-0-tts-plus'
 import qwenAudio31TtsFlash from './qwen-audio-3-1-tts-flash'
 import qwenAudio31TtsPlus from './qwen-audio-3-1-tts-plus'
+import qwen37TextRerank from './qwen3-7-text-rerank'
+import qwen3AsrFlash from './qwen3-asr-flash'
+import qwen3VlEmbedding from './qwen3-vl-embedding'
+import textEmbeddingV4 from './text-embedding-v4'
+import wan22S2v from './wan2-2-s2v'
+import zImageTurbo from './z-image-turbo'
 
 export {
   qwen38Max,
@@ -37,10 +44,17 @@ export {
   cosyvoiceV35Plus,
   cosyvoiceV3Flash,
   cosyvoiceV3Plus,
+  happyhorse10VideoEdit,
   qwenAudio30TtsFlash,
   qwenAudio30TtsPlus,
   qwenAudio31TtsFlash,
   qwenAudio31TtsPlus,
+  qwen37TextRerank,
+  qwen3AsrFlash,
+  qwen3VlEmbedding,
+  textEmbeddingV4,
+  wan22S2v,
+  zImageTurbo,
 }
 
 export const all: ModelDeclaration[] = [
@@ -60,8 +74,15 @@ export const all: ModelDeclaration[] = [
   cosyvoiceV35Plus,
   cosyvoiceV3Flash,
   cosyvoiceV3Plus,
+  happyhorse10VideoEdit,
   qwenAudio30TtsFlash,
   qwenAudio30TtsPlus,
   qwenAudio31TtsFlash,
   qwenAudio31TtsPlus,
+  qwen37TextRerank,
+  qwen3AsrFlash,
+  qwen3VlEmbedding,
+  textEmbeddingV4,
+  wan22S2v,
+  zImageTurbo,
 ]

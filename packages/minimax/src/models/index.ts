@@ -11,6 +11,7 @@ import minimaxH3Max from './minimax-h3-max'
 import speech28Hd from './speech-2-8-hd'
 import speech28Turbo from './speech-2-8-turbo'
 import music30 from './music-3-0'
+import music26 from './music-2-6'
 
 export {
   minimaxM3,
@@ -25,6 +26,7 @@ export {
   speech28Hd,
   speech28Turbo,
   music30,
+  music26,
 }
 
 export const all: ModelDeclaration[] = [
@@ -40,4 +42,5 @@ export const all: ModelDeclaration[] = [
   speech28Hd,
   speech28Turbo,
   music30,
+  music26,
 ]

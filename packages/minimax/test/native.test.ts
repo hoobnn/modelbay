@@ -16,6 +16,9 @@ import {
   voiceDesign,
 } from '../src/native'
 import { fakeContext, fixture, type Reply } from './helpers'
+import { all } from '../src/models/index'
+
+const models = all
 
 describe('native operation declarations', () => {
   it('declares a schema for every exposed operation', () => {
@@ -137,11 +140,15 @@ describe('upload / voice clone / voice design', () => {
     const u = fixture('upload')
     const c = fixture('voice-clone')
     const { ctx, calls } = fakeContext([u.response.body, c.response.body])
-    const result = await voiceClone(ctx, {
-      voice_id: 'MyVoice_123',
-      audio: { assetId: 'a1' },
-      mime: 'audio/mpeg',
-    })
+    const result = await voiceClone(
+      ctx,
+      {
+        voice_id: 'MyVoice_123',
+        audio: { assetId: 'a1' },
+        mime: 'audio/mpeg',
+      },
+      models,
+    )
     expect(calls()[0]?.url).toBe(u.request.url)
     expect(calls()[1]?.url).toBe(c.request.url)
     expect(calls()[1]?.body).toEqual(c.request.body)
@@ -150,14 +157,18 @@ describe('upload / voice clone / voice design', () => {
   it('voiceClone accepts a public URL and validates the voice id / mime', async () => {
     const c = fakeContext([fixture('voice-clone').response.body])
     await expect(
-      voiceClone(c.ctx, { voice_id: 'MyVoice_123', audio: 'https://example.com/a.mp3' }),
+      voiceClone(c.ctx, { voice_id: 'MyVoice_123', audio: 'https://example.com/a.mp3' }, models),
     ).resolves.toMatchObject({ status: 'ready' })
     const bad = fakeContext([])
     await expect(
-      voiceClone(bad.ctx, { voice_id: 'bad', audio: { assetId: 'a1' } }),
+      voiceClone(bad.ctx, { voice_id: 'bad', audio: { assetId: 'a1' } }, models),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     await expect(
-      voiceClone(bad.ctx, { voice_id: 'MyVoice_123', audio: { assetId: 'a1' }, mime: 'video/mp4' }),
+      voiceClone(
+        bad.ctx,
+        { voice_id: 'MyVoice_123', audio: { assetId: 'a1' }, mime: 'video/mp4' },
+        models,
+      ),
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
   it('voiceDesign posts the design body and returns the generated id', async () => {
@@ -213,12 +224,14 @@ describe('listVideoTasks / assetDataUrl / dispatch', () => {
     ]
     for (const [op, params, replies] of cases) {
       const { ctx } = fakeContext(replies)
-      await expect(runMinimaxNative(op, params, ctx)).resolves.toBeDefined()
+      await expect(runMinimaxNative(op, params, ctx, models)).resolves.toBeDefined()
     }
     const unknown = fakeContext([])
-    await expect(runMinimaxNative('nope', {}, unknown.ctx)).rejects.toBeInstanceOf(ProviderError)
+    await expect(runMinimaxNative('nope', {}, unknown.ctx, models)).rejects.toBeInstanceOf(
+      ProviderError,
+    )
     await expect(
-      runMinimaxNative('raw-request', { path: 'models' }, unknown.ctx),
+      runMinimaxNative('raw-request', { path: 'models' }, unknown.ctx, models),
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 })

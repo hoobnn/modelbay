@@ -93,7 +93,7 @@ export default {
     { channel: 'ark', id: 'doubao-seedance-2-5-260628' },
     { channel: 'ark-plan', id: 'doubao-seedance-2-5-260628' },
   ],
-  aliases: { official: [], short: [] },
+  aliases: { official: [], short: ['seedance'] },
   lifecycle: {
     status: 'active',
     source: {
