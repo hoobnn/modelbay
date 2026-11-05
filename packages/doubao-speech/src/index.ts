@@ -38,6 +38,7 @@ export {
   ACCESS_TOKEN_NAMES,
   SECRET_NAMES,
   firstSecret,
+  readSecret,
   hasCredentials,
   headers,
   failure,

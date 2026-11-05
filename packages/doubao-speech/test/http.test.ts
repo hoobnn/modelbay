@@ -9,6 +9,7 @@ import {
   failure,
   firstSecret,
   hasCredentials,
+  readSecret,
   headers,
   HOST,
   incomplete,
@@ -208,5 +209,19 @@ describe('postText / postJson (recorded fixtures)', () => {
   it('postJson rejects invalid JSON', async () => {
     const { ctx } = fakeContext([new Response('not-json')])
     await expect(postJson(ctx, '/x', {})).rejects.toMatchObject({ code: 'unavailable' })
+  })
+})
+
+describe('宿主对未声明密钥名抛错', () => {
+  it('别名探测视为未配置，已声明的名字照常读取', () => {
+    const { ctx } = fakeContext()
+    ctx.secret = (name: string) => {
+      if (name !== 'VOLC_SPEECH_API_KEY') throw new Error(`没有声明密钥 ${name}`)
+      return 'k'
+    }
+    expect(readSecret(ctx, 'DOUBAO_API_KEY')).toBeUndefined()
+    expect(firstSecret(ctx, API_KEY_NAMES)).toBe('k')
+    expect(hasCredentials(ctx)).toBe(true)
+    expect(scrub('key k', ctx)).toBe('key [redacted]')
   })
 })

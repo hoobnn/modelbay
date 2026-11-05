@@ -24,9 +24,18 @@ export const ACCESS_TOKEN_NAMES = [
 export const SECRET_NAMES = [...API_KEY_NAMES, ...APP_ID_NAMES, ...ACCESS_TOKEN_NAMES]
 
 /** Resolve the first configured value for a group of alias names. */
+/** 宿主对未声明的密钥名会抛错；别名探测时视为未配置。 */
+export function readSecret(ctx: AdapterContext, name: string): string | undefined {
+  try {
+    return ctx.secret(name)
+  } catch {
+    return undefined
+  }
+}
+
 export function firstSecret(ctx: AdapterContext, names: readonly string[]): string | undefined {
   for (const name of names) {
-    const value = ctx.secret(name)
+    const value = readSecret(ctx, name)
     if (value) return value
   }
   return undefined
@@ -56,7 +65,7 @@ export function arr(value: unknown): unknown[] {
 /** Remove known secrets then apply the generic core redactor. */
 export function scrub(text: string, ctx: AdapterContext): string {
   let out = text
-  const known = SECRET_NAMES.map((name) => ctx.secret(name)).filter((value): value is string =>
+  const known = SECRET_NAMES.map((name) => readSecret(ctx, name)).filter((value): value is string =>
     Boolean(value),
   )
   known.sort((a, b) => b.length - a.length)

@@ -12,7 +12,7 @@ import {
   type SubmitResult,
   type VoicePreset,
 } from '@modelbay/core'
-import { asJson, events, failure, incomplete, postRaw, type Json } from './http'
+import { asJson, events, failure, incomplete, postRaw, readSecret, type Json } from './http'
 
 /** Default speech settings. Kept as a zod object so `.shape` / `.parse` stay available. */
 export const speechSettings = z.object({
@@ -37,7 +37,7 @@ export function resolveSpeechSettings(
     const value = hosted[name]
     if (typeof value === 'string' && value) return value
     if (typeof value === 'number') return String(value)
-    return ctx.secret(secret)
+    return readSecret(ctx, secret)
   }
   const parsed = speechSettings.safeParse({
     voice: overrides.voice ?? pick('voice', 'VOLC_SPEECH_VOICE'),
