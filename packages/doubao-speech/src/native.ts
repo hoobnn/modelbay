@@ -4,6 +4,13 @@
 import { ProviderError, toBase64 } from '@modelbay/core'
 import type { AdapterContext } from '@modelbay/core'
 import { asJson, arr, postJson, postText, type Json } from './http'
+import {
+  interpretationStartRequest,
+  INTERPRETATION_CHUNK_BYTES,
+  INTERPRETATION_ENDPOINT,
+  INTERPRETATION_EVENTS,
+  INTERPRETATION_RESOURCE_ID,
+} from './interpretation'
 
 export const PODCAST_PATH = '/api/v3/podcast/sse'
 export const TRANSLATION_PATH = '/api/v3/machine_translation/matx_translate'
@@ -13,9 +20,13 @@ export const WORD_TABLE_PATH = '/api/proxy/invoke'
 export const VOICE_CLONE_PATH = '/api/v3/tts/voice_clone'
 export const VOICE_DESIGN_PATH = '/api/v3/tts/voice_design'
 export const GET_VOICE_PATH = '/api/v3/tts/get_voice'
-/** Simultaneous interpretation uses a WSS + protobuf protocol, not plain HTTP. */
-export const INTERPRETATION_ENDPOINT = 'wss://openspeech.bytedance.com/api/v4/ast/v2/translate'
-export const INTERPRETATION_RESOURCE_ID = 'volc.service_type.10053'
+
+export {
+  INTERPRETATION_ENDPOINT,
+  INTERPRETATION_RESOURCE_ID,
+  INTERPRETATION_CHUNK_BYTES,
+  INTERPRETATION_EVENTS,
+} from './interpretation'
 
 export const DOUBAO_NATIVE_OPERATIONS = [
   'podcast',
@@ -240,34 +251,34 @@ export async function podcast(ctx: AdapterContext, params: Json): Promise<Json> 
 // ── simultaneous interpretation ───────────────────────────────────────────
 
 /**
- * Validated stub: the official protocol is WSS + protobuf (`TranslateRequest`), which
- * `AdapterContext.fetch` cannot carry. Returning the planned request keeps the op callable
- * and gives hosts everything needed to implement the transport (TODO, see README).
+ * 同传只返回请求计划，不联网。
+ *
+ * 官方协议是 WSS + protobuf（`TranslateRequest`），`AdapterContext.fetch` 带不动二进制帧，
+ * 所以这里把连接头、事件号、开始会话的请求体和音频分片规则算好交给宿主，
+ * 由宿主注入 WebSocket 与 protobuf 编解码器。
  */
 export function simultaneousInterpretation(params: Json): Json {
   const mode = asString(params.mode, 's2t')
   const sourceLanguage = asString(params.source_language)
   const targetLanguage = asString(params.target_language)
-  if (!['s2t', 's2s'].includes(mode))
-    throw new ProviderError('invalid_input', 'mode must be s2t or s2s')
-  if (!sourceLanguage.trim() || !targetLanguage.trim())
-    throw new ProviderError('invalid_input', 'source_language and target_language are required')
-  const request = asRecord(params.request)
+  const request = interpretationStartRequest({
+    mode,
+    sourceLanguage,
+    targetLanguage,
+    request: asRecord(params.request),
+  })
   return {
     ok: false,
     requires: 'wss+protobuf',
     endpoint: INTERPRETATION_ENDPOINT,
     resourceId: INTERPRETATION_RESOURCE_ID,
-    request: {
-      event: 'StartSession',
-      request: {
-        mode,
-        source_language: sourceLanguage,
-        target_language: targetLanguage,
-        ...request,
-      },
-      source_audio: { format: 'wav', codec: 'raw', rate: 16000, bits: 16, channel: 1 },
+    headers: {
+      'X-Api-Resource-Id': INTERPRETATION_RESOURCE_ID,
+      'X-Api-Connect-Id': '<uuid>',
     },
+    events: INTERPRETATION_EVENTS,
+    chunkBytes: INTERPRETATION_CHUNK_BYTES,
+    request,
     todo: 'Host must inject a binary WebSocket factory and protobuf codec',
   }
 }

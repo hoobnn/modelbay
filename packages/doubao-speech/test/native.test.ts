@@ -18,6 +18,7 @@ import {
   voiceDesignOp,
   voiceQueryOp,
 } from '../src/native'
+import { interpretationChunks, interpretationHeaders } from '../src/interpretation'
 import { fakeContext, fixture, fixtureReply, type Reply } from './helpers'
 
 describe('native declarations', () => {
@@ -82,15 +83,57 @@ describe('podcast (required native op)', () => {
   })
 })
 
-describe('simultaneous-interpretation (required native stub)', () => {
-  it('returns a validated WSS+protobuf request plan', () => {
+describe('simultaneous-interpretation（只返回请求计划）', () => {
+  it('给出 WSS+protobuf 的连接头、事件号与开始会话请求体', () => {
     const plan = simultaneousInterpretation({ source_language: 'zh', target_language: 'en' })
     expect(plan).toMatchObject({
       ok: false,
       requires: 'wss+protobuf',
       endpoint: INTERPRETATION_ENDPOINT,
-      request: { event: 'StartSession' },
+      resourceId: 'volc.service_type.10053',
+      chunkBytes: 2560,
     })
+    expect(plan.headers).toMatchObject({ 'X-Api-Resource-Id': 'volc.service_type.10053' })
+    expect(plan.events).toMatchObject({ StartSession: 100, TaskRequest: 200, FinishSession: 102 })
+    expect(plan.request).toMatchObject({
+      event: 100,
+      request: { mode: 's2t', source_language: 'zh', target_language: 'en' },
+      source_audio: { format: 'wav', codec: 'raw', rate: 16000, bits: 16, channel: 1 },
+    })
+  })
+  it('s2s 模式补 target_audio 并按官方取值校验', () => {
+    const plan = simultaneousInterpretation({
+      mode: 's2s',
+      source_language: 'zh',
+      target_language: 'en',
+    })
+    expect(plan.request).toMatchObject({
+      target_audio: { format: 'pcm', rate: 16000, bits: 16, channel: 1 },
+    })
+    expect(() =>
+      simultaneousInterpretation({
+        mode: 's2s',
+        source_language: 'zh',
+        target_language: 'en',
+        request: { target_audio: { format: 'pcm', rate: 44100 } },
+      }),
+    ).toThrow(ProviderError)
+    expect(() =>
+      simultaneousInterpretation({
+        mode: 's2s',
+        source_language: 'zh',
+        target_language: 'en',
+        request: { target_audio: { format: 'ogg_opus', rate: 16000 } },
+      }),
+    ).toThrow(ProviderError)
+    expect(() =>
+      simultaneousInterpretation({
+        mode: 's2s',
+        source_language: 'zh',
+        target_language: 'en',
+        request: { target_audio: { channel: 2 } },
+      }),
+    ).toThrow(ProviderError)
   })
   it('validates mode and languages', () => {
     expect(() =>
@@ -99,6 +142,39 @@ describe('simultaneous-interpretation (required native stub)', () => {
     expect(() =>
       simultaneousInterpretation({ source_language: '', target_language: 'en' }),
     ).toThrow(ProviderError)
+    expect(() =>
+      simultaneousInterpretation({ source_language: 'zh', target_language: ' ' }),
+    ).toThrow(ProviderError)
+  })
+  it('额外字段不是对象时直接拒绝', () => {
+    expect(() =>
+      simultaneousInterpretation({
+        source_language: 'zh',
+        target_language: 'en',
+        request: { request_meta: 'x' },
+      }),
+    ).toThrow(ProviderError)
+  })
+})
+
+describe('同传的音频分片与请求头', () => {
+  it('按 80ms（2560 字节）切片', () => {
+    const pcm = new Uint8Array(2560 * 2 + 10)
+    const chunks = interpretationChunks(pcm)
+    expect(chunks).toHaveLength(3)
+    expect(chunks[0]?.length).toBe(2560)
+    expect(chunks[2]?.length).toBe(10)
+  })
+  it('空音频与未按采样帧对齐的音频都拒绝', () => {
+    expect(() => interpretationChunks(new Uint8Array(0))).toThrow(/empty/)
+    expect(() => interpretationChunks(new Uint8Array(3))).toThrow(/16-bit/)
+  })
+  it('请求头带 API Key 与资源 ID', () => {
+    expect(interpretationHeaders('k', 'cid')).toEqual({
+      'X-Api-Key': 'k',
+      'X-Api-Resource-Id': 'volc.service_type.10053',
+      'X-Api-Connect-Id': 'cid',
+    })
   })
 })
 

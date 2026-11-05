@@ -57,6 +57,15 @@ export {
   text,
 } from './speech'
 export {
+  INTERPRETATION_CHUNK_BYTES,
+  INTERPRETATION_EVENTS,
+  INTERPRETATION_MODES,
+  interpretationChunks,
+  interpretationHeaders,
+  interpretationStartRequest,
+} from './interpretation'
+export type { InterpretationOptions } from './interpretation'
+export {
   PODCAST_PATH,
   TRANSLATION_PATH,
   MINUTES_SUBMIT_PATH,
@@ -65,8 +74,6 @@ export {
   VOICE_CLONE_PATH,
   VOICE_DESIGN_PATH,
   GET_VOICE_PATH,
-  INTERPRETATION_ENDPOINT,
-  INTERPRETATION_RESOURCE_ID,
   buildPodcastRequest,
   parsePodcastSse,
   podcast,

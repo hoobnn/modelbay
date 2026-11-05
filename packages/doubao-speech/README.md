@@ -47,9 +47,11 @@ Declared in `DOUBAO_NATIVE_OPERATIONS`; each op's input JSON Schema is declared 
 adapter in `nativeOperationSchemas` (for the MCP generator). M3 baseline:
 
 - `podcast` — `POST /api/v3/podcast/sse` (validated request + SSE event parsing)
-- `simultaneous-interpretation` — **validated stub**: the official protocol is
+- `simultaneous-interpretation` — **request plan only**: the official protocol is
   WSS + protobuf (`wss://openspeech.bytedance.com/api/v4/ast/v2/translate`), which
-  `ctx.fetch` cannot carry. The op returns a complete request plan with a `todo` marker.
+  `ctx.fetch` cannot carry. The op returns the connection headers, the protobuf event
+  numbers, the `TranslateRequest` start body and the 80 ms audio chunking rule, so the
+  host only has to supply a binary WebSocket and a protobuf codec.
 
 Also implemented: `translation` (`matx_translate`), `meeting-notes` (lark submit/query),
 `hotword-table` (`/api/proxy/invoke`), `voice-clone` / `voice-design` / `voice-query`,
