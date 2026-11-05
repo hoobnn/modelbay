@@ -40,28 +40,6 @@ export function tierEdge(tier: string): number | undefined {
   return match ? Math.round(Number(match[1]) * 1024) : undefined
 }
 
-/**
- * Plan channel uses its own model names for the image / video endpoints.
- *
- * The names are the ones the official Agent Plan model-directory interface
- * returns (`doubao-seedream-5.0-pro` and `doubao-seedream-5.0-flash` use dots).
- * Declarations carry the same id in their `ark-plan` channel; this map is the
- * fallback for callers that pass the pay-as-you-go id.
- */
-export const PLAN_MODELS: Record<string, string> = {
-  'doubao-seedream-5-0-pro-260628': 'doubao-seedream-5.0-pro',
-  'doubao-seedream-5-0-flash-260915': 'doubao-seedream-5.0-flash',
-  'doubao-seedance-2-5-260628': 'doubao-seedance-2.5',
-  'doubao-seedance-2-0-260128': 'doubao-seedance-2.0',
-  'doubao-seedance-2-0-fast-260128': 'doubao-seedance-2.0-fast',
-  'doubao-seedance-2-0-mini-260615': 'doubao-seedance-2.0-mini',
-}
-
-/** Translate a model id for the plan data plane; custom ids pass through. */
-export function wireModel(plane: 'api' | 'plan', model: string): string {
-  return plane === 'plan' ? (PLAN_MODELS[model] ?? model) : model
-}
-
 function invalid(message: string): never {
   throw new ProviderError('invalid_input', message)
 }
@@ -73,10 +51,16 @@ function extraParams(extra: Json | undefined, allowed: string[]): Json {
   return { ...extra }
 }
 
-/** Seedream image generation request body. */
+/**
+ * Seedream image generation request body.
+ *
+ * `model` 是目标渠道的渠道内 ID（请求体里用这个）；`modelKey` 是声明里的规范
+ * 型号 ID——两条渠道的渠道内 ID 不同（按量 `doubao-seedream-5-0-pro-260628`、
+ * 套餐 `doubao-seedream-5.0-pro`），判断型号家族要用两条渠道一致的 `modelKey`。
+ */
 export async function imageBody(
-  plane: 'api' | 'plan',
   model: string,
+  modelKey: string,
   input: CapabilityInput<'image.generate'>,
   ctx: AdapterContext,
   defaultResolution: string,
@@ -84,9 +68,9 @@ export async function imageBody(
   if (!input.prompt.trim()) invalid('图片提示词不能为空')
   if (input.negativePrompt) invalid('Seedream 不支持独立 negativePrompt，请合并到 prompt')
   const count = input.count ?? 1
-  const lite = model === 'doubao-seedream-5-0-260128'
+  const lite = modelKey === 'doubao-seedream-5-0-260128'
   if (!Number.isInteger(count) || count < 1 || count > 15) invalid('图片数量必须为 1–15 的整数')
-  if (count > 1 && model.startsWith('doubao-seedream-5-') && !lite)
+  if (count > 1 && modelKey.startsWith('doubao-seedream-5-') && !lite)
     invalid('Seedream Pro / Flash 仅支持单图；多图请选 Seedream Lite')
   const refs = input.references ?? []
   if (refs.length > (lite ? 14 : 10)) invalid(`所选模型最多接受 ${lite ? 14 : 10} 张参考图`)
@@ -100,7 +84,7 @@ export async function imageBody(
       'output_format',
       'optimize_prompt_options',
     ]),
-    model: wireModel(plane, model),
+    model,
     prompt: input.prompt,
     response_format: 'b64_json',
   }
@@ -110,7 +94,7 @@ export async function imageBody(
     const resolution = input.resolution ?? defaultResolution
     const tokens = lite ? ['2K', '3K', '4K'] : ['1K', '1.5K', '2K']
     const edge = tierEdge(resolution)
-    if (!model.startsWith('doubao-seedream-5-') || !tokens.includes(resolution) || !edge)
+    if (!modelKey.startsWith('doubao-seedream-5-') || !tokens.includes(resolution) || !edge)
       invalid('所选 Seedream 模型不支持该分辨率')
     const { width, height } = sizeByArea(String(aspectRatio ?? '1:1'), edge * edge)
     body.size = aspectRatio === 'auto' ? resolution : `${width}x${height}`
@@ -173,7 +157,6 @@ export function parseImageResponse(data: Json): SubmitResult {
 
 /** Seedream layer-decomposition (cutout) request body. */
 export async function cutoutBody(
-  plane: 'api' | 'plan',
   model: string,
   input: CapabilityInput<'image.process'>,
   ctx: AdapterContext,
@@ -181,7 +164,7 @@ export async function cutoutBody(
   if (input.operation !== 'cutout') invalid('当前 Seedream 精修仅支持透明图层抠图')
   const source = await imageDataUrl(ctx, input.image, '火山方舟')
   return {
-    model: wireModel(plane, model),
+    model,
     image: source,
     prompt: input.prompt ?? '',
     layer_decomposition: true,
@@ -288,7 +271,7 @@ export async function videoBody(
       'generate_audio',
     ]),
     ...(input.audio !== undefined ? { generate_audio: input.audio } : {}),
-    model: wireModel(plane, model),
+    model,
     content: [],
     resolution: input.resolution ?? defaultResolution,
     ratio:

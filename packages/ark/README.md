@@ -11,10 +11,14 @@ that plein used to maintain separately:
 | `arkPlanAdapter` | `volc/ark-plan` | `ark-plan` | `https://ark.cn-beijing.volces.com/api/plan/v3` | `ARK_AGENT_PLAN_API_KEY` |
 
 `models` (re-exported from `src/models/index`'s `all`) and `channels`
-(`['ark', 'ark-plan']`) are exported from the root entry. Plan image/video model
-names are translated at request time by `wireModel()` (e.g.
-`doubao-seedream-5-0-pro-260628` → `doubao-seedream-5.0-pro`); chat, image and
-video ids otherwise pass through unchanged, including custom Endpoint IDs.
+(`['ark', 'ark-plan']`) are exported from the root entry. The two channels use
+different model ids for the same model, and the translation is derived from the
+declarations: the `ark` channel id and the `ark-plan` channel id of one
+declaration are the mapping (e.g. `doubao-seedream-5-0-pro-260628` →
+`doubao-seedream-5.0-pro`). Callers may pass either id — `ark-plan:<按量 ID>`
+and `ark-plan:<套餐 ID>` resolve to the same declaration and both send the plan
+id. A model that has no entry for the channel is rejected before the request is
+sent; custom Endpoint IDs without a declaration pass through unchanged.
 
 ## Capabilities and endpoints
 

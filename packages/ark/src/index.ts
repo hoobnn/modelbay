@@ -20,6 +20,7 @@ import {
   type AdapterContext,
   type AdapterRequest,
   type CapabilityInput,
+  type ChannelRef,
   type ModelDeclaration,
   type ModelLimits,
   type PlatformAdapter,
@@ -37,7 +38,6 @@ import {
   pollVideo,
   submitVideo,
   videoBody,
-  wireModel,
   type TaskOptions,
 } from './media'
 import { synthesizePlanSpeech } from './speech'
@@ -84,19 +84,65 @@ function requireKey(plane: Plane, ctx: AdapterContext): string {
   return key
 }
 
-/** Resolve `渠道:渠道内ID` / canonical id / alias to the platform wire id. */
-function modelId(ref: string, plane: Plane, models: ModelDeclaration[]): string {
+/**
+ * 解析引用到目标渠道的渠道内 ID。
+ *
+ * 同一个模型在两条渠道各有各的 ID（按量渠道在模型列表页、套餐渠道在套餐
+ * 模型目录页），所以按量 ID 与套餐 ID 都能定位到同一条声明；发出去的一律是
+ * 目标渠道的 ID。这张对照表从声明派生，不再单独维护一份手写映射。
+ *
+ * 声明里有这个模型、但它不在目标渠道时直接报错：这种请求发出去也是白花
+ * 额度（计费请求前失败）。找不到声明的自定义 ID 照旧透传。
+ */
+function resolveForPlane(
+  ref: string,
+  plane: Plane,
+  models: ModelDeclaration[],
+): { declaration: ModelDeclaration; channel: ChannelRef } | null {
+  const channel = planeChannel(plane)
   const colon = ref.indexOf(':')
   const raw = colon >= 0 ? ref.slice(colon + 1) : ref
   const found = resolveModel(models, ref)
-  const match = found?.declaration.channels.find((item) => item.channel === planeChannel(plane))
-  return match?.id ?? raw
+  const declaration =
+    found?.declaration ?? models.find((item) => item.channels.some((entry) => entry.id === raw))
+  if (!declaration) return null
+  const entry = declaration.channels.find((item) => item.channel === channel)
+  if (!entry)
+    throw new ProviderError('invalid_input', `所选模型不在 ${channel} 渠道：${declaration.id}`)
+  return { declaration, channel: entry }
+}
+
+/**
+ * 一次引用解析的结果。
+ *
+ * `model` 是目标渠道的渠道内 ID（请求体里用）；`modelKey` 是声明里的规范型号
+ * ID（两条渠道一致，判断型号家族用）；`limits` 是声明里的上限。
+ */
+interface ResolvedModel {
+  model: string
+  modelKey: string
+  limits: ModelLimits
+}
+
+/** Resolve `渠道:渠道内ID` / canonical id / alias to the platform wire id. */
+function resolveModelForPlane(
+  ref: string,
+  plane: Plane,
+  models: ModelDeclaration[],
+): ResolvedModel {
+  const colon = ref.indexOf(':')
+  const raw = colon >= 0 ? ref.slice(colon + 1) : ref
+  const found = resolveForPlane(ref, plane, models)
+  if (!found) return { model: raw, modelKey: raw, limits: {} }
+  return {
+    model: found.channel.id,
+    modelKey: found.declaration.id,
+    limits: { ...found.declaration.limits, ...found.channel.limits },
+  }
 }
 
 /** Default resolution comes only from the declaration; never hard-coded here. */
-function defaultResolution(ref: string, models: ModelDeclaration[]): string {
-  const found = resolveModel(models, ref)
-  const limits: ModelLimits = found ? { ...found.declaration.limits, ...found.channel.limits } : {}
+function defaultResolution(limits: ModelLimits): string {
   if (!limits.defaultResolution)
     throw new ProviderError('invalid_input', '所选模型未声明默认分辨率')
   return limits.defaultResolution
@@ -124,13 +170,14 @@ async function submit(
   const base = planeBase(plane)
   const label = planeLabel(plane)
   const messages = transportMessages(plane)
-  const model = modelId(req.model, plane, models)
+  const resolved = resolveModelForPlane(req.model, plane, models)
+  const model = resolved.model
 
   if (req.capability === 'text.chat') {
     return chatCompletion({
       ctx,
       url: `${base}/chat/completions`,
-      model: wireModel(plane, model),
+      model,
       apiKey: key,
       label,
       input: req.input as CapabilityInput<'text.chat'>,
@@ -140,11 +187,11 @@ async function submit(
   }
   if (req.capability === 'image.generate') {
     const body = await imageBody(
-      plane,
       model,
+      resolved.modelKey,
       req.input as CapabilityInput<'image.generate'>,
       ctx,
-      defaultResolution(req.model, models),
+      defaultResolution(resolved.limits),
     )
     const data = await request({
       ctx,
@@ -160,7 +207,7 @@ async function submit(
     return parseImageResponse(data)
   }
   if (req.capability === 'image.process') {
-    const body = await cutoutBody(plane, model, req.input as CapabilityInput<'image.process'>, ctx)
+    const body = await cutoutBody(model, req.input as CapabilityInput<'image.process'>, ctx)
     const data = await request({
       ctx,
       url: `${base}/images/generations`,
@@ -180,7 +227,7 @@ async function submit(
       model,
       req.input as CapabilityInput<'video.generate'>,
       ctx,
-      defaultResolution(req.model, models),
+      defaultResolution(resolved.limits),
       options.uploadVideo,
     )
     return submitVideo(body, taskOptions(plane, ctx, key))

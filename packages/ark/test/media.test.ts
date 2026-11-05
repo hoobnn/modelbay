@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { ProviderError, type CapabilityInput } from '@modelbay/core'
 import {
-  PLAN_MODELS,
   cancelVideo,
   cutoutBody,
   imageBody,
@@ -15,7 +14,6 @@ import {
   submitVideo,
   tierEdge,
   videoBody,
-  wireModel,
   type TaskOptions,
 } from '../src/media'
 import type { TransportMessages } from '../src/http'
@@ -59,16 +57,6 @@ describe('尺寸与模型名工具', () => {
     expect(tierEdge('1.5K')).toBe(1536)
     expect(tierEdge('bad')).toBeUndefined()
   })
-
-  it('wireModel 只在 plan 数据面替换套餐模型名', () => {
-    expect(wireModel('api', 'doubao-seedream-5-0-pro-260628')).toBe(
-      'doubao-seedream-5-0-pro-260628',
-    )
-    expect(wireModel('plan', 'doubao-seedream-5-0-pro-260628')).toBe(
-      PLAN_MODELS['doubao-seedream-5-0-pro-260628'],
-    )
-    expect(wireModel('plan', 'custom-endpoint')).toBe('custom-endpoint')
-  })
 })
 
 describe('imageBody：图片请求构造', () => {
@@ -76,13 +64,19 @@ describe('imageBody：图片请求构造', () => {
 
   it('默认档位换算成 WxH，并带上 response_format', async () => {
     const recorded = fixture<RecordedCall>('image-success')
-    const body = await imageBody('api', 'doubao-seedream-5-0-pro-260628', base, ctx(), '2K')
+    const body = await imageBody(
+      'doubao-seedream-5-0-pro-260628',
+      'doubao-seedream-5-0-pro-260628',
+      base,
+      ctx(),
+      '2K',
+    )
     expect(body).toEqual(recorded.request.body)
   })
 
   it('显式宽高与分辨率档位', async () => {
     const explicit = await imageBody(
-      'api',
+      'doubao-seedream-5-0-pro-260628',
       'doubao-seedream-5-0-pro-260628',
       { prompt: '猫', width: 1024, height: 768 },
       ctx(),
@@ -90,7 +84,7 @@ describe('imageBody：图片请求构造', () => {
     )
     expect(explicit.size).toBe('1024x768')
     const auto = await imageBody(
-      'api',
+      'doubao-seedream-5-0-pro-260628',
       'doubao-seedream-5-0-pro-260628',
       { prompt: '猫', extra: { aspectRatio: 'auto' } },
       ctx(),
@@ -101,7 +95,7 @@ describe('imageBody：图片请求构造', () => {
 
   it('多图走 sequential_image_generation，参考图转 data URL', async () => {
     const body = await imageBody(
-      'api',
+      'doubao-seedream-5-0-260128',
       'doubao-seedream-5-0-260128',
       {
         prompt: '组图',
@@ -117,17 +111,23 @@ describe('imageBody：图片请求构造', () => {
   })
 
   it('非法输入的校验', async () => {
-    await expect(imageBody('api', 'm', { prompt: '' }, ctx(), '2K')).rejects.toMatchObject({
+    await expect(imageBody('m', 'm', { prompt: '' }, ctx(), '2K')).rejects.toMatchObject({
       code: 'invalid_input',
     })
     await expect(
-      imageBody('api', 'doubao-seedream-5-0-pro-260628', { prompt: '猫', count: 2 }, ctx(), '2K'),
+      imageBody(
+        'doubao-seedream-5-0-pro-260628',
+        'doubao-seedream-5-0-pro-260628',
+        { prompt: '猫', count: 2 },
+        ctx(),
+        '2K',
+      ),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     await expect(
-      imageBody('api', 'm', { prompt: '猫', negativePrompt: '丑' }, ctx(), '2K'),
+      imageBody('m', 'm', { prompt: '猫', negativePrompt: '丑' }, ctx(), '2K'),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     await expect(
-      imageBody('api', 'm', { prompt: '猫', extra: { notAllowed: 1 } }, ctx(), '2K'),
+      imageBody('m', 'm', { prompt: '猫', extra: { notAllowed: 1 } }, ctx(), '2K'),
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 })
@@ -164,7 +164,6 @@ describe('parseImageResponse：图片响应解析', () => {
 describe('cutoutBody / parseCutoutResponse：图层抠图', () => {
   it('请求带 layer_decomposition 与原图 data URL', async () => {
     const body = await cutoutBody(
-      'api',
       'doubao-seedream-5-0-pro-260628',
       { image: { assetId: 'a1', kind: 'image' }, operation: 'cutout', prompt: '抠图' },
       ctx(),
@@ -172,12 +171,7 @@ describe('cutoutBody / parseCutoutResponse：图层抠图', () => {
     expect(body.layer_decomposition).toBe(true)
     expect(body.image).toBe('data:image/png;base64,AQID')
     await expect(
-      cutoutBody(
-        'api',
-        'm',
-        { image: { assetId: 'a1', kind: 'image' }, operation: 'upscale' },
-        ctx(),
-      ),
+      cutoutBody('m', { image: { assetId: 'a1', kind: 'image' }, operation: 'upscale' }, ctx()),
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 
