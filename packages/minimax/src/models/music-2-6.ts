@@ -18,7 +18,13 @@ export default {
   aliases: { official: [], short: [] },
   lifecycle: {
     status: 'closed-to-new-accounts',
-    source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
+    // 官方原文（2026-11-05）：自 2026 年 8 月 20 日起，付费接口（音乐生成、歌词生成）不再面向
+    // 新用户提供服务，历史付费用户可继续使用现有 API 服务
+    since: '2026-08-20',
+    source: {
+      url: 'https://platform.minimax.cn/docs/api-reference/music-generation',
+      checkedAt: '2026-11-05',
+    },
   },
   source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
 } satisfies ModelDeclaration
