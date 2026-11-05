@@ -4,7 +4,7 @@
  *   submit → adapter.submit；native → adapter.native；local → 本地只读回答。
  * 未配置 key / 适配器未就绪时返回清晰错误（isError 结果），绝不抛到 stdio 循环里。
  */
-import { lifecycleNotice } from '@modelbay/core'
+import { lifecycleNotice, selectDefaultModel } from '@modelbay/core'
 import type {
   AdapterContext,
   AdapterRequest,
@@ -28,6 +28,8 @@ export interface RoutingOptions {
   groups: readonly ToolGroup[]
   keyEnvVars: readonly string[]
   serverInfo: ServerInfo
+  /** 未传 model 时在哪个渠道里选默认模型；缺省取适配器的第一个渠道。 */
+  primaryChannel?: string
 }
 
 function toText(value: unknown): string {
@@ -55,10 +57,28 @@ function firstCapability(set: GeneratedToolSet): string {
   return ''
 }
 
-function derivedDefaultModel(tool: GeneratedToolSet['all'][number]): string {
-  const model = tool.inputSchema.properties?.model
-  if (model && typeof model.default === 'string') return model.default
-  return ''
+/**
+ * 传给适配器的模型：工具没传 model 时按能力取声明里的默认模型（只认 active、只在主渠道里选），
+ * 并统一去掉适配器自己渠道的 `渠道:` 前缀，适配器拿到的永远是渠道内 ID。
+ * 其他渠道的前缀（如方舟 MCP 里的 `ark-plan:`）原样保留，让适配器的渠道校验照常生效。
+ */
+function modelFor(
+  args: Record<string, unknown>,
+  capability: string,
+  adapter: PlatformAdapter,
+  primaryChannel: string | undefined,
+): string {
+  const given = typeof args.model === 'string' ? args.model.trim() : ''
+  if (given) return stripChannel(given, adapter.channels)
+  const channel = primaryChannel ?? adapter.channels[0]
+  const selected = selectDefaultModel(adapter.models, capability as never, channel)
+  return selected?.channel.id ?? ''
+}
+
+function stripChannel(model: string, channels: readonly string[]): string {
+  const colon = model.indexOf(':')
+  if (colon < 0) return model
+  return channels.includes(model.slice(0, colon)) ? model.slice(colon + 1) : model
 }
 
 function localResult(
@@ -135,7 +155,7 @@ function localResult(
 }
 
 export function createHandlers(options: RoutingOptions): ServerHandlers {
-  const { set, adapter, context, groups, keyEnvVars, serverInfo } = options
+  const { set, adapter, context, groups, keyEnvVars, serverInfo, primaryChannel } = options
   const models: readonly ModelDeclaration[] = adapter?.models ?? []
   const fallbackCapability = firstCapability(set)
 
@@ -174,7 +194,7 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
 
     const input: Record<string, unknown> = { ...args }
     delete input.model
-    const model = typeof args.model === 'string' ? args.model : derivedDefaultModel(tool)
+    const model = modelFor(args, route.capability, adapter, primaryChannel)
     const request = {
       capability: route.capability,
       model,

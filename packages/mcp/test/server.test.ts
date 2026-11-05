@@ -297,7 +297,7 @@ describe('createHandlers tools/call 路由', () => {
     expect(calls.submit).toHaveLength(1)
     expect(calls.submit[0]).toMatchObject({
       capability: 'text.chat',
-      model: 'ark:chat-pro',
+      model: 'chat-pro',
       input: { prompt: 'hi' },
     })
   })

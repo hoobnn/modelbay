@@ -167,6 +167,7 @@ export async function startServer(
     context,
     groups,
     keyEnvVars: meta.keyEnvVars,
+    primaryChannel: meta.primaryChannel,
     serverInfo: { name: meta.command, version: VERSION },
   })
   const server = createServer(handlers)
