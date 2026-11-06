@@ -317,6 +317,6 @@ describe('poll / cancel (async task polling)', () => {
   it('native() delegates to runMinimaxNative', async () => {
     const { ctx } = fakeContext([fixture('context-ir').response.body])
     const result = await adapter.native!('context-ir', { prompt: '一只猫在海边' }, ctx)
-    expect(result).toMatchObject({ taskId: 'ctx-1' })
+    expect(result).toMatchObject({ job_id: 'ctx-1', task_id: 'ctx-1' })
   })
 })

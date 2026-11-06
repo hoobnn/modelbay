@@ -199,7 +199,8 @@ export async function submitNativeTask(
   const taskId = data.task_id
   if (taskId === undefined || (typeof taskId === 'number' && !Number.isSafeInteger(taskId)))
     throw new ProviderError('unknown', 'MiniMax submission is missing a usable task_id')
-  return { taskId: String(taskId), requestId: data.request_id }
+  const id = String(taskId)
+  return { job_id: id, task_id: id, request_id: data.request_id }
 }
 
 /** Upload a local asset through FormData and return its `file_id`. */
