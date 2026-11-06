@@ -15,6 +15,27 @@ import {
 import { asJson, events, failure, incomplete, postRaw, readSecret, type Json } from './http'
 
 /**
+ * 语音合成（单向流式 HTTP / WebSocket）支持的采样率。
+ * 来源：https://docs.volcengine.com/docs/6561/1598757 与 https://docs.volcengine.com/docs/6561/1719100
+ * （2026-11-06 核对）：`req_params.audio_params.sample_rate`「音频采样率，可选值
+ * [8000,16000,22050,24000,32000,44100,48000]」，默认 24000。
+ */
+export const TTS_SAMPLE_RATES = [8000, 16000, 22050, 24000, 32000, 44100, 48000] as const
+
+/**
+ * Seed Audio 1.0 支持的采样率。
+ * 来源：https://docs.volcengine.com/docs/6561/2499930（模型列表页，2026-11-06 核对）：「采样率 8K,16K,24K,48K」。
+ */
+export const AUDIO_SAMPLE_RATES = [8000, 16000, 24000, 48000] as const
+
+/**
+ * 播客支持的采样率。
+ * 来源：https://docs.volcengine.com/docs/6561/1668014（2026-11-06 核对）：
+ * `audio_config.sample_rate`「音频采样率，可选值 [16000, 24000, 48000]」，默认 24000。
+ */
+export const PODCAST_SAMPLE_RATES = [16000, 24000, 48000] as const
+
+/**
  * Default speech settings. Kept as a zod object so `.shape` / `.parse` stay available.
  * `.meta({ title })` is the label host settings forms show; hosts that do not expose
  * `speed` (it is a per-request option) drop it with `.omit({ speed: true })`.
@@ -22,7 +43,10 @@ import { asJson, events, failure, incomplete, postRaw, readSecret, type Json } f
 export const speechSettings = z.object({
   voice: z.string().min(1).default('zh_female_vv_uranus_bigtts').meta({ title: '默认音色 ID' }),
   format: z.enum(['mp3', 'wav']).default('mp3').meta({ title: '音频格式' }),
-  sampleRate: z.enum(['16000', '24000', '48000']).default('24000').meta({ title: '采样率' }),
+  sampleRate: z
+    .enum(TTS_SAMPLE_RATES.map(String) as [string, ...string[]])
+    .default('24000')
+    .meta({ title: '采样率' }),
   speed: z.number().min(0.5).max(2).default(1).meta({ title: '语速' }),
 })
 export type SpeechSettings = z.output<typeof speechSettings>

@@ -28,6 +28,19 @@ describe('speechSettings / resolveSpeechSettings / TTS_VOICES', () => {
     expect(speechSettings.parse({})).toEqual(settings)
     expect(speechSettings.parse({ format: 'wav' }).format).toBe('wav')
   })
+  it('accepts every official TTS sample rate and rejects others', () => {
+    for (const rate of ['8000', '16000', '22050', '24000', '32000', '44100', '48000'])
+      expect(speechSettings.parse({ sampleRate: rate }).sampleRate).toBe(rate)
+    expect(speechSettings.safeParse({ sampleRate: '12000' }).success).toBe(false)
+    const built = buildSpeechRequest(
+      'seed-tts-2.0',
+      { text: 'hi' },
+      { ...settings, sampleRate: '44100' },
+    )
+    expect((built.body.req_params as { audio_params: unknown }).audio_params).toMatchObject({
+      sample_rate: 44100,
+    })
+  })
   it('resolves overrides and host-managed secrets', () => {
     const plain = fakeContext().ctx
     expect(resolveSpeechSettings(plain)).toEqual(settings)
