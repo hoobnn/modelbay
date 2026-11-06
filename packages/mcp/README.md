@@ -1,6 +1,6 @@
 # @modelbay/mcp
 
-MCP tool generator and per-platform stdio servers for [Modelbay](../../README.md). MIT licensed.
+MCP tool generator and per-platform stdio servers for [Modelbay](https://github.com/hoobnn/modelbay#readme). MIT licensed.
 
 `@modelbay/mcp` derives MCP tools from `ModelDeclaration` data and `@modelbay/core` schemas, and
 serves them over a minimal stdio JSON-RPC transport. It does **not** depend on
@@ -91,7 +91,7 @@ server's `env_vars` list in `~/.codex/config.toml`.
 - Shared capabilities use the same tool name on every platform (`generate_image`,
   `text_to_speech`, `clone_voice`, `design_voice`, `get_job`, ...).
 
-Details (in Chinese): [`docs/mcp.md`](../../docs/mcp.md).
+Details (in Chinese): [`docs/mcp.md`](https://github.com/hoobnn/modelbay/blob/main/docs/mcp.md).
 
 ## JSON-RPC methods
 

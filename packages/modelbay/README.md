@@ -1,6 +1,6 @@
 # modelbay
 
-The single install point for the [Modelbay](../../README.md) SDK. It bundles
+The single install point for the [Modelbay](https://github.com/hoobnn/modelbay#readme) SDK. It bundles
 the runtime-agnostic core API and the five platform adapters, holds the platform
 registry, and adds `createModelbay()` which wires everything together.
 
