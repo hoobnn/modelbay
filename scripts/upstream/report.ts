@@ -1,5 +1,5 @@
 /** 把对账结果渲染成 Markdown 报告（用作跟踪 issue 和草稿 PR 的正文，不进仓库）。 */
-import type { Gap, LegacyGap, LifecycleGap, UndeclaredGap, UnlistedGap } from './audit'
+import type { Gap, LifecycleGap, UndeclaredGap, UnlistedGap } from './audit'
 
 export interface PageStatus {
   url: string
@@ -36,6 +36,8 @@ function lifecycleSection(gaps: LifecycleGap[], applied: string[]): string[] {
       ? '补丁已写进声明文件，合并前逐条对照原文核对日期和状态。'
       : '用 `--apply` 运行会把下面的补丁写进声明文件。',
     '',
+    '官方列表放在历史 / 已下线小节的模型一律归档为 `retired`，不再支持。',
+    '',
   )
   for (const gap of gaps) {
     const from = gap.current.sunsetOn
@@ -68,22 +70,6 @@ function unlistedSection(gaps: UnlistedGap[]): string[] {
   for (const gap of gaps) {
     const pages = gap.pages.map((url, index) => `[${index + 1}](${url})`).join(' ')
     out.push(`| \`${gap.canonicalId}\` | ${gap.channel} | \`${gap.id}\` | ${pages} |`)
-  }
-  out.push('')
-  return out
-}
-
-function legacySection(gaps: LegacyGap[]): string[] {
-  if (gaps.length === 0) return []
-  const out = ['### 官方列表归为历史 / 已下线、声明仍是 active', '']
-  out.push(
-    '官方列表把它放在历史 / 旧版小节，或标了「已下线」。列表页的标签常和公告里的正式日期对不上，先找下线公告核对，再改成 `superseded`、`sunsetting` 等状态。',
-    '',
-  )
-  out.push('| 声明 | 渠道 | ID | 出处 |', '| --- | --- | --- | --- |')
-  for (const gap of gaps) {
-    const where = `[${escapeCell(gap.evidence.section)}](${gap.evidence.url})`
-    out.push(`| \`${gap.canonicalId}\` | ${gap.channel} | \`${gap.id}\` | ${where} |`)
   }
   out.push('')
   return out
@@ -135,7 +121,6 @@ export function renderReport(input: ReportInput): string {
     input.gaps.filter((gap): gap is Extract<Gap, { kind: K }> => gap.kind === kind)
   const lifecycle = by('lifecycle')
   const unlisted = by('unlisted')
-  const legacy = by('legacy')
   const undeclared = by('undeclared')
   const failed = input.pages.filter((page) => page.error)
 
@@ -147,7 +132,6 @@ export function renderReport(input: ReportInput): string {
     '| --- | --- |',
     `| 生命周期待更新 | ${lifecycle.length} |`,
     `| 官方列表和来源页里都找不到 | ${unlisted.length} |`,
-    `| 官方归为历史 / 已下线 | ${legacy.length} |`,
     `| 官方有、尚未声明 | ${undeclared.length} |`,
     `| 抓取失败 | ${failed.length} |`,
     '',
@@ -157,7 +141,6 @@ export function renderReport(input: ReportInput): string {
   out.push(
     ...lifecycleSection(lifecycle, input.applied),
     ...unlistedSection(unlisted),
-    ...legacySection(legacy),
     ...undeclaredSection(undeclared, input.skeletons),
     ...pagesSection(input.pages),
   )

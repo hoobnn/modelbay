@@ -9,11 +9,10 @@ export default {
   features: ['structured'],
   channels: [{ channel: 'minimax', id: 'MiniMax-M2.7' }],
   aliases: { official: [], short: [] },
+  // 官方原文（2026-11-06）：| MiniMax-M2.7 | 语言模型 | 已下线 |
   lifecycle: {
-    status: 'sunsetting',
-    // 官方原文（2026-11-05）：停止向新用户开放调用：【2026年10月19日】；正式下线：【2026年11月18日】
-    sunsetOn: '2026-11-18',
-    source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
+    status: 'retired',
+    source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-06' },
   },
   source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
 } satisfies ModelDeclaration

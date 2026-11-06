@@ -99,14 +99,22 @@ describe('工具 schema 由声明派生', () => {
     expect(after.inputSchema.properties?.resolution?.default).toBe('480p')
   })
 
-  it('把模型状态改成 retired：说明里出现下线提示，默认模型不再选它', () => {
+  it('把模型状态改成 retired：模型归档，不进 schema 和说明；能力下全部归档时工具不再提供', () => {
+    const active = videoModel({
+      id: 'video-b',
+      duration: { min: 4, max: 30 },
+      resolutions: ['720p'],
+      defaultResolution: '720p',
+    })
     const retired = {
       ...base,
       lifecycle: { ...base.lifecycle, status: 'retired' as const },
     } as ModelDeclaration
-    const tool = videoTool([retired])
-    expect(tool.description).toContain('官方已下线')
+    const tool = videoTool([retired, active])
+    expect(tool.description).not.toContain('video-a')
+    expect(String(tool.inputSchema.properties?.model?.description)).not.toContain('video-a')
     expect(tool.inputSchema.properties?.model?.default).not.toBe('ark:video-a')
+    expect(generateTools('ark', { models: [retired] }).byName.has('generate_video')).toBe(false)
   })
 
   it('改声明的可用模型 ID 集合，model 说明里的可选值跟着变', () => {

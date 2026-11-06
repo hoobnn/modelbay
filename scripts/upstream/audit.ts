@@ -6,11 +6,11 @@
  *
  * 声明 → 官方：
  * - `lifecycle`：下线 / 弃用公告点名了我们的模型，而声明的生命周期对不上，附生成好的补丁；
- * - `unlisted`：渠道内 ID 和别名在该渠道的列表页、声明自己引用的来源页里都找不到；
- * - `legacy`：只出现在列表页的历史 / 已下线小节，声明却还是 active。
+ *   只出现在列表页历史 / 已下线小节的模型一律归档（`retired`），也走这一类；
+ * - `unlisted`：渠道内 ID 和别名在该渠道的列表页、声明自己引用的来源页里都找不到。
  *
  * 官方 → 声明：
- * - `undeclared`：官方列表页里有、我们没声明的模型 ID。
+ * - `undeclared`：官方列表页当前小节里有、我们没声明的模型 ID。历史模型不再支持，不报。
  */
 import { dates, parseRows, plainText, type Row, tokens } from './markdown'
 
@@ -82,15 +82,7 @@ export interface UndeclaredGap {
   evidence: Evidence
 }
 
-export interface LegacyGap {
-  kind: 'legacy'
-  canonicalId: string
-  channel: string
-  id: string
-  evidence: Evidence
-}
-
-export type Gap = LifecycleGap | UnlistedGap | LegacyGap | UndeclaredGap
+export type Gap = LifecycleGap | UnlistedGap | UndeclaredGap
 
 export interface AuditInput {
   platform: string
@@ -112,7 +104,7 @@ const REPLACEMENT_HEADER =
 const RETIRED_WORDS =
   /已下线|已停止服务|已停服|已停用|retired|shut ?down|removed from the api|discontinued/i
 
-/** 列表页里表示「历史 / 旧版」的小节：模型还列着，但官方已不再主推。表格行写着「已下线」也按这类处理。 */
+/** 列表页里表示「历史 / 旧版」的小节，表格行写着「已下线」也算。这类模型一律归档，不再支持。 */
 const LEGACY_SECTION =
   /历史模型|历史版本|旧版|legacy|deprecated|previous (models|generation)|older models/i
 
@@ -268,8 +260,7 @@ export function audit(input: AuditInput): Gap[] {
     rows: parseRows(snapshot.markdown),
   }))
 
-  // 1. 下线 / 弃用公告点名的已声明模型。列表页上的「已下线」标签不出补丁：官方常用它表示
-  //    「不再对新用户开放」，和公告里的正式下线日期对不上，只在第 2 步按历史模型报告。
+  // 1. 下线 / 弃用公告点名的已声明模型。列表页上的历史模型在第 2 步一律归档。
   const mentions = new Map<DeclaredModel, { ids: Set<string>; evidence: Evidence[] }>()
   for (const { snapshot, rows } of parsed) {
     if (snapshot.role !== 'deprecation') continue
@@ -354,6 +345,7 @@ export function audit(input: AuditInput): Gap[] {
         listed.names.add(name)
         const key = `${channel}\n${name}`
         if (
+          legacy ||
           byName.has(name) ||
           candidates.has(key) ||
           !isCandidateId(token, prefixes, lowercaseOnly)
@@ -401,18 +393,39 @@ export function audit(input: AuditInput): Gap[] {
       })
     }
   }
+  // 历史模型一律归档：只出现在历史 / 已下线小节的已声明模型改成 retired，覆盖公告推算的状态
+  const archived = new Map<DeclaredModel, LifecycleGap>()
   for (const [key, hit] of legacyHits) {
     const channel = key.split('\n')[0]!
-    if (hit.model.status !== 'active') continue
-    const names = [...hit.model.channels.map((ref) => ref.id), ...hit.model.aliases].map(lower)
+    const model = hit.model
+    if (model.status === 'retired') continue
+    const names = [...model.channels.map((ref) => ref.id), ...model.aliases].map(lower)
     if (names.some((name) => currentNames.has(`${channel}\n${name}`))) continue
-    gaps.push({
-      kind: 'legacy',
-      canonicalId: hit.model.canonicalId,
-      channel,
-      id: hit.id,
-      evidence: hit.evidence,
+    const entry = archived.get(model)
+    if (entry) {
+      if (!entry.ids.includes(hit.id)) entry.ids.push(hit.id)
+      entry.evidence.push(hit.evidence)
+      continue
+    }
+    archived.set(model, {
+      kind: 'lifecycle',
+      canonicalId: model.canonicalId,
+      ids: [hit.id],
+      current: {
+        status: model.status,
+        ...(model.sunsetOn ? { sunsetOn: model.sunsetOn } : {}),
+        ...(model.lifecycleSource ? { source: model.lifecycleSource } : {}),
+      },
+      proposed: { status: 'retired', source: hit.evidence.url },
+      evidence: [hit.evidence],
     })
+  }
+  for (const [model, gap] of archived) {
+    const index = gaps.findIndex(
+      (other) => other.kind === 'lifecycle' && other.canonicalId === model.canonicalId,
+    )
+    if (index >= 0) gaps.splice(index, 1, gap)
+    else gaps.push(gap)
   }
   gaps.push(...candidates.values())
 

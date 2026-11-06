@@ -87,38 +87,19 @@ describe('MCP MiniMax 参数进上游请求', () => {
     expect(body.language_boost).toBe('Chinese')
   })
 
-  it('music_generation：显式模型下 lyrics / lyrics_optimizer 到请求体，is_instrumental 默认 false', async () => {
-    const { handlers, captured } = setup(() => json({ ...ok, data: { audio: '0102' } }))
-    await handlers.callTool('music_generation', {
-      model: 'music-3.0',
-      prompt: '民谣',
-      lyrics: '[Verse]\n你好',
+  it('已归档的模型：工具不再提供，显式点名也不发请求', async () => {
+    const { handlers, captured } = setup(() => json(ok))
+    const names = (await handlers.listTools()).map((tool) => tool.name)
+    expect(names).not.toContain('music_generation')
+    const music = await handlers.callTool('music_generation', { model: 'music-3.0' })
+    expect(music.isError).toBe(true)
+    const video = await handlers.callTool('generate_video', {
+      model: 'MiniMax-M2.7',
+      prompt: '海边',
     })
-    const first = bodyOf(captured, '/v1/music_generation')!
-    expect(first).toMatchObject({
-      model: 'music-3.0',
-      prompt: '民谣',
-      lyrics: '[Verse]\n你好',
-      is_instrumental: false,
-    })
-    captured.length = 0
-    await handlers.callTool('music_generation', {
-      model: 'music-3.0',
-      prompt: '民谣',
-      lyrics_optimizer: true,
-      is_instrumental: false,
-    })
-    expect(bodyOf(captured, '/v1/music_generation')).toMatchObject({
-      lyrics_optimizer: true,
-      is_instrumental: false,
-    })
-    captured.length = 0
-    await handlers.callTool('music_generation', {
-      model: 'music-3.0',
-      prompt: '钢琴',
-      is_instrumental: true,
-    })
-    expect(bodyOf(captured, '/v1/music_generation')!.is_instrumental).toBe(true)
+    expect(video.isError).toBe(true)
+    expect(JSON.stringify(video.content)).toContain('已归档')
+    expect(captured).toHaveLength(0)
   })
 
   it('generate_image：prompt_optimizer / parameters / subject_reference / n / aspect_ratio', async () => {

@@ -335,7 +335,7 @@ async function main(argv: string[]): Promise<number> {
         const count = (kind: Gap['kind']) => result.gaps.filter((gap) => gap.kind === kind).length
         process.stdout.write(
           `${platform}：生命周期 ${count('lifecycle')}，列表缺失 ${count('unlisted')}，` +
-            `历史模型 ${count('legacy')}，未声明 ${count('undeclared')}，抓取失败 ${result.errors}` +
+            `未声明 ${count('undeclared')}，抓取失败 ${result.errors}` +
             ` → .upstream-docs/${platform}/report.md\n`,
         )
       }

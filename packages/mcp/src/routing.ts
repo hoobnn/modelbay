@@ -4,7 +4,14 @@
  *   submit → adapter.submit；native → adapter.native；local → 本地只读回答。
  * 未配置 key / 适配器未就绪时返回清晰错误（isError 结果），绝不抛到 stdio 循环里。
  */
-import { lifecycleNotice, missingSecrets, selectDefaultModel, toBase64 } from 'modelbay'
+import {
+  isSelectable,
+  lifecycleNotice,
+  missingSecrets,
+  resolveModel,
+  selectDefaultModel,
+  toBase64,
+} from 'modelbay'
 import type {
   AdapterContext,
   AdapterRequest,
@@ -425,6 +432,10 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     }
 
     const givenModel = typeof args.model === 'string' ? args.model.trim() : ''
+    const archived = givenModel ? resolveModel(models, givenModel) : null
+    if (archived && !isSelectable(archived.declaration)) {
+      return errorResult(`模型 ${givenModel} 已归档（官方已下线），不再支持调用。`)
+    }
     const chosen = (givenModel ? adapterFor(givenModel) : target) ?? target
     const model = modelFor(args, route.capability, chosen, chosen.channels[0])
     const outDir = outputDirectory(given) ?? defaultOutDir

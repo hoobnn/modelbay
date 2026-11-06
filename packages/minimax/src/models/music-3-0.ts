@@ -9,13 +9,10 @@ export default {
   limits: { duration: false, promptMaxLength: 2000 },
   channels: [{ channel: 'minimax', id: 'music-3.0' }],
   aliases: { official: [], short: [] },
+  // 官方原文（2026-11-06）：| music-3.0 | 音乐 | 已下线 |
   lifecycle: {
-    status: 'closed-to-new-accounts',
-    since: '2026-08-20',
-    source: {
-      url: 'https://platform.minimax.cn/docs/api-reference/music-generation',
-      checkedAt: '2026-11-05',
-    },
+    status: 'retired',
+    source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-06' },
   },
   source: { url: 'https://platform.minimax.cn/docs/faq/models', checkedAt: '2026-11-05' },
 } satisfies ModelDeclaration

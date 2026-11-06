@@ -1,6 +1,6 @@
 /** 从 ModelDeclaration + 适配器 + 工具目录生成 MCP 工具集合。 */
 import type { ModelDeclaration, PlatformAdapter, PlatformDescriptor, ToolSpec } from 'modelbay'
-import { findPlatform } from 'modelbay'
+import { findPlatform, isSelectable } from 'modelbay'
 import {
   deriveAnnotations,
   deriveDefaultNote,
@@ -43,7 +43,9 @@ export function generateTools(
 ): GeneratedToolSet {
   const platform = typeof target === 'string' ? findPlatform(target) : target
   if (!platform?.mcp) throw new Error(`平台「${String(target)}」没有 MCP 工具目录`)
-  const models: readonly ModelDeclaration[] = options.models ?? options.adapter?.models ?? []
+  const declared: readonly ModelDeclaration[] = options.models ?? options.adapter?.models ?? []
+  // 已归档（retired）的模型不进工具 schema 和说明；list_declared_models 仍能查到记录
+  const models = declared.filter(isSelectable)
   const nodeOnly = new Set(options.adapter?.nodeOnly ?? [])
   const capabilities = models.flatMap((model) => model.capabilities)
   // 兜底能力仅用于派生无明确能力映射的工具；不是模型参数/上下限/默认值/生命周期。
@@ -56,15 +58,18 @@ export function generateTools(
 
   const all: GeneratedTool[] = []
   for (const entry of entries) {
-    all.push(
-      buildTool(
-        entry,
-        options.channel ?? platform.primaryChannel,
-        models,
-        defaultCapability,
-        nodeOnly,
-      ),
+    const tool = buildTool(
+      entry,
+      options.channel ?? platform.primaryChannel,
+      models,
+      defaultCapability,
+      nodeOnly,
     )
+    // 能力下的声明全部归档：工具不再提供
+    if (tool.route.kind === 'submit' && archivedOnly(declared, models, tool.route.capability)) {
+      continue
+    }
+    all.push(tool)
   }
   for (const name of EXTRA_TOOL_NAMES) {
     all.push(buildExtraTool(name))
@@ -77,6 +82,16 @@ export function generateTools(
     byName.set(tool.name, tool)
   }
   return { platform: platform.key, all, routes, byName }
+}
+
+function archivedOnly(
+  declared: readonly ModelDeclaration[],
+  selectable: readonly ModelDeclaration[],
+  capability: string,
+): boolean {
+  const has = (list: readonly ModelDeclaration[]) =>
+    list.some((model) => model.capabilities.includes(capability as never))
+  return has(declared) && !has(selectable)
 }
 
 function buildTool(
