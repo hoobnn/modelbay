@@ -24,6 +24,8 @@ interface JobRecord {
   id: string
   tool: string
   outDir?: string
+  /** 提交任务的渠道；多渠道平台查询时回到同一个适配器 */
+  channel?: string
   state: 'running' | 'delivered' | 'failed'
   createdAt: string
   /** 已落盘的结果：再查同一目录时直接返回，不再下载、不再写新文件 */
@@ -33,11 +35,12 @@ interface JobRecord {
 export class JobRegistry {
   private readonly jobs = new Map<string, JobRecord>()
 
-  remember(id: string, tool: string, outDir: string | undefined): JobRecord {
+  remember(id: string, tool: string, outDir: string | undefined, channel?: string): JobRecord {
     const record: JobRecord = {
       id,
       tool,
       ...(outDir ? { outDir } : {}),
+      ...(channel ? { channel } : {}),
       state: 'running',
       createdAt: new Date().toISOString(),
     }

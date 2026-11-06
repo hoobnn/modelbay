@@ -48,17 +48,28 @@ export function resolvePlatform(key: string): PlatformDescriptor {
 export async function loadAdapter(
   platform: PlatformDescriptor,
 ): Promise<PlatformAdapter | undefined> {
+  return primaryAdapter(platform, await loadAdapters(platform))
+}
+
+/** 创建平台的全部适配器（多渠道平台如方舟有按量、套餐两个）；失败时返回空数组。 */
+export async function loadAdapters(platform: PlatformDescriptor): Promise<PlatformAdapter[]> {
   try {
-    const adapters = await createNodeAdapters(platform)
-    return (
-      adapters.find((adapter) => adapter.channels.includes(platform.primaryChannel)) ?? adapters[0]
-    )
+    return await createNodeAdapters(platform)
   } catch (error) {
     process.stderr.write(
       `[modelbay-mcp ${platform.key}] 平台适配器暂不可用：${error instanceof Error ? error.message : String(error)}\n`,
     )
-    return undefined
+    return []
   }
+}
+
+function primaryAdapter(
+  platform: PlatformDescriptor,
+  adapters: readonly PlatformAdapter[],
+): PlatformAdapter | undefined {
+  return (
+    adapters.find((adapter) => adapter.channels.includes(platform.primaryChannel)) ?? adapters[0]
+  )
 }
 
 export function resolveGroups(env: Record<string, string | undefined>): ToolGroup[] {
@@ -103,7 +114,8 @@ export async function startServer(key: string, options: StartOptions = {}): Prom
   const input = options.input ?? process.stdin
   const output = options.output ?? process.stdout
 
-  const adapter = await loadAdapter(platform)
+  const adapters = await loadAdapters(platform)
+  const adapter = primaryAdapter(platform, adapters)
   const secrets = readSecrets(platform.secrets, env)
   const context = createAdapterContext({
     secrets,
@@ -117,6 +129,8 @@ export async function startServer(key: string, options: StartOptions = {}): Prom
   const handlers = createHandlers({
     set,
     adapter,
+    adapters,
+    ...(platform.channelSecrets ? { channelSecrets: platform.channelSecrets } : {}),
     context,
     groups,
     secrets: platform.secrets,

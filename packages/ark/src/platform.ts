@@ -9,6 +9,7 @@ export const arkPlatform = definePlatform<ArkAdapterOptions>({
   key: 'ark',
   title: 'Volcengine Ark',
   primaryChannel: 'ark',
+  channelSecrets: { ark: ['ARK_API_KEY'], 'ark-plan': ['ARK_AGENT_PLAN_API_KEY'] },
   secrets: {
     required: [['ARK_API_KEY'], ['ARK_AGENT_PLAN_API_KEY']],
     optional: [
