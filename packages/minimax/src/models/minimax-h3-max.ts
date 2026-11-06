@@ -13,6 +13,9 @@ export default {
     duration: { min: 5, max: 15 },
     seed: false,
     audio: false,
+    // 官方文档对「仅尾帧」自相矛盾（场景表列出，role 说明又要求与 first_frame 成对），保守不开放；
+    // 来源：https://platform.minimax.io/docs/api-reference/video-generation-v2-create（2026-11-06 核对）
+    videoModes: ['text', 'image', 'frames', 'reference'],
     references: { max: 9 },
     referenceMedia: { video: 3, audio: 3, audioOnly: true },
     media: {
