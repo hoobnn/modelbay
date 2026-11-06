@@ -4,7 +4,7 @@
     "url": "https://api.minimax.cn/v2/video_regeneration",
     "method": "POST",
     "headers": { "Authorization": "Bearer <redacted>", "Content-Type": "application/json" },
-    "body": { "model": "MiniMax-H3", "source_task_id": "task-1" }
+    "body": { "model": "MiniMax-H3", "source_task_id": "task-1", "resolution": "2K" }
   },
   "response": {
     "status": 200,

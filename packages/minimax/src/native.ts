@@ -13,6 +13,7 @@ import {
   baseUrl,
   errorCode,
   readJson,
+  normalizeFileId,
   requestJson,
   requestMessages,
   send,
@@ -21,6 +22,8 @@ import {
 } from './http'
 
 export const CONTEXT_IR_PATH = '/v2/h3_context_ir'
+/** 再生成目标分辨率：官方两种请求体里 resolution 必填，默认值 2K。 */
+const REGENERATION_RESOLUTION = '2K'
 export const RERENDER_PATH = '/v2/video_regeneration'
 export const UPLOAD_PATH = '/v1/files/upload'
 export const VOICE_CLONE_PATH = '/v1/voice_clone'
@@ -65,7 +68,10 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
     properties: {
       voice_id: { type: 'string' },
       audio: { type: 'string', description: 'AssetRef id or a public URL' },
-      file_id: { type: 'string', description: '已上传样本的 file_id，与 audio 二选一' },
+      file_id: {
+        anyOf: [{ type: 'string' }, { type: 'integer' }],
+        description: '已上传样本的 file_id（官方 int64，字符串或整数均可），与 audio 二选一',
+      },
       text: { type: 'string' },
       noise_reduction: { type: 'boolean' },
       volume_normalization: { type: 'boolean' },
@@ -73,9 +79,9 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
   },
   'voice-design': {
     type: 'object',
-    required: ['voice_id', 'prompt', 'preview_text'],
+    required: ['prompt', 'preview_text'],
     properties: {
-      voice_id: { type: 'string' },
+      voice_id: { type: 'string', description: '可选；不传时平台自动生成并返回' },
       prompt: { type: 'string' },
       preview_text: { type: 'string' },
     },
@@ -173,12 +179,11 @@ export function buildRerenderRequest(params: Json): { path: string; body: Json }
         'content must contain exactly one role=base_video item',
       )
   }
-  const body: Json = { model: 'MiniMax-H3', ...options }
+  // 官方 POST /v2/video_regeneration：source_task_id 与 content 两种请求体的 resolution 都是必填，
+  // 默认值 2K（2026-11-06 核对：https://platform.minimax.cn/docs/api-reference/video-generation-v2-regeneration）
+  const body: Json = { model: 'MiniMax-H3', ...options, resolution: REGENERATION_RESOLUTION }
   if (sourceTaskId) body.source_task_id = sourceTaskId
-  else {
-    body.content = content
-    body.resolution = '2K'
-  }
+  else body.content = content
   return { path: RERENDER_PATH, body }
 }
 
@@ -212,9 +217,11 @@ export async function uploadFile(ctx: AdapterContext, params: Json): Promise<Jso
   form.set('file', new Blob([new Uint8Array(loaded.data)], { type: mime }), `asset.${ext}`)
   const data = await requestJson(ctx, UPLOAD_PATH, form)
   const fileId = asJson(data.file).file_id
-  if (fileId === undefined || (typeof fileId === 'number' && !Number.isSafeInteger(fileId)))
+  // file_id 是 int64：超长整数已在 readJson 里按字符串保留，丢精度的数字不可用
+  const usable = normalizeFileId(fileId)
+  if (usable === undefined)
     throw new ProviderError('unknown', 'MiniMax upload returned no usable file_id')
-  return { fileId: String(fileId), data }
+  return { fileId: String(usable), data }
 }
 
 const CLONE_FORMATS: Record<string, string> = {
@@ -238,8 +245,12 @@ export async function voiceClone(
     throw new ProviderError('invalid_input', 'Invalid MiniMax voice_id')
   const audio = params.audio
   let fileId: string
-  if (asString(params.file_id)) {
-    fileId = asString(params.file_id)
+  if (params.file_id !== undefined && params.file_id !== null && params.file_id !== '') {
+    // 官方 file_id 为 integer(int64)，字符串或数字输入都接受，发送时按数字写出
+    const normalized = normalizeFileId(params.file_id)
+    if (normalized === undefined)
+      throw new ProviderError('invalid_input', 'file_id must be a non-negative int64 integer')
+    fileId = String(normalized)
   } else if (typeof audio === 'string' && /^https?:\/\//.test(audio)) {
     fileId = audio
   } else {
@@ -280,19 +291,15 @@ export async function voiceDesign(ctx: AdapterContext, params: Json): Promise<Js
   const voiceId = asString(params.voice_id)
   const prompt = asString(params.prompt)
   const previewText = asString(params.preview_text)
-  if (
-    !voiceId ||
-    !prompt.trim() ||
-    prompt.length > 2000 ||
-    !previewText.trim() ||
-    previewText.length > 500
-  )
+  if (!prompt.trim() || prompt.length > 2000 || !previewText.trim() || previewText.length > 500)
     throw new ProviderError(
       'invalid_input',
-      'voice_id, prompt (<=2000) and preview_text (<=500) are required',
+      'prompt (<=2000) and preview_text (<=500) are required',
     )
+  // 官方 POST /v1/voice_design：voice_id 可选，不传则自动生成并在响应里返回
+  // （2026-11-06 核对：https://platform.minimax.cn/docs/api-reference/voice-design-design）
   const data = await requestJson(ctx, VOICE_DESIGN_PATH, {
-    voice_id: voiceId,
+    ...(voiceId ? { voice_id: voiceId } : {}),
     prompt,
     preview_text: previewText,
   })

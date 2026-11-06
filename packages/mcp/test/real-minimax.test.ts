@@ -318,7 +318,7 @@ describe('MCP MiniMax native 工具', () => {
     expect(captured[0]!.url).toContain('/v1/files/upload')
     expect(captured[0]!.form!.get('purpose')).toBe('voice_clone')
     expect(bodyOf(captured, '/v1/voice_clone')).toEqual({
-      file_id: '42',
+      file_id: 42,
       voice_id: 'MyVoice_12345',
       need_noise_reduction: false,
       need_volume_normalization: false,
@@ -331,7 +331,7 @@ describe('MCP MiniMax native 工具', () => {
     const { handlers, captured } = setup(() => json(ok))
     await handlers.callTool('clone_voice', { voice_id: 'MyVoice_12345', file_id: '99' })
     expect(captured).toHaveLength(1)
-    expect(bodyOf(captured, '/v1/voice_clone')).toMatchObject({ file_id: '99' })
+    expect(bodyOf(captured, '/v1/voice_clone')).toMatchObject({ file_id: 99 })
   })
 
   it('design_voice：改走 voice-design，prompt / preview_text / voice_id 进请求体', async () => {
@@ -346,6 +346,21 @@ describe('MCP MiniMax native 工具', () => {
     expect(result.isError).toBeFalsy()
     expect(bodyOf(captured, '/v1/voice_design')).toEqual({
       voice_id: 'Designed_1',
+      prompt: '温柔的女声',
+      preview_text: '你好',
+    })
+  })
+
+  it('design_voice：不传 voice_id 时请求体不带该字段', async () => {
+    const { handlers, captured } = setup(() =>
+      json({ ...ok, voice_id: 'Auto_1', trial_audio: '0102' }),
+    )
+    const result = await handlers.callTool('design_voice', {
+      prompt: '温柔的女声',
+      preview_text: '你好',
+    })
+    expect(result.isError).toBeFalsy()
+    expect(bodyOf(captured, '/v1/voice_design')).toEqual({
       prompt: '温柔的女声',
       preview_text: '你好',
     })

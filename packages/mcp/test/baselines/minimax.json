@@ -1014,7 +1014,7 @@
           "type": "string"
         }
       },
-      "required": ["prompt", "preview_text", "voice_id"],
+      "required": ["prompt", "preview_text"],
       "title": "design_voiceArguments",
       "type": "object"
     },

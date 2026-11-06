@@ -370,14 +370,17 @@ export const minimaxTools: ToolSpec[] = [
     // 试听 text 需要 model（2026-11-06 核对：
     // https://platform.minimax.cn/docs/api-reference/voice-cloning-clone）。
     // 本地路径 / URL 换成素材引用，由适配器先上传再复刻
+    // file_id 官方为 integer(int64)（2026-11-06 核对同上），字符串和整数输入都接受，校验在适配器里
     mapArguments: ({ file, file_id, model, ...rest }) => {
       const sample = typeof file === 'string' ? file : ''
       const mime = sample ? sampleMime(sample) : undefined
+      const hasFileId =
+        typeof file_id === 'number' || (typeof file_id === 'string' && file_id !== '')
       return {
         ...rest,
         ...(channelModel(model) ? { model: channelModel(model) } : {}),
-        ...(typeof file_id === 'string' && file_id ? { file_id } : {}),
-        ...(sample && !(typeof file_id === 'string' && file_id)
+        ...(hasFileId ? { file_id } : {}),
+        ...(sample && !hasFileId
           ? { audio: { assetId: sample, kind: 'audio', ...(mime ? { mime } : {}) } }
           : {}),
       }
@@ -389,7 +392,10 @@ export const minimaxTools: ToolSpec[] = [
       properties: {
         voice_id: { type: 'string' },
         file: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        file_id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        file_id: {
+          anyOf: [{ type: 'string' }, { type: 'integer' }, { type: 'null' }],
+          default: null,
+        },
         text: { type: 'string', default: '' },
         model: { type: 'string' },
       },
@@ -400,7 +406,7 @@ export const minimaxTools: ToolSpec[] = [
     name: 'design_voice',
     // 历史工具名保留兼容，同时注册跨平台统一命名
     description:
-      '按文字描述设计音色（POST /v1/voice_design）。prompt<=2000字符，preview_text<=500字符，试听按字符计费；voice_id为自定义音色ID。生成的音色用于text_to_speech。',
+      '按文字描述设计音色（POST /v1/voice_design）。prompt<=2000字符，preview_text<=500字符，试听按字符计费；voice_id可选（自定义音色ID，不传则平台自动生成并返回）。生成的音色用于text_to_speech。',
     native: 'voice-design',
     capability: 'voice.design',
     inputSchema: {
@@ -411,7 +417,7 @@ export const minimaxTools: ToolSpec[] = [
         preview_text: { type: 'string' },
         voice_id: { type: 'string' },
       },
-      required: ['prompt', 'preview_text', 'voice_id'],
+      required: ['prompt', 'preview_text'],
     },
   },
 ]
