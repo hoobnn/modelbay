@@ -1,5 +1,15 @@
 # @modelbay/cli
 
+## 0.2.0
+
+### Patch Changes
+
+- 9a9587c: npm 包补充关键词在前的描述与 keywords，README 里指向仓库根目录与文档的相对链接改为绝对地址，npm 页面上不再失效。
+- Updated dependencies [84b5bee]
+- Updated dependencies [89e1df7]
+- Updated dependencies [9a9587c]
+  - modelbay@0.2.0
+
 ## 0.1.3
 
 ### Patch Changes

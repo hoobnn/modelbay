@@ -1,5 +1,20 @@
 # @modelbay/mcp
 
+## 0.2.0
+
+### Minor Changes
+
+- 84b5bee: 历史模型一律归档，不再支持：`retired` 的模型 SDK 与 MCP 都拒绝调用，MCP 工具 schema 不再列出，能力下全部归档时工具不再提供。MiniMax 的 `MiniMax-M2.7`、`music-3.0`、`music-2.6` 按官方模型列表的「历史模型」小节归档，MiniMax MCP 不再提供 `music_generation`。
+
+### Patch Changes
+
+- 89e1df7: 方舟补回 Responses API 的联网搜索（`web_search`）、续接响应（`previous_response_id`）与 `max_tool_calls`，以及多模态向量化 `embed`（MCP 工具 `embed`）。只对声明里支持的按量模型开放，套餐渠道直接拒绝。
+- 9a9587c: npm 包补充关键词在前的描述与 keywords，README 里指向仓库根目录与文档的相对链接改为绝对地址，npm 页面上不再失效。
+- Updated dependencies [84b5bee]
+- Updated dependencies [89e1df7]
+- Updated dependencies [9a9587c]
+  - modelbay@0.2.0
+
 ## 0.1.3
 
 ### Patch Changes
