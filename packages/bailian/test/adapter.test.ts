@@ -228,6 +228,23 @@ describe('submit: request construction and response parsing (fixtures)', () => {
     expect(calls()[0]?.headers).toMatchObject({ 'X-DashScope-Async': 'enable' })
     expect(result).toEqual({ state: 'pending', remoteId: 'task-123', pollAfterMs: 10_000 })
   })
+  it('video.generate 拒绝视频编辑模型，指向 edit-video，且不联网', async () => {
+    const { ctx, calls } = fakeContext([])
+    await expect(
+      createBailianAdapter(bailianModels).submit(
+        {
+          capability: 'video.generate',
+          model: 'happyhorse-1.0-video-edit',
+          input: { prompt: '换背景' },
+        },
+        ctx,
+      ),
+    ).rejects.toMatchObject({
+      code: 'invalid_input',
+      message: expect.stringContaining('edit-video'),
+    })
+    expect(calls()).toHaveLength(0)
+  })
   it('video.generate rejects an empty request and a missing task_id', async () => {
     const a = fakeContext([])
     await expect(

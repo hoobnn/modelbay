@@ -10,6 +10,7 @@ import {
   mapChatArguments,
   mapCloneArguments,
   mapDesignArguments,
+  mapEditVideoArguments,
   mapEmbedArguments,
   mapPortraitArguments,
   mapRerankArguments,
@@ -24,7 +25,7 @@ export const bailianTools: ToolSpec[] = [
     description:
       '数字人对口型：图片+人声驱动人物口型、表情、动作。image、audio须为公网URL，不上传本地文件。\n' +
       '图片jpg/png/webp等，音频wav/mp3，音频须小于15MB且小于20秒；resolution=480P/720P，默认720P。\n' +
-      'parameters合并进官方parameters对象。按输出秒数计费；只提交任务，返回taskId，之后用get_job（task_id）查进度。北京地域能力。\n',
+      'parameters合并进官方parameters对象。按输出秒数计费；只提交任务，返回job_id/task_id，之后用get_job查进度。北京地域能力。\n',
     inputSchema: {
       type: 'object',
       title: 'animate_portraitArguments',
@@ -256,10 +257,38 @@ export const bailianTools: ToolSpec[] = [
     },
   },
   {
+    name: 'edit_video',
+    native: 'edit-video',
+    mapArguments: mapEditVideoArguments,
+    description:
+      '视频指令编辑（HappyHorse）：按prompt改风格、替换局部元素；输入1个视频加0–5张参考图，只提交任务，返回job_id/task_id，之后用get_job查进度，完成时取结果。\n' +
+      'video须为公网URL，不上传本地文件；reference_images为公网URL或Base64 Data URI。不是generate_video的模型，请求体不同。\n' +
+      'resolution、watermark、audio_setting（auto/origin）、seed的取值与默认值见get_tool_help；parameters合并进官方parameters对象。\n',
+    inputSchema: {
+      type: 'object',
+      title: 'edit_videoArguments',
+      properties: {
+        video: { type: 'string' },
+        prompt: { type: 'string' },
+        reference_images: { type: 'array', items: { type: 'string' } },
+        model: { type: 'string' },
+        resolution: { type: 'string' },
+        watermark: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
+        audio_setting: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        parameters: {
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          default: null,
+        },
+      },
+      required: ['video', 'prompt'],
+    },
+  },
+  {
     name: 'get_job',
     description:
       '查任务进度和结果，job_id 或 task_id 二选一（都给时须属于同一任务）。\n' +
-      '视频类任务（generate_video/animate_portrait）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n' +
+      '视频类任务（generate_video/edit_video/animate_portrait）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n' +
       '完成即下载到原输出目录；已结束的任务只读本地记录。只给 task_id 且本地没有记录时，新建本地记录再查询。\n' +
       '不会重新提交生成。返回 job_state、completed、files、usage；ok=false 表示查询或交付失败。\n',
     inputSchema: {

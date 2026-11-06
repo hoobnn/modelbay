@@ -5,10 +5,11 @@
  * Schema itself (see `nativeOperationSchemas`) instead of deriving it from a declaration.
  * 与模型有关的取值（可用的 TTS 模型、复刻/设计的目标模型）从声明派生。
  */
-import { ProviderError, selectDefaultModel, selectNativeModel } from '@modelbay/core'
+import { ProviderError, selectDefaultModel, selectNativeModel, toModelInfo } from '@modelbay/core'
 import type { AdapterContext, AssetRef, ModelDeclaration } from '@modelbay/core'
 import { openAiModelList } from '@modelbay/shared'
 import { asJson, arr, bailianSettings, requestJson, type Json } from './http'
+import { optionKeys, optionsProblem } from './options'
 import { asrModels, buildAsrRequest, parseAsrResponse, resolveAudio } from './asr'
 import {
   buildCloneRequest,
@@ -34,6 +35,7 @@ export const EMBED_TEXT_PATH = '/compatible-mode/v1/embeddings'
 export const EMBED_MULTIMODAL_PATH =
   '/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding'
 export const PORTRAIT_PATH = '/api/v1/services/aigc/image2video/video-synthesis'
+export const VIDEO_SYNTHESIS_PATH = '/api/v1/services/aigc/video-generation/video-synthesis'
 
 export const BAILIAN_NATIVE_OPERATIONS = [
   'listModels',
@@ -46,6 +48,7 @@ export const BAILIAN_NATIVE_OPERATIONS = [
   'voice-list',
   'voice-query',
   'digital-human-lipsync',
+  'edit-video',
   'raw-request',
 ] as const
 
@@ -156,6 +159,21 @@ export function nativeOperationSchemas(
         image_url: { type: 'string' },
         audio_url: { type: 'string' },
         resolution: { type: 'string', enum: ['480P', '720P'] },
+        parameters: { type: 'object' },
+      },
+    },
+    'edit-video': {
+      type: 'object',
+      required: ['video', 'prompt'],
+      properties: {
+        video: { type: 'string' },
+        prompt: { type: 'string' },
+        reference_images: { type: 'array', items: { type: 'string' } },
+        resolution: { type: 'string' },
+        model: { type: 'string' },
+        watermark: { type: 'boolean' },
+        audio_setting: { type: 'string' },
+        seed: { type: 'integer' },
         parameters: { type: 'object' },
       },
     },
@@ -292,7 +310,83 @@ export async function digitalHumanLipsync(
   const taskId = asJson(data.output).task_id
   if (typeof taskId !== 'string' || !taskId)
     throw new ProviderError('unknown', '数字人任务缺少 task_id；请勿重新提交任务')
-  return { taskId, requestId: data.request_id }
+  return { job_id: taskId, task_id: taskId, request_id: data.request_id }
+}
+
+const PUBLIC_URL = /^https?:\/\//i
+const IMAGE_DATA_URI = /^data:image\/(?:jpeg|png|webp);base64,/i
+
+/**
+ * HappyHorse 视频指令编辑（happyhorse-1.0-video-edit），返回异步任务 ID。
+ * 来源：https://help.aliyun.com/en/model-studio/happyhorse-video-edit-api-reference（2026-11-06 核对）：
+ * input.media 恰好 1 个 video 加 0–5 个 reference_image；parameters 为 resolution / watermark /
+ * audio_setting / seed。取值范围与默认值读声明，视频只收公网 URL。
+ */
+export async function editVideo(
+  params: Json,
+  ctx: AdapterContext,
+  models: readonly ModelDeclaration[],
+): Promise<Json> {
+  const requested = asString(params.model)
+  const declaration = requested
+    ? models.find(
+        (item) =>
+          item.native?.includes('edit-video') &&
+          item.channels.some(
+            (channel) => channel.channel === 'bailian' && channel.id === requested,
+          ),
+      )
+    : selectNativeModel(models, 'edit-video', 'bailian')?.declaration
+  const channel = declaration?.channels.find((item) => item.channel === 'bailian')
+  if (!declaration || !channel)
+    throw new ProviderError('invalid_input', `${requested || 'edit-video'} 不是视频编辑模型`)
+  const spec = toModelInfo(declaration, channel)
+  const limits = spec.limits ?? {}
+
+  const video = asString(params.video)
+  const prompt = asString(params.prompt)
+  if (!PUBLIC_URL.test(video))
+    throw new ProviderError(
+      'invalid_input',
+      '视频编辑须提供公网 URL 的 video，不接受本地文件或 Data URI',
+    )
+  if (!prompt.trim()) throw new ProviderError('invalid_input', '视频编辑须提供 prompt')
+  const images = asStringArray(params.reference_images)
+  const maxImages = limits.references?.max
+  if (maxImages !== undefined && images.length > maxImages)
+    throw new ProviderError('invalid_input', `参考图最多 ${maxImages} 张`)
+  if (images.some((src) => !PUBLIC_URL.test(src) && !IMAGE_DATA_URI.test(src)))
+    throw new ProviderError(
+      'invalid_input',
+      '参考图须为公网 URL 或 jpeg / png / webp 的 Base64 Data URI',
+    )
+  const resolution = asString(params.resolution) || limits.defaultResolution
+  if (limits.resolutions && (!resolution || !limits.resolutions.includes(resolution)))
+    throw new ProviderError('invalid_input', `分辨率须为 ${limits.resolutions.join(' 或 ')}`)
+
+  const names = optionKeys(spec.optionsSchema)
+  const options = Object.fromEntries(
+    Object.entries(params).filter(([key, value]) => names.includes(key) && value !== undefined),
+  )
+  if (optionsProblem(spec.optionsSchema, options))
+    throw new ProviderError('invalid_input', '视频编辑专属参数无效')
+  const extra = asRecord(params.parameters)
+  const body: Json = {
+    model: channel.id,
+    input: {
+      prompt,
+      media: [
+        { type: 'video', url: video },
+        ...images.map((url) => ({ type: 'reference_image', url })),
+      ],
+    },
+    parameters: { ...extra, ...(resolution ? { resolution } : {}), ...options },
+  }
+  const data = await requestJson(ctx, VIDEO_SYNTHESIS_PATH, body, { asyncTask: true })
+  const taskId = asJson(data.output).task_id
+  if (typeof taskId !== 'string' || !taskId)
+    throw new ProviderError('unknown', '视频编辑任务缺少 task_id；请勿重新提交任务')
+  return { job_id: taskId, task_id: taskId, request_id: data.request_id }
 }
 
 /**
@@ -449,6 +543,8 @@ export async function runBailianNative(
     }
     case 'digital-human-lipsync':
       return digitalHumanLipsync(p, ctx, models)
+    case 'edit-video':
+      return editVideo(p, ctx, models)
     case 'raw-request': {
       const path = asString(p.path)
       if (!path.startsWith('/'))

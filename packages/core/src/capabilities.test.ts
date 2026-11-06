@@ -41,7 +41,8 @@ describe('归一化能力', () => {
 
 describe('native 操作', () => {
   it('NATIVE_OPERATIONS 列出单平台独有操作', () => {
-    expect(NATIVE_OPERATIONS).toHaveLength(11)
+    expect(NATIVE_OPERATIONS).toHaveLength(12)
+    expect(NATIVE_OPERATIONS).toContain('edit-video')
     expect(NATIVE_OPERATIONS).toContain('rerank')
     expect(NATIVE_OPERATIONS).toContain('raw-request')
     expect(NATIVE_OPERATIONS).toContain('digital-human-lipsync')

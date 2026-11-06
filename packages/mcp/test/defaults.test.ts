@@ -43,6 +43,7 @@ const EXPECTED: Record<McpKey, Record<string, string | null | undefined>> = {
   },
   bailian: {
     chat: 'bailian:qwen3.8-max',
+    edit_video: 'bailian:happyhorse-1.0-video-edit',
     embed: 'bailian:text-embedding-v4',
     generate_image: 'bailian:qwen-image-3.0-pro',
     generate_video: 'bailian:wan3.0-video',

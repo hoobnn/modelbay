@@ -107,6 +107,7 @@ export {
   rerank,
   textEmbed,
   digitalHumanLipsync,
+  editVideo,
   runBailianNative,
 } from './native'
 export { bailianPlatform } from './platform'

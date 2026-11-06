@@ -156,3 +156,11 @@ export function mapPortraitArguments(args: Args): Args {
   const { image, audio, ...rest } = args
   return { ...rest, image_url: image, audio_url: audio }
 }
+
+/**
+ * edit_video → native edit-video：video 须是公网 URL；参考图可以是公网 URL 或 Base64 Data URI，
+ * 本地路径不会被上传。来源：https://help.aliyun.com/en/model-studio/happyhorse-video-edit-api-reference（2026-11-06 核对）。
+ */
+export function mapEditVideoArguments(args: Args): Args {
+  return withModel(args)
+}
