@@ -12,6 +12,7 @@ export default {
   description: '最快的文生图型号：写实人像与产品图好，只支持文生图，每次 1 张。',
   capabilities: ['image.generate'],
   channels: [{ channel: 'bailian', id: 'z-image-turbo' }],
+  limits: { count: { max: 1 } },
   aliases: { official: [], short: ['z'] },
   lifecycle: {
     status: 'active',

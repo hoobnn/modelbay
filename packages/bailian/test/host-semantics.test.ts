@@ -501,6 +501,7 @@ describe('图片尺寸与预检', () => {
     ['qwen-image-3.0-pro', { extra: { prompt_extend_mode: 'agent' }, references: [reference] }],
     ['qwen-image-3.0-pro', { extra: { prompt_extend_mode: 'bogus' } }],
     ['qwen-image-3.0-pro', { width: 1024 }],
+    ['z-image-turbo', { count: 2 }],
   ] as const)('%s 无效组合不读取素材、不联网：%j', async (model, input) => {
     const { ctx, fetch } = setup()
     await expect(generate(ctx, model, input)).rejects.toMatchObject({ code: 'invalid_input' })
