@@ -32,7 +32,7 @@
 - `@modelbay/core`：能力、声明格式与校验、默认模型选择、异步任务运行、平台描述类型。
 - 五个平台包（方舟按量与套餐、百炼、MiniMax、豆包语音、OpenAI 与 OpenAI 兼容渠道），共 85 个模型声明。
 - `modelbay` 汇总入口与平台注册表，`modelbay/node` 注入 Node 专属能力，`modelbay/<平台>` 提供平台特有导出。对外只发 `modelbay`、`@modelbay/mcp`、`@modelbay/cli` 三个包。
-- `@modelbay/mcp`：`modelbay-mcp <平台>`，支持方舟、MiniMax、百炼、豆包语音，工具从声明生成，本地 stdio 冒烟通过。
+- `@modelbay/mcp`：`modelbay-mcp <平台>`，支持方舟、MiniMax、百炼、豆包语音、OpenAI（官方渠道的对话与生图），工具从声明生成，本地 stdio 冒烟通过。
 - `@modelbay/cli`：`modelbay models / capabilities / doctor / generate`。
 - 上游文档对账：每天现抓官方 Markdown（个别站点浏览器渲染），统一抽取模型清单和下线信息，与声明双向核对，差距进跟踪 issue，生命周期补丁开草稿 PR。
 

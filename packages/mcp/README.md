@@ -20,6 +20,7 @@ npx -y @modelbay/mcp ark            # or: modelbay-mcp ark
 | MiniMax         | `minimax`       | `MINIMAX_API_KEY`                                            |
 | Alibaba Bailian | `bailian`       | `BAILIAN_API_KEY` (alias `DASHSCOPE_API_KEY`)                |
 | Doubao Speech   | `doubao-speech` | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN` |
+| OpenAI          | `openai`        | `OPENAI_API_KEY`                                             |
 
 The platform list, key names and aliases come from each platform package's `PlatformDescriptor`;
 running `modelbay-mcp` without an argument prints the available platforms. Keys are supplied by the
