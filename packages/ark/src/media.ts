@@ -304,6 +304,8 @@ const AUDIO_FORMAT: Record<string, string> = {
   'audio/mpeg': 'audio/mp3',
 }
 
+const REMOTE_REFERENCE = /^(?:https?|asset):\/\//i
+
 /**
  * 只有 `ctx.assets`（没有时长 / 编码元数据）时的参考素材编码：
  * 图片与音频走 data URL，视频先交给注入的上传实现换成限时地址。
@@ -316,7 +318,13 @@ async function assetReferences(
 ): Promise<Json[]> {
   const content: Json[] = []
   for (const ref of refs) {
-    if (ref.kind === 'video') {
+    // 方舟原生支持公网 URL 与 asset://ID 的参考视频 / 音频：原样转给上游，不读取、不转存
+    const remote = REMOTE_REFERENCE.test(ref.assetId) ? ref.assetId : undefined
+    if (remote && ref.kind === 'video') {
+      content.push({ type: 'video_url', video_url: { url: remote }, role: 'reference_video' })
+    } else if (remote && ref.kind === 'audio') {
+      content.push({ type: 'audio_url', audio_url: { url: remote }, role: 'reference_audio' })
+    } else if (ref.kind === 'video') {
       if (!uploadVideo)
         invalid(
           '火山方舟参考视频需要上传到对象存储：请从 @modelbay/ark/node 引入 uploadReferenceVideo，' +
