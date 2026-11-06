@@ -176,4 +176,40 @@ describe('MCP OpenAI 工具经真实适配器', () => {
     expect(request.body.size).toBe('1024x1024')
     expect(JSON.stringify(request.body.images)).toContain('data:image/png;base64')
   })
+
+  it('从声明派生的顶层字段也进请求体，不会被丢掉', async () => {
+    const { handlers, captured } = handlersWith(responsesSse)
+    const tools = handlers.listTools()
+    const chat = tools.find((tool) => tool.name === 'chat')!
+    expect(Object.keys(chat.inputSchema.properties ?? {})).toContain('previous_response_id')
+    await handlers.callTool('chat', {
+      model: 'openai:gpt-6.1-terra',
+      prompt: 'continue',
+      previous_response_id: 'resp_1',
+      service_tier: 'flex',
+    })
+    expect(captured.at(-1)!.body).toMatchObject({
+      previous_response_id: 'resp_1',
+      service_tier: 'flex',
+    })
+  })
+
+  it('generate_image：声明派生的顶层字段（complexity）进请求体', async () => {
+    const { handlers, captured } = handlersWith(imageJson)
+    await handlers.callTool('generate_image', {
+      model: 'openai:gpt-image-2.6-flare',
+      prompt: '猫',
+      complexity: 'low',
+    })
+    expect(captured[0]!.body.complexity).toBe('low')
+  })
+
+  it('同步平台不暴露 list_jobs，工具不声明与结果不符的 outputSchema', async () => {
+    const { handlers } = handlersWith(imageJson)
+    const tools = handlers.listTools()
+    const names = tools.map((tool) => tool.name)
+    expect(names).not.toContain('list_jobs')
+    for (const name of ['chat', 'generate_image', 'get_tool_help', 'list_capabilities'])
+      expect(tools.find((tool) => tool.name === name)?.outputSchema).toBeUndefined()
+  })
 })
