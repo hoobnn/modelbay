@@ -263,7 +263,10 @@ describe('generate_podcast', () => {
       audio_config: { format: 'aac' },
     })
     await handlers.callTool('generate_podcast', { url: 'https://example.com/a.pdf' })
-    expect(captured[1]!.body.input_info).toEqual({ input_url: 'https://example.com/a.pdf' })
+    expect(captured[1]!.body.input_info).toEqual({
+      input_url: 'https://example.com/a.pdf',
+      return_audio_url: true,
+    })
     await handlers.callTool('generate_podcast', { topic: '量子计算' })
     expect(captured[2]!.body).toMatchObject({ action: 4, prompt_text: '量子计算' })
     await handlers.callTool('generate_podcast', {
@@ -281,11 +284,26 @@ describe('generate_podcast', () => {
       text: 'x',
       parameters: { input_info: { input_text_max_length: 5000 }, use_head_music: false },
     })
-    expect(captured[0]!.body.input_info).toEqual({ input_text_max_length: 5000 })
+    expect(captured[0]!.body.input_info).toEqual({
+      input_text_max_length: 5000,
+      return_audio_url: true,
+    })
     expect(captured[0]!.body.use_head_music).toBe(false)
     await expect(
       handlers.callTool('generate_podcast', { text: 'x', url: 'https://a.b' }),
     ).rejects.toThrow('四选一')
+  })
+})
+
+describe('generate_podcast 音频输出', () => {
+  it('事件 361 的分片拼成一个 audio 块，不在事件里重复', async () => {
+    const text = 'event: 361\ndata: {"data":"AQID"}\n\nevent: 361\ndata: {"data":"BAUG"}\n\n'
+    const { handlers } = await setup(() => new Response(text))
+    const res = await handlers.callTool('generate_podcast', { text: 'x' })
+    const audio = res.content.filter((block) => block.type === 'audio')
+    expect(audio).toHaveLength(1)
+    expect(audio[0]).toMatchObject({ mimeType: 'audio/mpeg', data: 'AQIDBAUG' })
+    expect(JSON.stringify(res.structuredContent)).not.toContain('AQID')
   })
 })
 

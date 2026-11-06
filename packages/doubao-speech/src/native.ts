@@ -1,9 +1,10 @@
 /**
  * Doubao Speech native (single-platform) operations and their parameter schemas.
  */
-import { ProviderError, toBase64 } from '@modelbay/core'
+import { fromBase64, ProviderError, toBase64 } from '@modelbay/core'
 import type { AdapterContext } from '@modelbay/core'
 import { asJson, arr, postJson, postText, type Json } from './http'
+import { PODCAST_SAMPLE_RATES } from './speech'
 import { consoleAction } from './console'
 import {
   interpretationStartRequest,
@@ -196,7 +197,7 @@ export function buildPodcastRequest(params: Json): Json {
   const sampleRate = config.sample_rate ?? 24000
   if (
     !['mp3', 'pcm', 'aac', 'ogg_opus'].includes(format) ||
-    ![16000, 24000, 48000].includes(Number(sampleRate))
+    !(PODCAST_SAMPLE_RATES as readonly number[]).includes(Number(sampleRate))
   )
     throw new ProviderError('invalid_input', 'invalid audio_config.format or sample_rate')
   body.action = action
@@ -248,10 +249,61 @@ export function parsePodcastSse(raw: string): PodcastEvent[] {
   return result
 }
 
+const PODCAST_MIME: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  aac: 'audio/aac',
+  ogg_opus: 'audio/ogg',
+  pcm: 'audio/pcm',
+}
+
+/**
+ * 从播客事件里取音频。
+ * 来源：https://docs.volcengine.com/docs/6561/1668014（2026-11-06 核对）：
+ * 事件 361 PodcastRoundResponse 是轮次音频；事件 363 PodcastEnd 的 `meta_info.audio_url`
+ * 是完整播客的下载链接（有效期 1h，需请求里 `input_info.return_audio_url=true`）。
+ * 官方文档只描述了 WebSocket 二进制协议，没有 SSE 版本的文档，所以 SSE 下轮次音频放在
+ * 事件 `data` 的 Base64 字符串里是按现有实现的假设，未经官方文档或实测确认。
+ * 有完整链接就返回链接（含片头片尾），否则拼接 361 的分片。
+ */
+export function podcastAudio(events: PodcastEvent[], format: string): Json[] {
+  const mime = PODCAST_MIME[format] ?? 'application/octet-stream'
+  const name = `podcast.${format === 'ogg_opus' ? 'ogg' : format}`
+  for (const item of events) {
+    if (item.event !== 363) continue
+    const url = asString(asRecord(item.data.meta_info).audio_url)
+    if (url) return [{ type: 'file', kind: 'audio', mime, url, name }]
+  }
+  const chunks = events
+    .filter((item) => item.event === 361 && typeof item.data.data === 'string')
+    .map((item) => fromBase64(item.data.data as string))
+  const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  if (!length) return []
+  const data = new Uint8Array(length)
+  let offset = 0
+  for (const chunk of chunks) {
+    data.set(chunk, offset)
+    offset += chunk.length
+  }
+  return [{ type: 'file', kind: 'audio', mime, data, name }]
+}
+
 export async function podcast(ctx: AdapterContext, params: Json): Promise<Json> {
   const body = buildPodcastRequest(params)
+  const info = asRecord(body.input_info)
+  // 要音频时让服务端顺带返回完整播客的下载链接（官方字段 input_info.return_audio_url）。
+  if (info.only_nlp_text !== true && info.return_audio_url === undefined)
+    body.input_info = { ...info, return_audio_url: true }
   const raw = await postText(ctx, PODCAST_PATH, body)
-  return { events: parsePodcastSse(raw) }
+  const events = parsePodcastSse(raw)
+  const format = asString(asRecord(body.audio_config).format, 'mp3')
+  const outputs = info.only_nlp_text === true ? [] : podcastAudio(events, format)
+  // 音频已经在 outputs 里，事件里不再重复带 Base64。
+  const slim = events.map((item) => {
+    if (item.event !== 361 || typeof item.data.data !== 'string') return item
+    const { data: _audio, ...rest } = item.data
+    return { ...item, data: rest }
+  })
+  return { events: slim, outputs }
 }
 
 // ── simultaneous interpretation ───────────────────────────────────────────

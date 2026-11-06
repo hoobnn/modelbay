@@ -9,6 +9,7 @@
  * 官方文档里查不到的字段、适配器没实现的能力不在这里出现。
  */
 import type { ToolSpec } from '@modelbay/core'
+import { AUDIO_SAMPLE_RATES, TTS_SAMPLE_RATES } from '../speech'
 import {
   mapCloneVoice,
   mapDesignVoice,
@@ -94,7 +95,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
       properties: {
         prompt: string,
         format: { type: 'string', enum: ['mp3', 'wav'], default: 'mp3' },
-        sample_rate: { type: 'integer', enum: [16000, 24000, 48000], default: 24000 },
+        sample_rate: { type: 'integer', enum: [...AUDIO_SAMPLE_RATES], default: 24000 },
         model: string,
         out_dir: optional(string),
       },
@@ -114,7 +115,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
       'speakers：两个播客音色 ID（按给出的顺序），不传用官方默认。script_only=true 只生成对谈文本不合成音频（仅 text/url）。\n' +
       'format：mp3（默认）、pcm、aac、ogg_opus。parameters：官方请求里其余字段（如 retry_info 续传、use_head_music、' +
       'input_info.input_text_max_length），深度合并，优先于上面的参数。\n' +
-      '返回解析后的 SSE 事件列表（含音频分片与文本轮次），不写文件。按官方播客计费，耗时较长。' +
+      '返回 outputs（完整播客音频的下载链接，或拼好的音频字节）和事件列表（文本轮次等），工具本身不写文件。按官方播客计费，耗时较长。' +
       "技巧见 get_speech_usage_examples(product='podcast')。\n",
     inputSchema: {
       type: 'object',
@@ -335,7 +336,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
         loudness_rate: { type: 'integer', minimum: -50, maximum: 100 },
         pitch: { type: 'integer', minimum: -12, maximum: 12 },
         format: { type: 'string', enum: ['mp3', 'wav'], default: 'mp3' },
-        sample_rate: { type: 'integer', enum: [16000, 24000, 48000], default: 24000 },
+        sample_rate: { type: 'integer', enum: [...TTS_SAMPLE_RATES], default: 24000 },
         model: optional(string),
         out_dir: optional(string),
       },
