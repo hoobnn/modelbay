@@ -4,7 +4,7 @@
 
 ## 现状
 
-一份 TypeScript 实现覆盖火山方舟、阿里云百炼、MiniMax、豆包语音和 OpenAI，SDK、MCP、CLI 都从同一份模型声明派生。功能已齐，尚未发布 0.x。对外只发 `modelbay`、`@modelbay/mcp`、`@modelbay/cli` 三个包，其余是不发布的内部包，见 [0005](docs/decisions/0005-three-published-packages.md)，见 [目标与范围](docs/goals.md)。
+一份 TypeScript 实现覆盖火山方舟、阿里云百炼、MiniMax、豆包语音和 OpenAI，SDK、MCP、CLI 都从同一份模型声明派生。功能已齐，0.1.x 已发布到 npm。对外只发 `modelbay`、`@modelbay/mcp`、`@modelbay/cli` 三个包，其余是不发布的内部包，见 [0005](docs/decisions/0005-three-published-packages.md)，见 [目标与范围](docs/goals.md)。
 
 平台包自描述：每个平台包导出一个 `PlatformDescriptor`，汇总入口、MCP、CLI 都只遍历 `packages/modelbay/src/platforms.ts` 里的注册表。新增平台只动它自己的包和注册表，见 [扩展指南](docs/extending.md)。
 
