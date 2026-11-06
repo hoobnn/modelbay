@@ -110,5 +110,5 @@ const tools = listTools(set, MCP_TOOL_GROUPS.all) // every tool, including optio
 ## Testing
 
 `vp test run packages/mcp` runs the parity tests against the frozen tool-list snapshots in
-`test/baselines/` (70 tools), a real stdio smoke test (child process + pipes), and unit tests for
+`test/baselines/` (59 tools), a real stdio smoke test (child process + pipes), and unit tests for
 schema derivation, group switches, routing and error paths.

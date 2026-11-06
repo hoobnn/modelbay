@@ -12,6 +12,7 @@ import type {
   PlatformAdapter,
   PlatformSecrets,
   PollResult,
+  ProviderOutput,
   SubmitResult,
 } from 'modelbay'
 import { normalizeArguments } from './arguments'
@@ -248,6 +249,22 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     return result(payload)
   }
 
+  /** 原生操作直接带回 `outputs` 时（如播客音频）同样按 out_dir / 默认目录落盘。 */
+  async function nativeResult(
+    tool: string,
+    value: unknown,
+    outDir: string | undefined,
+  ): Promise<CallToolResult> {
+    const record = value as { outputs?: unknown; task_id?: unknown } | null
+    // 原生异步任务（如口型同步、视频编辑）登记进 list_jobs，get_job 时沿用这次的输出目录。
+    if (typeof record?.task_id === 'string' && record.task_id)
+      jobs.remember(record.task_id, tool, outDir)
+    if (!outDir || typeof record !== 'object' || record === null || !Array.isArray(record.outputs))
+      return result(value)
+    const outputs = await deliver(record.outputs as ProviderOutput[], outDir, tool, context)
+    return result({ ...record, outputs })
+  }
+
   function listJobs(args: Record<string, unknown>): CallToolResult {
     const limit = Number(args.limit ?? 20)
     return result({
@@ -306,10 +323,12 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     const given = Object.fromEntries(Object.entries(args).filter(([, value]) => value !== null))
 
     if (route.kind === 'native') {
-      const params = tool.mapArguments ? tool.mapArguments(given, { model: '' }) : given
+      const outDir = outputDirectory(given) ?? defaultOutDir
+      const { out_dir: _o, output_directory: _d, ...rest } = given
+      const params = tool.mapArguments ? tool.mapArguments(rest, { model: '' }) : rest
       if (adapter.native) {
         const value = await adapter.native(route.op, params, context)
-        return result(value)
+        return nativeResult(name, value, outDir)
       }
       // 适配器未实现 native()：退化成带 native 字段的 submit，仍按契约路由。
       const request = {

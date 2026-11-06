@@ -2,7 +2,7 @@
  * MCP → 真实豆包语音适配器（Node 版，注入 fetch，不联网）。
  * 断言每个声明的 MCP 参数都落到了上游请求里，重路由的工具走到对应的 native 操作。
  */
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createAdapterContext, readSecrets } from '@modelbay/core'
@@ -304,6 +304,16 @@ describe('generate_podcast 音频输出', () => {
     expect(audio).toHaveLength(1)
     expect(audio[0]).toMatchObject({ mimeType: 'audio/mpeg', data: 'AQIDBAUG' })
     expect(JSON.stringify(res.structuredContent)).not.toContain('AQID')
+  })
+
+  it('给 out_dir 时把音频存成文件，out_dir 不进上游请求', async () => {
+    const text = 'event: 361\ndata: {"data":"AQID"}\n\n'
+    const { handlers, captured } = await setup(() => new Response(text))
+    const dir = mkdtempSync(join(tmpdir(), 'modelbay-podcast-'))
+    const res = await handlers.callTool('generate_podcast', { text: 'x', out_dir: dir })
+    expect(readdirSync(dir)).toHaveLength(1)
+    expect(res.content.some((block) => block.type === 'audio')).toBe(false)
+    expect(JSON.stringify(captured[0]!.body)).not.toContain('out_dir')
   })
 })
 
