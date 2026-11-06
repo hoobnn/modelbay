@@ -466,7 +466,7 @@ export async function videoBody(opts: VideoBodyOptions): Promise<Json> {
   const counts = { image: 0, video: 0, audio: 0 }
   for (const ref of input.references ?? [])
     if (ref.kind === 'image' || ref.kind === 'video' || ref.kind === 'audio') counts[ref.kind]++
-  const referenceProblem = videoReferenceProblem(input.prompt, counts)
+  const referenceProblem = videoReferenceProblem(input.prompt, counts, 'ark-video')
   if (referenceProblem) invalid(referenceProblem)
 
   const content: Json[] = input.prompt.trim()

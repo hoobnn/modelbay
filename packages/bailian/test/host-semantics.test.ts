@@ -639,6 +639,12 @@ describe('视频', () => {
     expect(body().parameters).not.toHaveProperty('adaptive_duration')
   })
 
+  it('提示词里的 @ 引用改写成万相 3.0 官方的「图N / 视频N / 音频N」', async () => {
+    const { ctx, body } = setup([{ output: { task_id: 't' } }])
+    await generate(ctx, { prompt: '@image1 的角色按 @视频1 运镜，配 @audio1' })
+    expect(body().input.prompt).toBe('图1 的角色按 视频1 运镜，配 音频1')
+  })
+
   it.each([
     { duration: 1 },
     { duration: 31 },

@@ -263,7 +263,7 @@ describe('视频校验', () => {
       'reference_video',
       'reference_audio',
     ])
-    expect(body.content[0]!.text).toBe('@image1 参考 @video1 和 @audio1')
+    expect(body.content[0]!.text).toBe('@图片1 参考 @视频1 和 @音频1')
     expect((body.content[2]!.video_url as { url: string }).url).toBe(
       'https://b.tos-cn-beijing.volces.com/v.mp4',
     )

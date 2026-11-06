@@ -60,7 +60,7 @@ describe('方舟参考视频：注入后走通', () => {
       'reference_video',
       'reference_audio',
     ])
-    expect(content[0]?.text).toBe('@image1 参考 @video1 运镜和 @audio1')
+    expect(content[0]?.text).toBe('@图片1 参考 @视频1 运镜和 @音频1')
     expect(urlOf(content[1], 'image_url')).toMatch(/^data:image\/png;base64,/)
     expect(urlOf(content[2], 'video_url')).toBe(
       'https://test-bucket.tos-cn-beijing.volces.com/refs/x.mp4?sig=1',
@@ -180,7 +180,7 @@ describe('方舟参考视频：真实 TOS 上传', () => {
       'reference_video',
       'reference_audio',
     ])
-    expect(content[0]?.text).toBe('@image1 参考 @video1 运镜和 @audio1')
+    expect(content[0]?.text).toBe('@图片1 参考 @视频1 运镜和 @音频1')
     expect(urlOf(content[2], 'video_url')).toMatch(
       /^https:\/\/test-bucket\.tos-cn-beijing\.volces\.com\//,
     )
