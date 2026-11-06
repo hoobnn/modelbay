@@ -1,6 +1,7 @@
 {
   "name": "@modelbay/core",
   "version": "0.1.0",
+  "private": true,
   "description": "Runtime-agnostic core types, validation and model declarations for Modelbay",
   "license": "MIT",
   "repository": {

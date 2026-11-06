@@ -4,7 +4,7 @@
  *   submit → adapter.submit；native → adapter.native；local → 本地只读回答。
  * 未配置 key / 适配器未就绪时返回清晰错误（isError 结果），绝不抛到 stdio 循环里。
  */
-import { lifecycleNotice, missingSecrets, selectDefaultModel, toBase64 } from '@modelbay/core'
+import { lifecycleNotice, missingSecrets, selectDefaultModel, toBase64 } from 'modelbay'
 import type {
   AdapterContext,
   AdapterRequest,
@@ -13,7 +13,7 @@ import type {
   PlatformSecrets,
   PollResult,
   SubmitResult,
-} from '@modelbay/core'
+} from 'modelbay'
 import { normalizeArguments } from './arguments'
 import { listTools } from './generate'
 import {

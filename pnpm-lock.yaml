@@ -276,13 +276,13 @@ importers:
 
   packages/cli:
     dependencies:
-      '@modelbay/core':
-        specifier: workspace:*
-        version: link:../core
       modelbay:
         specifier: workspace:*
         version: link:../modelbay
     devDependencies:
+      '@modelbay/core':
+        specifier: workspace:*
+        version: link:../core
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
@@ -329,9 +329,6 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@modelbay/core':
-        specifier: workspace:*
-        version: link:../core
       modelbay:
         specifier: workspace:*
         version: link:../modelbay
@@ -342,6 +339,9 @@ importers:
       '@modelbay/bailian':
         specifier: workspace:*
         version: link:../bailian
+      '@modelbay/core':
+        specifier: workspace:*
+        version: link:../core
       '@modelbay/doubao-speech':
         specifier: workspace:*
         version: link:../doubao-speech
@@ -379,6 +379,16 @@ importers:
 
   packages/modelbay:
     dependencies:
+      '@ai-sdk/openai':
+        specifier: 4.0.106
+        version: 4.0.106(zod@4.6.7)
+      '@ai-sdk/openai-compatible':
+        specifier: 3.0.81
+        version: 3.0.81(zod@4.6.7)
+      ai:
+        specifier: 7.0.157
+        version: 7.0.157(zod@4.6.7)
+    devDependencies:
       '@modelbay/ark':
         specifier: workspace:*
         version: link:../ark
@@ -397,13 +407,27 @@ importers:
       '@modelbay/openai':
         specifier: workspace:*
         version: link:../openai
-    devDependencies:
+      '@modelbay/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
+      '@types/ws':
+        specifier: ^8.18.2
+        version: 8.18.2
+      '@volcengine/tos-sdk':
+        specifier: ^2.9.1
+        version: 2.9.1(supports-color@7.2.0)
+      sharp:
+        specifier: ^0.35.5
+        version: 0.35.5(@types/node@26.6.6)
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      ws:
+        specifier: ^8.22.1
+        version: 8.22.1
       zod:
         specifier: 'catalog:'
         version: 4.6.7

@@ -1,10 +1,12 @@
 # @modelbay/bailian
 
+> Internal workspace package, not published to npm. Install `modelbay` and import these exports from `modelbay/bailian` (Node-only helpers: `modelbay/bailian/node`).
+
 Alibaba Bailian / DashScope adapter for [Modelbay](../../README.md). MIT licensed.
 
 ```ts
-import { bailianAdapter } from '@modelbay/bailian'
-import { createAdapterContext } from '@modelbay/core'
+import { bailianAdapter } from 'modelbay/bailian'
+import { createAdapterContext } from 'modelbay'
 
 const ctx = createAdapterContext({ secrets: { BAILIAN_API_KEY: '...' } })
 const result = await bailianAdapter.submit(
@@ -96,11 +98,11 @@ next to this subpath. The root entry deliberately excludes the subpath.
 the root entry never imports `sharp`:
 
 ```ts
-import { createBailianAdapter, models } from '@modelbay/bailian'
+import { createBailianAdapter, models } from 'modelbay/bailian'
 import {
   prepareImageEditRequest,
   prepareImageProcessRequest,
-} from '@modelbay/bailian/node'
+} from 'modelbay/bailian/node'
 
 const adapter = createBailianAdapter(models, {
   edit: prepareImageEditRequest,

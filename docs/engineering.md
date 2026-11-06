@@ -20,16 +20,16 @@
 
 ```text
 packages/
-  core/            @modelbay/core：能力、声明、校验、任务运行、平台描述类型（运行时无关）
-  shared/          @modelbay/shared：平台包共用的 HTTP、对话、尺寸、模型清单工具
-  ark/             @modelbay/ark：火山方舟（按量 + 套餐两个渠道）
-  bailian/         @modelbay/bailian：阿里云百炼
-  minimax/         @modelbay/minimax
-  doubao-speech/   @modelbay/doubao-speech：豆包语音
-  openai/          @modelbay/openai：OpenAI 与 OpenAI 兼容渠道
-  modelbay/        modelbay：汇总入口、平台注册表、modelbay/node
-  mcp/             @modelbay/mcp：MCP server，命令 modelbay-mcp <平台>
-  cli/             @modelbay/cli：命令 modelbay
+  core/            @modelbay/core（内部）：能力、声明、校验、任务运行、平台描述类型（运行时无关）
+  shared/          @modelbay/shared（内部）：平台包共用的 HTTP、对话、尺寸、模型清单工具
+  ark/             @modelbay/ark（内部）：火山方舟（按量 + 套餐两个渠道）
+  bailian/         @modelbay/bailian（内部）：阿里云百炼
+  minimax/         @modelbay/minimax（内部）
+  doubao-speech/   @modelbay/doubao-speech（内部）：豆包语音
+  openai/          @modelbay/openai（内部）：OpenAI 与 OpenAI 兼容渠道
+  modelbay/        modelbay（发布）：汇总入口、平台注册表、modelbay/node、modelbay/<平台>，构建时打进内部包
+  mcp/             @modelbay/mcp（发布）：MCP server，命令 modelbay-mcp <平台>
+  cli/             @modelbay/cli（发布）：命令 modelbay
 scripts/           仓库级检查：覆盖率、包发布、许可、core 运行时隔离；upstream/ 是上游文档对账
 docs/
 vite.package.ts    各包共用的打包入口探测与测试别名
@@ -53,12 +53,14 @@ test/
 ## 包的约定
 
 - 只发 ESM。`vp pack` 构建到 `dist/`，同时产出 `.d.ts`。`exports` 只指向 `dist`，`sideEffects: false`。
-- 打包入口按目录自动探测：`src/index.ts`，`src/node/index.ts`（或 `src/node.ts`），`src/bin/*.ts`。各包的 `vite.config.ts` 只有一行 `definePackageConfig(import.meta.url)`。
-- 子路径只有两种：`"."` 和 `"./node"`。命令行入口放 `src/bin/`。
-- 测试和类型检查直接解析源码：`@modelbay/<包>` → `src/index.ts`，`@modelbay/<包>/node` → `src/node/index.ts`。别名在 `vite.package.ts` 和 `tsconfig.base.json` 里统一配置，新包不用改。
+- 只发三个包：`modelbay`、`@modelbay/mcp`、`@modelbay/cli`。其余包标 `private`，只做代码边界，见 [0005](decisions/0005-three-published-packages.md)。
+- 打包入口按目录自动探测：`src/index.ts`，`src/node/index.ts`（或 `src/node.ts`），`src/bin/*.ts`。各包的 `vite.config.ts` 只有一行 `definePackageConfig(import.meta.url)`；`modelbay` 额外传 `bundleWorkspace: true` 把内部包打进产物，并列出 `modelbay/<平台>`、`modelbay/<平台>/node` 子路径入口（源文件在 `src/platform/`）。
+- 内部包的子路径只有 `"."` 和 `"./node"`。命令行入口放 `src/bin/`。
+- 内部包的第三方依赖由 `modelbay` 一并声明：普通依赖进 `dependencies`，Node 专属依赖进可选 peer。`@modelbay/mcp`、`@modelbay/cli` 只依赖 `modelbay`，源码只从 `modelbay` 导入，保证依赖树里 core 只有一份。
+- 测试和类型检查直接解析源码：`@modelbay/<包>` → `src/index.ts`，`@modelbay/<包>/node` → `src/node/index.ts`，`modelbay/<平台>` → `packages/modelbay/src/platform/<平台>.ts`。别名在 `vite.package.ts` 和 `tsconfig.base.json` 里统一配置，新包不用改。
 - `zod` 是 `peerDependency`（`^4.6`）：宿主会把 core 的 schema 和自己的混用，装两份会出错。
 - 只允许 MIT、Apache-2.0、BSD、ISC 许可的依赖。新增运行时依赖要在 PR 里说明用途。core 尽量不加依赖。
-- 发布前每个包都要过 `publint` 和 `@arethetypeswrong/cli`，并且包目录里有 `README.md`、`LICENSE`（根 LICENSE 的副本），`repository.directory` 指向自己的目录（`pnpm check:packages`）。仓库地址是 `github.com/hoobnn/modelbay`，npm provenance 要求它和发布所在的仓库一致。
+- 发布包的依赖和产物里不能引用 `private` 内部包。发布前每个包都要过 `publint` 和 `@arethetypeswrong/cli`，并且包目录里有 `README.md`、`LICENSE`（根 LICENSE 的副本），`repository.directory` 指向自己的目录（`pnpm check:packages`）。仓库地址是 `github.com/hoobnn/modelbay`，npm provenance 要求它和发布所在的仓库一致。
 
 ## 代码规则
 
@@ -115,8 +117,8 @@ PR 合并前 `pnpm verify` 必须通过，CI 跑的就是这一条。
 
 ## 和下游项目联调
 
-- 下游项目的主分支只能依赖已经发布的 `@modelbay/*` 版本号。
-- 发布之前，在下游项目功能分支根目录的 `pnpm-workspace.yaml` 里加 `overrides`，例如 `"@modelbay/core": "link:../modelbay/packages/core"`，路径按下游项目根目录解析。这一行不能合进下游的主分支。
+- 下游项目的主分支只能依赖已经发布的 `modelbay` / `@modelbay/mcp` / `@modelbay/cli` 版本号。
+- 发布之前，在下游项目功能分支根目录的 `pnpm-workspace.yaml` 里加 `overrides`，例如 `"modelbay": "link:../modelbay/packages/modelbay"`，路径按下游项目根目录解析，并先在 modelbay 仓库里 `pnpm build`。这一行不能合进下游的主分支。
 
 ## Git
 
@@ -127,6 +129,6 @@ PR 合并前 `pnpm verify` 必须通过，CI 跑的就是这一条。
 
 ## 版本与发布
 
-- 所有包同一个版本号（changesets 的 `fixed` 组按 `@modelbay/*` 和 `modelbay` 匹配，新包自动纳入）。
+- 三个发布包同一个版本号（changesets 的 `fixed` 组）。内部包不记版本、不打标签（`privatePackages`），改内部包的 changeset 写 `modelbay`。
 - 1.0 之前都是 `0.x`：不兼容的改动升次版本号，兼容的新增和修复升修订号。什么时候发 1.0 由维护者决定。
 - 发布通过 `.github/workflows/release.yml` 手动触发，绑定需要审批的 `release` 环境，开启 npm provenance。**每次发布都要维护者批准**，agent 不能执行 `npm publish`，也不能打发布标签。

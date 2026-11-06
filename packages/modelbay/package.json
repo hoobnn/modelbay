@@ -25,6 +25,42 @@
     "./node": {
       "types": "./dist/node.d.mts",
       "default": "./dist/node.mjs"
+    },
+    "./ark": {
+      "types": "./dist/ark.d.mts",
+      "default": "./dist/ark.mjs"
+    },
+    "./ark/node": {
+      "types": "./dist/ark/node.d.mts",
+      "default": "./dist/ark/node.mjs"
+    },
+    "./bailian": {
+      "types": "./dist/bailian.d.mts",
+      "default": "./dist/bailian.mjs"
+    },
+    "./bailian/node": {
+      "types": "./dist/bailian/node.d.mts",
+      "default": "./dist/bailian/node.mjs"
+    },
+    "./minimax": {
+      "types": "./dist/minimax.d.mts",
+      "default": "./dist/minimax.mjs"
+    },
+    "./doubao-speech": {
+      "types": "./dist/doubao-speech.d.mts",
+      "default": "./dist/doubao-speech.mjs"
+    },
+    "./doubao-speech/node": {
+      "types": "./dist/doubao-speech/node.d.mts",
+      "default": "./dist/doubao-speech/node.mjs"
+    },
+    "./openai": {
+      "types": "./dist/openai.d.mts",
+      "default": "./dist/openai.mjs"
+    },
+    "./openai/node": {
+      "types": "./dist/openai/node.d.mts",
+      "default": "./dist/openai/node.mjs"
     }
   },
   "scripts": {
@@ -32,19 +68,41 @@
     "build": "vp pack"
   },
   "peerDependencies": {
+    "@volcengine/tos-sdk": "^2.9.1",
+    "sharp": "^0.35.0",
+    "ws": "^8.18.0",
     "zod": "^4.6"
   },
   "dependencies": {
+    "@ai-sdk/openai": "4.0.106",
+    "@ai-sdk/openai-compatible": "3.0.81",
+    "ai": "7.0.157"
+  },
+  "devDependencies": {
     "@modelbay/core": "workspace:*",
     "@modelbay/ark": "workspace:*",
     "@modelbay/bailian": "workspace:*",
     "@modelbay/minimax": "workspace:*",
     "@modelbay/doubao-speech": "workspace:*",
-    "@modelbay/openai": "workspace:*"
-  },
-  "devDependencies": {
+    "@modelbay/openai": "workspace:*",
+    "@modelbay/shared": "workspace:*",
     "@types/node": "^26.6.6",
+    "@types/ws": "^8.18.2",
+    "@volcengine/tos-sdk": "^2.9.1",
+    "sharp": "^0.35.5",
     "typescript": "^7.0.2",
+    "ws": "^8.22.1",
     "zod": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@volcengine/tos-sdk": {
+      "optional": true
+    },
+    "sharp": {
+      "optional": true
+    },
+    "ws": {
+      "optional": true
+    }
   }
 }

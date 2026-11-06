@@ -1,10 +1,12 @@
 # @modelbay/minimax
 
+> Internal workspace package, not published to npm. Install `modelbay` and import these exports from `modelbay/minimax`.
+
 MiniMax adapter for [Modelbay](../../README.md). MIT licensed.
 
 ```ts
-import { minimaxAdapter } from '@modelbay/minimax'
-import { createAdapterContext } from '@modelbay/core'
+import { minimaxAdapter } from 'modelbay/minimax'
+import { createAdapterContext } from 'modelbay'
 
 const ctx = createAdapterContext({ secrets: { MINIMAX_API_KEY: '...' } })
 const result = await minimaxAdapter.submit(

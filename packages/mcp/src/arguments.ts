@@ -6,8 +6,8 @@
  * 从同义的 MCP 字段换算出来；原字段保留，适配器里已有的 MCP 专属处理照常生效。
  * 和具体平台、模型有关的字段不在这里处理。
  */
-import { ProviderError } from '@modelbay/core'
-import type { AssetRef } from '@modelbay/core'
+import { ProviderError } from 'modelbay'
+import type { AssetRef } from 'modelbay'
 import { mimeFromName } from './assets'
 
 type Args = Record<string, unknown>

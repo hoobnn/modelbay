@@ -1,6 +1,7 @@
 {
   "name": "@modelbay/shared",
   "version": "0.1.0",
+  "private": true,
   "description": "Runtime-agnostic code shared by platform adapters: transport, OpenAI-compatible chat (Vercel AI SDK), model lists, video reference validation, voice preview and size math",
   "license": "MIT",
   "repository": {
