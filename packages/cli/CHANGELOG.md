@@ -1,5 +1,17 @@
 # @modelbay/cli
 
+## 0.1.3
+
+### Patch Changes
+
+- b6dff9c: `doctor` 分开列出已配置和未配置的密钥名（`DoctorEntry.present`），不再把任选一组的所有名字列在一起，看起来像全都配好了。
+- Updated dependencies [816fe0e]
+- Updated dependencies [de41805]
+- Updated dependencies [b6dff9c]
+- Updated dependencies [de41805]
+- Updated dependencies [039c35a]
+  - modelbay@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes
