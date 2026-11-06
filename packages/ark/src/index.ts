@@ -30,6 +30,7 @@ import {
 } from '@modelbay/core'
 import { all } from './models/index'
 import { chatCompletion } from './chat'
+import { embed } from './embed'
 import {
   cancelVideo,
   cutoutBody,
@@ -225,6 +226,21 @@ async function submit(
       label: LABEL,
       input: req.input as CapabilityInput<'text.chat'>,
       plan: plane === 'plan',
+      ...(declaration ? { declaration } : {}),
+    })
+  }
+  // text.embed 不在 core 的旧能力枚举里，输入也不是 CapabilityInputs 的成员，按字符串比较
+  if (String(req.capability) === 'text.embed') {
+    return embed({
+      ctx,
+      baseURL: base,
+      model,
+      apiKey: key,
+      label: LABEL,
+      messages: TRANSPORT,
+      input: req.input as Record<string, unknown>,
+      plan: plane === 'plan',
+      ...(declaration ? { declaration } : {}),
     })
   }
   if (req.capability === 'image.generate') {

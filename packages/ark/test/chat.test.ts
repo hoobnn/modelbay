@@ -220,7 +220,7 @@ describe('extra：白名单放行，其余报错', () => {
       { messages: [] },
       { stream: false },
       { foo: 1 },
-      { web_search: true },
+      { web_search: true, frequency_penalty: 0.1 },
     ]) {
       const { ctx, fetch } = fakeContext([])
       await expect(
