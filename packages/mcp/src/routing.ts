@@ -38,7 +38,12 @@ import type {
 
 export interface RoutingOptions {
   set: GeneratedToolSet
+  /** 主渠道的适配器（生成工具、选默认模型用）。 */
   adapter?: PlatformAdapter
+  /** 平台的全部适配器；多渠道平台（如方舟按量 / 套餐）按模型前缀和已配置的 key 选。缺省只用 `adapter`。 */
+  adapters?: readonly PlatformAdapter[]
+  /** 每个渠道要的密钥，见 `PlatformDescriptor.channelSecrets`。 */
+  channelSecrets?: Record<string, readonly string[]>
   context: AdapterContext
   groups: readonly ToolGroup[]
   /** 平台的密钥要求；缺必填密钥时 tools/call 返回清晰错误。 */
@@ -202,6 +207,57 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
   const { set, adapter, context, groups, secrets, serverInfo, primaryChannel, defaultOutDir } =
     options
   const models: readonly ModelDeclaration[] = adapter?.models ?? []
+  const pool: readonly PlatformAdapter[] = options.adapters?.length
+    ? options.adapters
+    : adapter
+      ? [adapter]
+      : []
+
+  /** 这个适配器的渠道 key 配了没有；平台没声明渠道密钥时都算可用。 */
+  function usable(candidate: PlatformAdapter): boolean {
+    const names = candidate.channels.flatMap((channel) => options.channelSecrets?.[channel] ?? [])
+    return names.length === 0 || names.some((name) => Boolean(context.secret(name)))
+  }
+
+  /** 没指定渠道时用哪个适配器：主渠道 key 配了就用主渠道，否则用第一个配了 key 的渠道。 */
+  function defaultAdapter(): PlatformAdapter | undefined {
+    const primary = pool.find((item) => primaryChannel && item.channels.includes(primaryChannel))
+    return (primary && usable(primary) ? primary : pool.find(usable)) ?? primary ?? pool[0]
+  }
+
+  /**
+   * 按模型选适配器：`渠道:ID` 前缀直接定渠道（如 `ark-plan:`）；
+   * 不带前缀时看声明在哪些渠道，优先默认适配器，其次配了 key 的渠道。
+   */
+  function adapterFor(model: string): PlatformAdapter | undefined {
+    const colon = model.indexOf(':')
+    if (colon > 0) {
+      const prefix = model.slice(0, colon)
+      const byPrefix = pool.find((item) => item.channels.includes(prefix))
+      if (byPrefix) return byPrefix
+    }
+    const fallback = defaultAdapter()
+    const declared = models.find(
+      (item) =>
+        item.id === model ||
+        item.canonicalId === model ||
+        item.channels.some((entry) => entry.id === model),
+    )
+    if (!declared) return fallback
+    const candidates = pool.filter((item) =>
+      declared.channels.some((entry) => item.channels.includes(entry.channel)),
+    )
+    return (
+      candidates.find((item) => item === fallback) ??
+      candidates.find(usable) ??
+      candidates[0] ??
+      fallback
+    )
+  }
+
+  function adapterOfChannel(channel: string | undefined): PlatformAdapter | undefined {
+    return (channel && pool.find((item) => item.channels.includes(channel))) || defaultAdapter()
+  }
   const fallbackCapability = firstCapability(set)
 
   const jobs = new JobRegistry()
@@ -254,11 +310,12 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     tool: string,
     value: unknown,
     outDir: string | undefined,
+    channel: string | undefined,
   ): Promise<CallToolResult> {
     const record = value as { outputs?: unknown; task_id?: unknown } | null
     // 原生异步任务（如口型同步、视频编辑）登记进 list_jobs，get_job 时沿用这次的输出目录。
     if (typeof record?.task_id === 'string' && record.task_id)
-      jobs.remember(record.task_id, tool, outDir)
+      jobs.remember(record.task_id, tool, outDir, channel)
     if (!outDir || typeof record !== 'object' || record === null || !Array.isArray(record.outputs))
       return result(value)
     const outputs = await deliver(record.outputs as ProviderOutput[], outDir, tool, context)
@@ -296,7 +353,7 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       (await deliveredIntact(record.delivered.payload))
     )
       return result(record.delivered.payload)
-    const value = await pollUntil(adapter!, id, context, waitSeconds(args))
+    const value = await pollUntil(adapterOfChannel(record.channel)!, id, context, waitSeconds(args))
     return jobResult(record.tool, id, value, outDir)
   }
 
@@ -311,8 +368,9 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
 
     // 未配置 key：返回清晰错误而不是崩溃；log 走 stderr（由 context.log 决定是否输出）。
     const missing = missingSecrets(secrets, (name) => Boolean(context.secret(name)))
-    if (missing.length > 0 || !adapter) {
-      const reason = !adapter ? '平台适配器尚未就绪' : `未配置访问密钥：${missing.join('、')}`
+    const target = defaultAdapter()
+    if (missing.length > 0 || !target) {
+      const reason = !target ? '平台适配器尚未就绪' : `未配置访问密钥：${missing.join('、')}`
       context.log('modelbay-mcp: 调用被拒绝', { tool: name, reason })
       return errorResult(`${reason}，工具 ${name} 无法调用。请在环境变量中配置后重试。`)
     }
@@ -326,9 +384,9 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       const outDir = outputDirectory(given) ?? defaultOutDir
       const { out_dir: _o, output_directory: _d, ...rest } = given
       const params = tool.mapArguments ? tool.mapArguments(rest, { model: '' }) : rest
-      if (adapter.native) {
-        const value = await adapter.native(route.op, params, context)
-        return nativeResult(name, value, outDir)
+      if (target.native) {
+        const value = await target.native(route.op, params, context)
+        return nativeResult(name, value, outDir, target.channels[0])
       }
       // 适配器未实现 native()：退化成带 native 字段的 submit，仍按契约路由。
       const request = {
@@ -337,11 +395,13 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
         input: {},
         native: { op: route.op, params },
       } as unknown as AdapterRequest
-      const value = await adapter.submit(request, context)
+      const value = await target.submit(request, context)
       return result(value)
     }
 
-    const model = modelFor(args, route.capability, adapter, primaryChannel)
+    const givenModel = typeof args.model === 'string' ? args.model.trim() : ''
+    const chosen = (givenModel ? adapterFor(givenModel) : target) ?? target
+    const model = modelFor(args, route.capability, chosen, chosen.channels[0])
     const outDir = outputDirectory(given) ?? defaultOutDir
     const wait = waitSeconds(given)
     const mapped = tool.mapArguments ? tool.mapArguments(given, { model }) : given
@@ -353,10 +413,10 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       model,
       input,
     } as unknown as AdapterRequest
-    const submitted = await adapter.submit(request, context)
+    const submitted = await chosen.submit(request, context)
     const id = submitted.state === 'pending' ? submitted.remoteId : undefined
-    if (id) jobs.remember(id, name, outDir)
-    return jobResult(name, id, await settle(adapter, submitted, context, wait), outDir)
+    if (id) jobs.remember(id, name, outDir, chosen.channels[0])
+    return jobResult(name, id, await settle(chosen, submitted, context, wait), outDir)
   }
 
   return {

@@ -22,6 +22,11 @@ npx -y @modelbay/mcp ark            # or: modelbay-mcp ark
 | Doubao Speech   | `doubao-speech` | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN` |
 | OpenAI          | `openai`        | `OPENAI_API_KEY`                                             |
 
+Ark has two billing channels. Prefix the model with `ark-plan:` to use the Agent Plan
+(`ARK_AGENT_PLAN_API_KEY`, `/api/plan/v3`) and `ark:` for pay-per-use (`ARK_API_KEY`). A model
+without a prefix goes to the channel it is declared in, preferring pay-per-use when both keys are
+set; with only the plan key configured, calls without a model use the plan.
+
 The platform list, key names and aliases come from each platform package's `PlatformDescriptor`;
 running `modelbay-mcp` without an argument prints the available platforms. Keys are supplied by the
 host through environment variables and never stored. When a key is missing, `tools/list` still

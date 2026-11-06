@@ -72,6 +72,11 @@ export interface PlatformDescriptor<Options extends object = object> {
   primaryChannel: string
   secrets: PlatformSecrets
   /**
+   * 多渠道平台里每个渠道要的密钥（任一即可），如方舟 `{ ark: ['ARK_API_KEY'], 'ark-plan': [...] }`。
+   * MCP 据此在只配了某个渠道的 key 时把调用路由到那个渠道；不声明表示所有渠道共用 `secrets`。
+   */
+  channelSecrets?: Record<string, readonly string[]>
+  /**
    * 创建本平台的全部适配器（一个平台可以有多个渠道 / 适配器）。
    * `options` 是 `@modelbay/<平台>/node` 导出的 `nodeOptions`，注入 Node 专属能力；
    * 不传时得到运行时无关的适配器。
