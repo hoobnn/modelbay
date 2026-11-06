@@ -7,13 +7,6 @@
  */
 import type { ToolSpec } from '@modelbay/core'
 
-const okOutput = {
-  type: 'object',
-  required: ['ok'],
-  properties: { ok: { type: 'boolean' } },
-  additionalProperties: true,
-}
-
 /** 去掉适配器自己渠道的 `minimax:` 前缀（native 路由没有通用的 model 解析） */
 const channelModel = (model: unknown): string | undefined =>
   typeof model === 'string' && model ? model.replace(/^minimax:/, '') : undefined
@@ -57,7 +50,6 @@ export const minimaxTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'delete_video_task',
@@ -73,7 +65,6 @@ export const minimaxTools: ToolSpec[] = [
       properties: { task_id: { type: 'string' } },
       required: ['task_id'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_video',
@@ -122,7 +113,6 @@ export const minimaxTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_job',
@@ -143,7 +133,6 @@ export const minimaxTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_tool_help',
@@ -154,13 +143,11 @@ export const minimaxTools: ToolSpec[] = [
       properties: { tool: { type: 'string' } },
       required: ['tool'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_capabilities',
     description: '列出本MCP已实现能力与官方来源，不联网；不是账号权限/模型在线可用性证明。',
     inputSchema: { type: 'object', title: 'list_capabilitiesArguments', properties: {} },
-    outputSchema: okOutput,
   },
   {
     name: 'list_jobs',
@@ -174,7 +161,6 @@ export const minimaxTools: ToolSpec[] = [
         kind: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_video_tasks',
@@ -195,7 +181,6 @@ export const minimaxTools: ToolSpec[] = [
         task_type: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_voices',
@@ -206,7 +191,6 @@ export const minimaxTools: ToolSpec[] = [
       title: 'list_voicesArguments',
       properties: { voice_type: { type: 'string', default: 'all' } },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'music_generation',
@@ -232,7 +216,6 @@ export const minimaxTools: ToolSpec[] = [
         lyrics_optimizer: { type: 'boolean', default: false },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'recover_job',
@@ -253,7 +236,6 @@ export const minimaxTools: ToolSpec[] = [
       },
       required: ['job_id'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'regenerate_video',
@@ -284,7 +266,6 @@ export const minimaxTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'text_to_speech',
@@ -314,7 +295,6 @@ export const minimaxTools: ToolSpec[] = [
       },
       required: ['text'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_image',
@@ -352,7 +332,6 @@ export const minimaxTools: ToolSpec[] = [
       },
       required: ['prompt'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'upload_file',
@@ -378,7 +357,6 @@ export const minimaxTools: ToolSpec[] = [
       },
       required: ['file'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'clone_voice',
@@ -417,7 +395,6 @@ export const minimaxTools: ToolSpec[] = [
       },
       required: ['voice_id'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'design_voice',
@@ -436,6 +413,5 @@ export const minimaxTools: ToolSpec[] = [
       },
       required: ['prompt', 'preview_text', 'voice_id'],
     },
-    outputSchema: okOutput,
   },
 ]

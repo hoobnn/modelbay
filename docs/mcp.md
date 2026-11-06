@@ -30,6 +30,8 @@
 
 工具目录里写了的参数必须真的生效：要么经上面几步进了上游请求，要么从目录里删掉。
 
+平台工具不写 `outputSchema`。MCP 规定声明了 `outputSchema` 就要返回符合它的 `structuredContent`，客户端可以按它校验；而生成、查询、帮助各工具的结果形状不同（`get_tool_help` 只返回文本）。只有 MCP 自带的 `list_declared_models` 声明了，结果确实是 `{ models }`。快照里的 `outputSchema` 是旧版遗留，`tools.test.ts` 不对照它。
+
 ### 素材、任务与结果
 
 - 素材：`src/assets.ts` 给适配器上下文注入 `assets`，按 `assetId` 读本地路径（相对 server 的工作目录，支持 `~`）、`file://`、`http(s)://` 和 `data:` URL。方舟的参考视频 / 音频是公网 URL 或 `asset://ID` 时由适配器原样转给上游，不经这里读取。
