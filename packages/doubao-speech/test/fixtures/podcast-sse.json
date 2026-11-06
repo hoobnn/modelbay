@@ -1,5 +1,5 @@
 {
-  "note": "Podcast SSE: blank-line-terminated events with numeric event types.",
+  "note": "Podcast SSE: blank-line-terminated events with numeric event types. Event numbers follow the official WebSocket doc (360 round start, 361 round audio, 362 round end); the SSE payload shape (audio as base64 in data) is an assumption, not confirmed by the official docs.",
   "request": {
     "url": "https://openspeech.bytedance.com/api/v3/podcast/sse",
     "method": "POST",
@@ -10,11 +10,12 @@
     "body": {
       "action": 0,
       "input_text": "两位主持人讨论模型迁移。",
-      "audio_config": { "format": "mp3", "sample_rate": 24000 }
+      "audio_config": { "format": "mp3", "sample_rate": 24000 },
+      "input_info": { "return_audio_url": true }
     }
   },
   "response": {
     "status": 200,
-    "text": "event: 1\ndata: {\"round_id\":1}\n\nevent: 2\ndata: {\"data\":\"AQID\"}\n\n"
+    "text": "event: 360\ndata: {\"round_id\":1,\"speaker\":\"a\",\"text\":\"你好\"}\n\nevent: 361\ndata: {\"data\":\"AQID\"}\n\nevent: 361\ndata: {\"data\":\"BAUG\"}\n\nevent: 362\ndata: {\"audio_duration\":1.5}\n\n"
   }
 }

@@ -32,14 +32,12 @@ describe('native declarations', () => {
 describe('podcast (required native op)', () => {
   it('builds the recorded request', () => {
     const f = fixture('podcast-sse')
-    expect(buildPodcastRequest({ input_text: '两位主持人讨论模型迁移。' })).toEqual(f.request.body)
+    const { input_info: _info, ...recorded } = f.request.body!
+    expect(buildPodcastRequest({ input_text: '两位主持人讨论模型迁移。' })).toEqual(recorded)
   })
   it('parses SSE events', () => {
     const events = parsePodcastSse(fixture('podcast-sse').response.text!)
-    expect(events).toEqual([
-      { event: 1, data: { round_id: 1 } },
-      { event: 2, data: { data: 'AQID' } },
-    ])
+    expect(events.map((item) => item.event)).toEqual([360, 361, 361, 362])
   })
   it('ignores comments and rejects a non-numeric event', () => {
     expect(parsePodcastSse(': keepalive\n\nevent: 5\ndata: {}\n\n')).toEqual([
@@ -53,7 +51,46 @@ describe('podcast (required native op)', () => {
     const result = await podcast(ctx, { input_text: '两位主持人讨论模型迁移。' })
     expect(calls()[0]?.url).toBe(f.request.url)
     expect(calls()[0]?.body).toEqual(f.request.body)
-    expect(result.events as unknown[]).toHaveLength(2)
+    expect(result.events as unknown[]).toHaveLength(4)
+    // 音频不再以 Base64 留在事件里，而是拼成一个字节输出，形状与其他音频操作的文件输出一致。
+    expect(JSON.stringify(result.events)).not.toContain('AQID')
+    expect(result.outputs).toEqual([
+      {
+        type: 'file',
+        kind: 'audio',
+        mime: 'audio/mpeg',
+        name: 'podcast.mp3',
+        data: new Uint8Array([1, 2, 3, 4, 5, 6]),
+      },
+    ])
+  })
+  it('prefers the full-audio URL from event 363 and honours the requested format', async () => {
+    const sse =
+      'event: 361\ndata: {"data":"AQID"}\n\n' +
+      'event: 363\ndata: {"meta_info":{"audio_url":"https://example.test/p.ogg"}}\n\n'
+    const { ctx, calls } = fakeContext([new Response(sse)])
+    const result = await podcast(ctx, { input_text: 'x', audio_config: { format: 'ogg_opus' } })
+    expect(calls()[0]?.body?.input_info).toEqual({ return_audio_url: true })
+    expect(result.outputs).toEqual([
+      {
+        type: 'file',
+        kind: 'audio',
+        mime: 'audio/ogg',
+        url: 'https://example.test/p.ogg',
+        name: 'podcast.ogg',
+      },
+    ])
+  })
+  it('script_only returns no audio and does not ask for a URL', async () => {
+    const { ctx, calls } = fakeContext([new Response('event: 360\ndata: {"text":"hi"}\n\n')])
+    const result = await podcast(ctx, { input_text: 'x', input_info: { only_nlp_text: true } })
+    expect(calls()[0]?.body?.input_info).toEqual({ only_nlp_text: true })
+    expect(result.outputs).toEqual([])
+  })
+  it('rejects sample rates outside the official podcast list', () => {
+    expect(() =>
+      buildPodcastRequest({ input_text: 'x', audio_config: { sample_rate: 8000 } }),
+    ).toThrow(ProviderError)
   })
   it('validates action, nlp_texts, audio_config, speakers and retry_info', () => {
     expect(() => buildPodcastRequest({ action: 9 })).toThrow(ProviderError)
