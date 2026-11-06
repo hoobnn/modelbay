@@ -68,17 +68,17 @@ export type Command =
   | { kind: 'help' }
   | { kind: 'error'; message: string }
 
-/** Capabilities that take a single text prompt. `audio.speech` uses `text`. */
+/**
+ * Capabilities that work from a single text prompt. Ones that need an input
+ * file (image.edit / image.process / audio.transcribe) are not offered here.
+ */
 const GENERATE_CAPABILITIES: readonly string[] = [
   'text.chat',
   'image.generate',
-  'image.edit',
-  'image.process',
   'video.generate',
   'audio.speech',
   'audio.music',
   'audio.sfx',
-  'audio.transcribe',
 ]
 
 export const USAGE = `modelbay — CLI for Modelbay
@@ -204,9 +204,13 @@ async function runGenerate(
     io.stderr(`error: unsupported capability: ${command.capability}\n`)
     return 1
   }
-  // 配音用 text 字段，其余能力用 prompt 字段
+  // 对话要 messages，配音用 text 字段，其余能力用 prompt 字段
   const input: Record<string, unknown> =
-    command.capability === 'audio.speech' ? { text: command.prompt } : { prompt: command.prompt }
+    command.capability === 'text.chat'
+      ? { messages: [{ role: 'user', content: command.prompt }] }
+      : command.capability === 'audio.speech'
+        ? { text: command.prompt }
+        : { prompt: command.prompt }
   try {
     const outcome = await deps.generate({
       capability: command.capability,
