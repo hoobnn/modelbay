@@ -88,6 +88,13 @@ describe('video-2k-rerender (required native op)', () => {
     expect(built.body.resolution).toBe('2K')
     expect(built.body.aigc_watermark).toBe(true)
   })
+  it('两种请求体都带必填的 resolution=2K（官方 resolution 必填，默认 2K）', () => {
+    expect(buildRerenderRequest({ source_task_id: 'task-1' }).body.resolution).toBe('2K')
+    const content = [
+      { type: 'video_url', video_url: { url: 'https://x/v.mp4' }, role: 'base_video' },
+    ]
+    expect(buildRerenderRequest({ content }).body.resolution).toBe('2K')
+  })
   it('validates mutual exclusivity, base_video and parameters', () => {
     expect(() =>
       buildRerenderRequest({ source_task_id: 'x', content: [{ type: 'text', text: 'y' }] }),
@@ -182,11 +189,48 @@ describe('upload / voice clone / voice design', () => {
     expect(calls()[0]?.body).toEqual(f.request.body)
     expect(result.voiceId).toBe('generated-voice-1')
   })
+  it('voiceDesign 不传 voice_id 时请求体省略该字段，并返回平台生成的 ID', async () => {
+    const { ctx, calls } = fakeContext([
+      { base_resp: { status_code: 0 }, voice_id: 'auto-1', trial_audio: '00' },
+    ])
+    const result = await voiceDesign(ctx, { prompt: 'p', preview_text: 't' })
+    expect(calls()[0]?.body).toEqual({ prompt: 'p', preview_text: 't' })
+    expect(result.voiceId).toBe('auto-1')
+  })
+  it('voice-clone 的 file_id 接受数字和数字字符串，并按 JSON 整数发送（含超过 2^53 的 int64）', async () => {
+    for (const [input, wire] of [
+      [263891729178625, '263891729178625'],
+      ['263891729178625', '263891729178625'],
+      ['9223372036854775807', '9223372036854775807'],
+    ] as const) {
+      const { ctx, calls } = fakeContext([{ base_resp: { status_code: 0 } }])
+      await voiceClone(ctx, { voice_id: 'MyVoice_123', file_id: input }, models)
+      const raw = String(calls()[0]?.rawBody)
+      expect(raw).toContain(`"file_id":${wire},`)
+    }
+    for (const bad of ['abc', '9223372036854775808', 1.5, -1, 2 ** 60]) {
+      const { ctx } = fakeContext([])
+      await expect(
+        voiceClone(ctx, { voice_id: 'MyVoice_123', file_id: bad }, models),
+      ).rejects.toMatchObject({ code: 'invalid_input' })
+    }
+  })
+  it('上传响应里超过 2^53 的 file_id 按原值保留，再作为整数提交', async () => {
+    const big = '9007199254740993'
+    const upload = new Response(`{"base_resp":{"status_code":0},"file":{"file_id":${big}}}`, {
+      status: 200,
+    })
+    const { ctx } = fakeContext([upload])
+    expect((await uploadFile(ctx, { asset_id: 'a1', purpose: 'voice_clone' })).fileId).toBe(big)
+    const clone = fakeContext([{ base_resp: { status_code: 0 } }])
+    await voiceClone(clone.ctx, { voice_id: 'MyVoice_123', file_id: big }, models)
+    expect(String(clone.calls()[0]?.rawBody)).toContain(`"file_id":${big},`)
+  })
   it('voiceDesign validates inputs and refuses a missing voice_id', async () => {
     const a = fakeContext([])
-    await expect(
-      voiceDesign(a.ctx, { voice_id: '', prompt: 'x', preview_text: 'y' }),
-    ).rejects.toMatchObject({ code: 'invalid_input' })
+    await expect(voiceDesign(a.ctx, { prompt: ' ', preview_text: 'y' })).rejects.toMatchObject({
+      code: 'invalid_input',
+    })
     const b = fakeContext([{ base_resp: { status_code: 0 } }])
     await expect(
       voiceDesign(b.ctx, { voice_id: 'v', prompt: 'x', preview_text: 'y' }),

@@ -14,7 +14,7 @@ import {
 } from '@modelbay/core'
 import { downloadVoicePreview } from '@modelbay/shared'
 import { withFiles } from './files'
-import { requestJson } from './http'
+import { normalizeFileId, requestJson } from './http'
 
 const MB = 1024 * 1024
 
@@ -76,13 +76,10 @@ async function uploadSample(
   form.set('file', new Blob([new Uint8Array(asset.data)], { type: asset.mime }), `${name}.${ext}`)
   const uploaded = await requestJson(ctx, '/v1/files/upload', form)
   const fileId = (uploaded.file as { file_id?: unknown } | undefined)?.file_id
-  // file_id 是 int64，超出 JS 安全整数时 JSON 解析已丢精度，不能拿去提交
-  if (
-    (typeof fileId !== 'string' && typeof fileId !== 'number') ||
-    (typeof fileId === 'number' && !Number.isSafeInteger(fileId))
-  )
-    throw new ProviderError('unknown', failure)
-  return fileId
+  // file_id 是 int64（官方 integer/int64）：超长整数已在 readJson 里按字符串保留，发送时按数字写出
+  const usable = normalizeFileId(fileId)
+  if (usable === undefined) throw new ProviderError('unknown', failure)
+  return usable
 }
 
 export async function cloneVoice(
@@ -177,8 +174,10 @@ export async function designVoice(
   if (image) throw new ProviderError('invalid_input', 'MiniMax 音色设计仅支持文字描述')
   required(prompt, 2000, '音色描述')
   required(previewText, 500, '试听文本')
+  // voice_id 可选，不传则平台自动生成并返回
+  // （2026-11-06 核对：https://platform.minimax.cn/docs/api-reference/voice-design-design）
   const result = await requestJson(ctx, '/v1/voice_design', {
-    voice_id: voiceId,
+    ...(voiceId ? { voice_id: voiceId } : {}),
     prompt,
     preview_text: previewText,
   })

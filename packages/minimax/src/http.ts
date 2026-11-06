@@ -114,6 +114,41 @@ export async function readText(
   }
 }
 
+/**
+ * 官方把 file_id 定义为 integer（int64）：
+ * - 上传响应 file.file_id：type integer / format int64
+ *   （2026-11-06 核对：https://platform.minimax.cn/docs/api-reference/file-management-upload）
+ * - 复刻请求 file_id、clone_prompt.prompt_audio：type integer / format int64
+ *   （2026-11-06 核对：https://platform.minimax.cn/docs/api-reference/voice-cloning-clone）
+ * 超过 2^53 的整数 JSON.parse 会丢精度，所以解析前把 16 位以上的 file_id 整数改写成字符串保留原值。
+ */
+export function quoteLargeInt64(text: string): string {
+  return text.replace(/("file_id"\s*:\s*)(\d{16,})/g, '$1"$2"')
+}
+
+const INT64_KEYS = new Set(['file_id', 'prompt_audio'])
+const INT64_MAX = 9223372036854775807n
+const INT64_TOKEN = '__modelbay_int64__'
+
+/** file_id 的合法输入：非负安全整数，或不超过 int64 的纯数字字符串（保留原始精度）。 */
+export function normalizeFileId(value: unknown): string | number | undefined {
+  if (typeof value === 'number')
+    return Number.isSafeInteger(value) && value >= 0 ? value : undefined
+  if (typeof value === 'string' && /^\d{1,19}$/.test(value) && BigInt(value) <= INT64_MAX)
+    return value
+  return undefined
+}
+
+/** 序列化请求体：file_id / prompt_audio 的数字字符串按 JSON 数字（int64）原样写出，不经过 Number。 */
+export function stringifyBody(body: Json): string {
+  const text = JSON.stringify(body, (key, value) =>
+    INT64_KEYS.has(key) && normalizeFileId(value) !== undefined && typeof value === 'string'
+      ? `${INT64_TOKEN}${value}`
+      : value,
+  )
+  return text.replace(new RegExp(`"${INT64_TOKEN}(\\d+)"`, 'g'), '$1')
+}
+
 export async function readJson(
   ctx: Pick<AdapterContext, 'signal'>,
   response: Response,
@@ -122,7 +157,7 @@ export async function readJson(
 ): Promise<unknown> {
   const text = await readText(ctx, response, method, messages)
   try {
-    return JSON.parse(text)
+    return JSON.parse(quoteLargeInt64(text))
   } catch {
     return null
   }
@@ -202,7 +237,7 @@ export async function requestJson(
   const method: Method = opts.method ?? (body === undefined ? 'GET' : 'POST')
   const messages = requestMessages(method)
   const isForm = body instanceof FormData
-  const payload = isForm ? body : body === undefined ? undefined : JSON.stringify(body)
+  const payload = isForm ? body : body === undefined ? undefined : stringifyBody(body)
   const queryEntries = opts.query
     ? Object.entries(opts.query)
         .filter(([, value]) => value !== undefined)

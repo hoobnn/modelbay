@@ -39,6 +39,19 @@ describe('声音复刻', () => {
     })
   })
 
+  it('上传返回超过 2^53 的 file_id 时按整数原值提交，不丢精度', async () => {
+    const big = '9007199254740993'
+    const { ctx, fetch } = hostContext(
+      [
+        new Response(`{"file":{"file_id":${big}},"base_resp":{"status_code":0}}`),
+        { input_sensitive: { type: 0 }, demo_audio: '', base_resp: { status_code: 0 } },
+      ],
+      { mime: 'audio/mpeg', duration: 30 },
+    )
+    await cloneVoice({ voiceId: 'pleinabcdefgh', sample }, ctx)
+    expect(String(fetch.mock.calls[1]![1]!.body)).toContain(`"file_id":${big},`)
+  })
+
   it('样本过短直接拦下，未实名按鉴权失败报', async () => {
     const short = hostContext([], { mime: 'audio/wav', duration: 3 })
     await expect(cloneVoice({ voiceId: 'pleinabcdefgh', sample }, short.ctx)).rejects.toMatchObject(
@@ -197,6 +210,14 @@ describe('音色设计', () => {
       voiceId: 'designed123',
       preview: { data: new Uint8Array([1, 2, 3]), mime: 'audio/mpeg' },
     })
+  })
+  it('不传 voiceId 时请求体不带 voice_id', async () => {
+    const { ctx, body } = hostContext([
+      { voice_id: 'auto-1', trial_audio: '01', base_resp: { status_code: 0 } },
+    ])
+    const result = await designVoice({ voiceId: '', prompt: 'p', previewText: 't' }, ctx)
+    expect(body()).toEqual({ prompt: 'p', preview_text: 't' })
+    expect(result.voiceId).toBe('auto-1')
   })
   it('拒绝图片、空描述；缺音色 ID 标为结果未知', async () => {
     const { ctx, fetch } = hostContext([{ base_resp: { status_code: 0 } }])
