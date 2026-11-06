@@ -58,6 +58,7 @@ function makeImageAdapter(rec: Recorder): PlatformAdapter {
     models: [
       declaration('test/active-image', 'image.generate', 'active', 'test', { default: true }),
       declaration('test/sunsetting-image', 'image.generate', 'sunsetting'),
+      declaration('test/retired-image', 'image.generate', 'retired'),
     ],
     async submit(request, ctx) {
       rec.model = request.model
@@ -98,7 +99,7 @@ describe('createModelbay 汇总入口', () => {
       secrets: {},
     })
     expect(mb.registry).toBeInstanceOf(ModelRegistry)
-    expect(mb.registry.all()).toHaveLength(2)
+    expect(mb.registry.all()).toHaveLength(3)
     expect(mb.adapters).toHaveLength(1)
   })
 
@@ -181,6 +182,23 @@ describe('createModelbay 汇总入口', () => {
     expect(JSON.stringify(report)).not.toContain('sk-SUPER-SECRET')
     expect(report.entries.find((entry) => entry.platform === 'ark')?.configured).toBe(true)
     expect(report.ok).toBe(true)
+  })
+
+  it('已归档（retired）的模型不再支持调用，不发请求', async () => {
+    const rec: Recorder = { polls: 0, fetches: 0 }
+    const mb = createModelbay({
+      adapters: [makeImageAdapter(rec)],
+      secrets: {},
+      fetch: fakeFetch(),
+    })
+    await expect(
+      mb.generate({
+        capability: 'image.generate',
+        model: 'test:retired-image',
+        input: { prompt: 'x' },
+      }),
+    ).rejects.toThrow(/已归档/)
+    expect(rec.model).toBeUndefined()
   })
 
   it('自定义 ID 缺少渠道前缀时明确报错', async () => {

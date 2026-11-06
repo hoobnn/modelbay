@@ -16,6 +16,7 @@ import {
   ProviderError,
   adapterCapabilities,
   createAdapterContext,
+  isSelectable,
   missingSecrets,
   readSecrets,
   runJob,
@@ -160,6 +161,13 @@ export function createModelbay(options: ModelbayOptions = {}): Modelbay {
 
     if (request.model) {
       const resolved = registry.resolve(request.model)
+      if (resolved && !isSelectable(resolved.declaration)) {
+        // 已归档（retired）的模型不再支持，声明只留作记录
+        throw new ProviderError(
+          'unavailable',
+          `模型 ${request.model} 已归档（官方已下线），不再支持调用`,
+        )
+      }
       if (resolved) {
         channel = resolved.channel.channel
         // 用渠道内的真实 ID，避免别名/简称在适配器里二次解析

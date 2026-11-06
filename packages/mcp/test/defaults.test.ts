@@ -5,8 +5,7 @@
  * - 方舟 chat 的 `pro` → `doubao-seed-2-1-pro-260915`（按量渠道，不是套餐渠道）；
  * - 百炼 chat 的 `max` → `qwen3.8-max`，生图的 `qwen` → `qwen-image-3.0-pro`，
  *   视频的 `wan` → `wan3.0-video`；
- * - MiniMax 音乐生成的默认是 `music-3.0`，但它已是 `closed-to-new-accounts`，
- *   按 0003 非 active 不能当默认，所以不给默认值，必须显式传。
+ * - MiniMax 音乐模型全部归档（retired），音乐生成工具不再提供。
  */
 import { describe, expect, it } from 'vite-plus/test'
 import { canBeDefault, type ModelDeclaration } from '@modelbay/core'
@@ -36,7 +35,6 @@ const EXPECTED: Record<McpKey, Record<string, string | null | undefined>> = {
   minimax: {
     generate_video: 'minimax:MiniMax-H3',
     list_video_tasks: null,
-    music_generation: undefined,
     text_to_speech: 'minimax:speech-2.8-hd',
     generate_image: 'minimax:image-01',
     clone_voice: 'minimax:speech-2.8-hd',
@@ -101,10 +99,23 @@ describe('MCP 工具的 model 默认值', () => {
   })
 
   it('没有默认模型的能力，工具说明里说明必须显式传', () => {
-    const set = generateTools('minimax', { adapter: minimaxAdapter })
-    const tool = set.byName.get('music_generation')
+    // 把已归档的音乐模型临时改回 closed-to-new-accounts：可选但不能当默认
+    const models = minimaxAdapter.models.map((model) =>
+      model.capabilities.includes('audio.music')
+        ? ({
+            ...model,
+            lifecycle: { status: 'closed-to-new-accounts', source: model.lifecycle.source },
+          } as ModelDeclaration)
+        : model,
+    )
+    const tool = generateTools('minimax', { models }).byName.get('music_generation')
     expect(tool).toBeDefined()
     expect(tool?.description).toContain('model 必须显式指定')
     expect(tool?.description).toContain('music-3.0')
+  })
+
+  it('能力下的声明全部归档，工具不再提供', () => {
+    const set = generateTools('minimax', { adapter: minimaxAdapter })
+    expect(set.byName.has('music_generation')).toBe(false)
   })
 })

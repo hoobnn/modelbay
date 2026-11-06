@@ -149,24 +149,60 @@ describe('生命周期', () => {
     expect(gap!.proposed).toMatchObject({ status: 'sunsetting', sunsetOn: '2027-01-19' })
   })
 
-  it('列表页的「已下线」标签不出生命周期补丁，active 的声明按历史模型报告', () => {
+  it('历史模型一律归档成 retired，未声明的历史模型不报', () => {
     const page: Snapshot = {
       url: 'https://x/list',
       role: 'list',
       channel: 'c',
       markdown: [
+        '## 当前模型',
+        '| 模型名称 | 状态 |',
+        '| --- | --- |',
+        '| mx-3 | 可用 |',
+        '| mx-8 | 可用 |',
         '## 历史模型',
         '| 模型名称 | 状态 |',
         '| --- | --- |',
-        '| m-1 | 已下线 |',
-        '| m-2 | 可用 |',
+        '| mx-1 | 已下线 |',
+        '| mx-2 | 可用 |',
+        '| mx-3 | 可用 |',
+        '| mx-9 | 已下线 |',
+        '| mx-0 | 已下线 |',
       ].join('\n'),
     }
-    const gaps = run([page], [model('m-1', { status: 'sunsetting' }), model('m-2')])
-    expect(gaps.some((gap) => gap.kind === 'lifecycle')).toBe(false)
-    expect(gaps).toEqual([expect.objectContaining({ kind: 'legacy', canonicalId: 'v/m-2' })])
-    const active = run([page], [model('m-1')])
-    expect(active).toEqual([expect.objectContaining({ kind: 'legacy', canonicalId: 'v/m-1' })])
+    const gaps = run(
+      [page],
+      [
+        model('mx-1', { status: 'sunsetting' }),
+        model('mx-2'),
+        model('mx-3'),
+        model('mx-0', { status: 'retired' }),
+      ],
+    ) as LifecycleGap[]
+    expect(gaps.map((gap) => [gap.kind, gap.canonicalId, gap.proposed?.status])).toEqual([
+      ['lifecycle', 'v/mx-1', 'retired'],
+      ['lifecycle', 'v/mx-2', 'retired'],
+      ['undeclared', undefined, undefined],
+    ])
+    expect(gaps[2]).toMatchObject({ id: 'mx-8' })
+    expect(gaps[0]!.proposed.source).toBe('https://x/list')
+  })
+
+  it('历史小节的归档覆盖公告推算的 sunsetting', () => {
+    const notice: Snapshot = {
+      url: 'https://x/dep',
+      role: 'deprecation',
+      markdown: '| 模型 | 下线日期 |\n| --- | --- |\n| m-1 | 2099-01-01 |',
+    }
+    const list: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: '## 历史模型\n\n- m-1',
+    }
+    const gaps = run([notice, list], [model('m-1')]) as LifecycleGap[]
+    expect(gaps).toHaveLength(1)
+    expect(gaps[0]!.proposed).toEqual({ status: 'retired', source: 'https://x/list' })
   })
 
   it('状态一致时不报', () => {
