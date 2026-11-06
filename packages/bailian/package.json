@@ -1,6 +1,7 @@
 {
   "name": "@modelbay/bailian",
   "version": "0.1.0",
+  "private": true,
   "description": "Alibaba Bailian / DashScope adapter",
   "license": "MIT",
   "repository": {

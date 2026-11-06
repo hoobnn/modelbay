@@ -18,6 +18,8 @@
       "@modelbay/*/node": ["./packages/*/src/node/index.ts"],
       "@modelbay/*": ["./packages/*/src/index.ts"],
       "modelbay/node": ["./packages/modelbay/src/node.ts"],
+      "modelbay/*/node": ["./packages/modelbay/src/platform/*-node.ts"],
+      "modelbay/*": ["./packages/modelbay/src/platform/*.ts"],
       "modelbay": ["./packages/modelbay/src/index.ts"]
     }
   }

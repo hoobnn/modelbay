@@ -1,5 +1,7 @@
 # @modelbay/shared
 
+> Internal workspace package, not published to npm. Bundled into `modelbay`; not a public API.
+
 Runtime-agnostic building blocks shared by the [Modelbay](../../README.md)
 platform adapters. Every platform package imports the same implementation from
 here instead of copying it; types come from `@modelbay/core`.

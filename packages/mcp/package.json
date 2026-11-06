@@ -34,7 +34,6 @@
     "zod": "^4.6"
   },
   "dependencies": {
-    "@modelbay/core": "workspace:*",
     "modelbay": "workspace:*"
   },
   "devDependencies": {
@@ -44,6 +43,7 @@
     "@modelbay/minimax": "workspace:*",
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@modelbay/core": "workspace:*"
   }
 }

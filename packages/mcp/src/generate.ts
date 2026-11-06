@@ -1,10 +1,5 @@
 /** 从 ModelDeclaration + 适配器 + 工具目录生成 MCP 工具集合。 */
-import type {
-  ModelDeclaration,
-  PlatformAdapter,
-  PlatformDescriptor,
-  ToolSpec,
-} from '@modelbay/core'
+import type { ModelDeclaration, PlatformAdapter, PlatformDescriptor, ToolSpec } from 'modelbay'
 import { findPlatform } from 'modelbay'
 import {
   deriveAnnotations,

@@ -1,5 +1,7 @@
 # @modelbay/core
 
+> Internal workspace package, not published to npm. Its whole API is re-exported from `modelbay`.
+
 Runtime-agnostic foundation of [Modelbay](../../README.md): capability types,
 model parameter validation, media requirements, error normalization, model
 declarations, the async job runner, and the `PlatformDescriptor` type that every
@@ -11,7 +13,7 @@ exported from optional subpaths of the platform adapters, never from this
 package.
 
 ```ts
-import { modelParamsProblem, ProviderError, type ModelSpec } from '@modelbay/core'
+import { modelParamsProblem, ProviderError, type ModelSpec } from 'modelbay'
 ```
 
 `zod` is a peer dependency — install it once in the host application so that

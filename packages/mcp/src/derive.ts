@@ -21,8 +21,8 @@ import {
   selectNativeModel,
   type ModelDeclaration,
   type ModelParamKind,
-} from '@modelbay/core'
-import type { ToolSpec } from '@modelbay/core'
+} from 'modelbay'
+import type { ToolSpec } from 'modelbay'
 import type { JsonSchema, ToolAnnotations, ToolNature } from './types'
 
 type Capability = Parameters<typeof capabilityInputSchema>[0]

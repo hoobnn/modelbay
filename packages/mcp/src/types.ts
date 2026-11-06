@@ -1,9 +1,5 @@
 /** MCP 生成器与 stdio server 的公共类型。 */
-import type {
-  ToolGroup as CoreToolGroup,
-  ToolNature as CoreToolNature,
-  ToolSpec,
-} from '@modelbay/core'
+import type { ToolGroup as CoreToolGroup, ToolNature as CoreToolNature, ToolSpec } from 'modelbay'
 
 /** 打开哪些工具组的环境变量（逗号分隔）。 */
 export const GROUP_ENV_VAR = 'MODELBAY_MCP_GROUPS'

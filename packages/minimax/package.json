@@ -1,6 +1,7 @@
 {
   "name": "@modelbay/minimax",
   "version": "0.1.0",
+  "private": true,
   "description": "MiniMax adapter",
   "license": "MIT",
   "repository": {

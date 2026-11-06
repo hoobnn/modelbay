@@ -1,8 +1,8 @@
 # modelbay
 
-The single install point for the [Modelbay](../../README.md) SDK. It re-exports
-the runtime-agnostic `@modelbay/core` API and the five platform adapter packages,
-holds the platform registry, and adds `createModelbay()` which wires everything together.
+The single install point for the [Modelbay](../../README.md) SDK. It bundles
+the runtime-agnostic core API and the five platform adapters, holds the platform
+registry, and adds `createModelbay()` which wires everything together.
 
 MIT licensed.
 
@@ -70,6 +70,21 @@ SDK. The environment variable names come from each platform's descriptor
 | MiniMax         | `MINIMAX_API_KEY`                                            |
 | Doubao Speech   | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN` |
 | OpenAI          | `OPENAI_API_KEY`, or `OPENAI_COMPATIBLE_API_KEY`             |
+
+## Platform-specific exports
+
+Each platform's own exports (adapter factories, model declarations, options)
+are on a subpath; Node-only helpers are on `<platform>/node`:
+
+```ts
+import { createArkAdapter, models } from 'modelbay/ark'
+import { uploadReferenceVideo } from 'modelbay/ark/node'
+```
+
+Subpaths: `modelbay/ark`, `modelbay/bailian`, `modelbay/minimax`,
+`modelbay/doubao-speech`, `modelbay/openai`, and `/node` for `ark`, `bailian`,
+`doubao-speech`, `openai`. The root entry also exposes each platform as a
+namespace (`ark`, `bailian`, `minimax`, `doubaoSpeech`, `openai`).
 
 ## Node-only capabilities
 

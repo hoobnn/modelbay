@@ -27,10 +27,12 @@
 6. 在 `packages/modelbay` 里登记：
    - `src/platforms.ts` 的 `PLATFORMS` 加一行；
    - `src/index.ts` 加命名空间再导出；
-   - `package.json` 加依赖；
+   - `src/platform/<平台>.ts`（有 Node 扩展的再加 `<平台>-node.ts`）一行再导出，在 `vite.config.ts` 的 `entries` 和 `package.json` 的 `exports` 里登记 `./<平台>`（和 `./<平台>/node`）；
+   - `package.json` 的 `devDependencies` 加 `"@modelbay/<平台>": "workspace:*"`，平台包的第三方依赖并到 `modelbay` 的 `dependencies` / 可选 peer；
    - 有 Node 扩展的，在 `src/node.ts` 的 `NODE_LOADERS` 加一行。
+   - 平台包本身的 `package.json` 标 `"private": true`，不单独发布。
 7. 在 `scripts/upstream/sources.ts` 的 `SOURCES` 里登记模型列表页和下线公告页，并在 `.github/workflows/upstream-docs.yml` 的平台列表里加上 `key`，见 [上游文档对账](upstream.md#新增平台或页面)。
-8. `pnpm install`，然后 `pnpm verify`。打包入口、测试别名、TS 路径、覆盖率门槛（80%）、changesets 版本组都按目录约定自动生效，不用改。
+8. `pnpm install`，然后 `pnpm verify`。打包入口、测试别名、TS 路径、覆盖率门槛（80%）都按目录约定自动生效，不用改。
 
 平台包之间不互相依赖，公共的 HTTP、对话、尺寸换算放进 `@modelbay/shared`。目前唯一的例外是方舟依赖豆包语音（套餐渠道复用豆包语音的合成协议）。
 

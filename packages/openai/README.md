@@ -1,5 +1,7 @@
 # @modelbay/openai
 
+> Internal workspace package, not published to npm. Install `modelbay` and import these exports from `modelbay/openai` (Node-only helpers: `modelbay/openai/node`).
+
 OpenAI and OpenAI-compatible adapters for [Modelbay](../../README.md). MIT licensed.
 
 | Export                    | Adapter id          | Channel             | Secret                                              |
@@ -163,8 +165,8 @@ parts and is never imported by the root entry:
 the adapter asks for it instead of importing `sharp` itself:
 
 ```ts
-import { createOpenAIAdapter, models } from '@modelbay/openai'
-import { editMask } from '@modelbay/openai/node'
+import { createOpenAIAdapter, models } from 'modelbay/openai'
+import { editMask } from 'modelbay/openai/node'
 
 const adapter = createOpenAIAdapter(models, { editMask })
 ```

@@ -1,6 +1,7 @@
 {
   "name": "@modelbay/ark",
   "version": "0.1.0",
+  "private": true,
   "description": "Volcengine Ark adapter (pay-as-you-go and plan channels)",
   "license": "MIT",
   "repository": {

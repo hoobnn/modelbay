@@ -7,14 +7,14 @@
  */
 import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
-import { ProviderError } from '@modelbay/core'
+import { ProviderError } from 'modelbay'
 import type {
   AdapterContext,
   PlatformAdapter,
   PollResult,
   ProviderOutput,
   SubmitResult,
-} from '@modelbay/core'
+} from 'modelbay'
 import { extensionFor, mimeFromName } from './assets'
 
 /** `wait` 的上限（秒），与工具说明的 1–90 一致。 */

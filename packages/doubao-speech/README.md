@@ -1,10 +1,12 @@
 # @modelbay/doubao-speech
 
+> Internal workspace package, not published to npm. Install `modelbay` and import these exports from `modelbay/doubao-speech` (Node-only helpers: `modelbay/doubao-speech/node`).
+
 Doubao Speech adapter for [Modelbay](../../README.md). MIT licensed.
 
 ```ts
-import { doubaoAdapter } from '@modelbay/doubao-speech'
-import { createAdapterContext } from '@modelbay/core'
+import { doubaoAdapter } from 'modelbay/doubao-speech'
+import { createAdapterContext } from 'modelbay'
 
 const ctx = createAdapterContext({
   secrets: { DOUBAO_APP_ID: '...', DOUBAO_ACCESS_TOKEN: '...' },

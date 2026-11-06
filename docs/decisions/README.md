@@ -16,3 +16,4 @@
 | [0002](0002-naming-license-and-namespaces.md)       | 命名、许可与命名空间                    | 已接受 |
 | [0003](0003-capabilities-and-model-declarations.md) | 能力划分与模型声明格式                  | 已接受 |
 | [0004](0004-platform-descriptors-and-registry.md)   | 平台自描述与单一注册表；声明不导出 JSON | 已接受 |
+| [0005](0005-three-published-packages.md)            | 对外只发三个包，内部分包只做代码边界    | 已接受 |

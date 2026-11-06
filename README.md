@@ -14,21 +14,22 @@ declarations, so an upstream change only needs one edit.
 
 ## Packages
 
-| Package                   | Role                                                                      |
-| ------------------------- | ------------------------------------------------------------------------- |
-| `modelbay`                | Aggregation entry: platform registry, `createModelbay()`, `modelbay/node` |
-| `@modelbay/core`          | Runtime-agnostic types, validation, model declarations, async job runner  |
-| `@modelbay/ark`           | Volcengine Ark adapter (pay-as-you-go + plan channels)                    |
-| `@modelbay/bailian`       | Alibaba Bailian adapter                                                   |
-| `@modelbay/minimax`       | MiniMax adapter                                                           |
-| `@modelbay/doubao-speech` | Doubao Speech adapter                                                     |
-| `@modelbay/openai`        | OpenAI (+ OpenAI-compatible channel) adapter                              |
-| `@modelbay/mcp`           | MCP server generated from declarations; command `modelbay-mcp <platform>` |
-| `@modelbay/cli`           | CLI, command name `modelbay`                                              |
-| `@modelbay/shared`        | Internal helpers shared by the platform packages                          |
+Three packages are published to npm:
 
-`packages/*` are ESM-only, MIT licensed, and share one version number
-(changesets fixed group).
+| Package         | Role                                                                      |
+| --------------- | ------------------------------------------------------------------------- |
+| `modelbay`      | The SDK: core API, `createModelbay()`, platform registry, `modelbay/node` |
+| `@modelbay/mcp` | MCP server generated from declarations; command `modelbay-mcp <platform>` |
+| `@modelbay/cli` | CLI, command name `modelbay`                                              |
+
+Platform-specific exports live on subpaths of `modelbay`: `modelbay/ark`,
+`modelbay/bailian`, `modelbay/minimax`, `modelbay/doubao-speech`,
+`modelbay/openai`, plus `modelbay/<platform>/node` for Node-only helpers.
+
+Inside the repo, `@modelbay/core`, `@modelbay/shared` and the five platform
+packages stay separate private workspace packages that keep the layering honest;
+`modelbay` bundles them at build time. All packages are ESM-only, MIT licensed,
+and share one version number (changesets fixed group).
 
 ## Quick start (10 lines)
 

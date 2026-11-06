@@ -2,8 +2,8 @@
  * 启动逻辑：从注册表找到平台、读取密钥、创建注入了 Node 扩展的适配器、生成工具、启动 stdio server。
  */
 import type { Readable, Writable } from 'node:stream'
-import { createAdapterContext, readSecrets } from '@modelbay/core'
-import type { PlatformAdapter, PlatformDescriptor } from '@modelbay/core'
+import { createAdapterContext, readSecrets } from 'modelbay'
+import type { PlatformAdapter, PlatformDescriptor } from 'modelbay'
 import { PLATFORMS, findPlatform } from 'modelbay'
 import { createNodeAdapters } from 'modelbay/node'
 import { createMcpAssetSource } from './assets'

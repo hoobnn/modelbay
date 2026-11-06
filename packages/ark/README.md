@@ -1,5 +1,7 @@
 # @modelbay/ark
 
+> Internal workspace package, not published to npm. Install `modelbay` and import these exports from `modelbay/ark` (Node-only helpers: `modelbay/ark/node`).
+
 Volcengine Ark adapter for [Modelbay](../../README.md). MIT licensed.
 
 This package exposes **two** `PlatformAdapter`s, one per Ark data plane:
@@ -125,8 +127,8 @@ or the error cause. `native('listModels')` on the plan channel directs callers t
 adapter asks for the uploader instead of importing the SDK:
 
 ```ts
-import { createArkAdapter, models } from '@modelbay/ark'
-import { uploadReferenceVideo } from '@modelbay/ark/node'
+import { createArkAdapter, models } from 'modelbay/ark'
+import { uploadReferenceVideo } from 'modelbay/ark/node'
 
 const adapter = createArkAdapter(models, { uploadVideo: uploadReferenceVideo })
 ```

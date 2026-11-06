@@ -6,8 +6,8 @@ import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { extname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ProviderError } from '@modelbay/core'
-import type { AssetSource, LoadedAsset } from '@modelbay/core'
+import { ProviderError } from 'modelbay'
+import type { AssetSource, LoadedAsset } from 'modelbay'
 
 const MIME_BY_EXT: Record<string, string> = {
   '.png': 'image/png',
