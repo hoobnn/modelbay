@@ -58,10 +58,14 @@ import {
   synthesizeQwenAudioTts,
   ttsModels,
 } from './tts'
-import { BAILIAN_NATIVE_OPERATIONS, nativeOperationSchemas, runBailianNative } from './native'
+import {
+  BAILIAN_NATIVE_OPERATIONS,
+  nativeOperationSchemas,
+  runBailianNative,
+  VIDEO_SYNTHESIS_PATH,
+} from './native'
 
 const GENERATION = '/api/v1/services/aigc/multimodal-generation/generation'
-const VIDEO_SYNTHESIS = '/api/v1/services/aigc/video-generation/video-synthesis'
 const TASKS = '/api/v1/tasks'
 /** 万相图像编辑 / 精修（异步任务，素材走临时 OSS）。 */
 export const IMAGE_EDIT_PATH = '/api/v1/services/aigc/image2image/image-synthesis'
@@ -367,6 +371,11 @@ async function generateVideo(
 ): Promise<SubmitResult> {
   const { model } = request
   const input = request.input as CapabilityInput<'video.generate'>
+  if (resolved.declaration.native?.includes('edit-video'))
+    throw new ProviderError(
+      'invalid_input',
+      `${model} 是视频编辑模型，请求体与 video.generate 不同；请用 native 操作 edit-video（MCP 工具 edit_video）`,
+    )
   const spec = toModelInfo(resolved.declaration, resolved.channel)
   const limits = spec.limits ?? {}
   if (!input.prompt.trim() && !input.firstFrame && !input.references?.length)
@@ -454,7 +463,7 @@ async function generateVideo(
     })
   const data = await requestJson(
     ctx,
-    VIDEO_SYNTHESIS,
+    VIDEO_SYNTHESIS_PATH,
     {
       model,
       input: { prompt: input.prompt, ...(media.length ? { media } : {}) },

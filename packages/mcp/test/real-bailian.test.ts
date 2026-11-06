@@ -250,6 +250,37 @@ describe('bailian 重路由到 native', () => {
       parameters: { resolution: '480P', style: 'speech' },
     })
   })
+
+  it('edit_video：video / reference_images 进 input.media，音频、水印、种子、分辨率生效', async () => {
+    const { captured } = await call('edit_video', {
+      video: 'https://example.com/in.mp4',
+      prompt: '换成水彩风格',
+      reference_images: ['https://example.com/r.png'],
+      resolution: '720P',
+      watermark: false,
+      audio_setting: 'origin',
+      seed: 3,
+      parameters: { extra_flag: 1 },
+    })
+    expect(captured[0]!.url).toContain('/api/v1/services/aigc/video-generation/video-synthesis')
+    expect(captured[0]!.body).toEqual({
+      model: 'happyhorse-1.0-video-edit',
+      input: {
+        prompt: '换成水彩风格',
+        media: [
+          { type: 'video', url: 'https://example.com/in.mp4' },
+          { type: 'reference_image', url: 'https://example.com/r.png' },
+        ],
+      },
+      parameters: {
+        extra_flag: 1,
+        resolution: '720P',
+        watermark: false,
+        audio_setting: 'origin',
+        seed: 3,
+      },
+    })
+  })
 })
 
 describe('bailian 图片 / 视频 / 语音经 submit', () => {

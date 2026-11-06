@@ -3,6 +3,7 @@ import { ProviderError } from '@modelbay/core'
 import {
   BAILIAN_NATIVE_OPERATIONS,
   digitalHumanLipsync,
+  editVideo,
   EMBED_MULTIMODAL_PATH,
   nativeOperationSchemas,
   rerank,
@@ -108,7 +109,11 @@ describe('digitalHumanLipsync (recorded fixture)', () => {
       'X-DashScope-Async': 'enable',
       'X-DashScope-OssResourceResolve': 'enable',
     })
-    expect(result.taskId).toBe('portrait-1')
+    expect(result).toEqual({
+      job_id: 'portrait-1',
+      task_id: 'portrait-1',
+      request_id: 'req-portrait-1',
+    })
   })
   it('rejects missing urls, bad resolution and data URIs', async () => {
     const { ctx } = fakeContext([])
@@ -231,7 +236,7 @@ describe('runBailianNative dispatch (TTS / ASR / voice / embedding)', () => {
         p.ctx,
         models,
       ),
-    ).resolves.toMatchObject({ taskId: 'portrait-1' })
+    ).resolves.toMatchObject({ task_id: 'portrait-1', job_id: 'portrait-1' })
   })
   it('raw-request forwards an arbitrary path and method', async () => {
     const { ctx, calls } = fakeContext([{ data: [] }])
@@ -252,5 +257,80 @@ describe('runBailianNative dispatch (TTS / ASR / voice / embedding)', () => {
   it('rejects an unknown operation', async () => {
     const { ctx } = fakeContext([])
     await expect(runBailianNative('nope', {}, ctx, models)).rejects.toBeInstanceOf(ProviderError)
+  })
+})
+
+describe('editVideo（happyhorse-1.0-video-edit）', () => {
+  const reply = { output: { task_id: 'edit-1', task_status: 'PENDING' }, request_id: 'req-edit-1' }
+  const video = 'https://example.com/in.mp4'
+
+  it('按官方形状发 input.media（1 个 video + reference_image）与 parameters', async () => {
+    const { ctx, calls } = fakeContext([reply])
+    const result = await editVideo(
+      {
+        video,
+        prompt: '把背景换成雪山',
+        reference_images: ['https://example.com/r.png', 'data:image/png;base64,AAAA'],
+        resolution: '720P',
+        watermark: false,
+        audio_setting: 'origin',
+        seed: 7,
+      },
+      ctx,
+      models,
+    )
+    expect(calls()[0]?.url).toContain('/api/v1/services/aigc/video-generation/video-synthesis')
+    expect(calls()[0]?.headers).toMatchObject({ 'X-DashScope-Async': 'enable' })
+    expect(calls()[0]?.body).toEqual({
+      model: 'happyhorse-1.0-video-edit',
+      input: {
+        prompt: '把背景换成雪山',
+        media: [
+          { type: 'video', url: video },
+          { type: 'reference_image', url: 'https://example.com/r.png' },
+          { type: 'reference_image', url: 'data:image/png;base64,AAAA' },
+        ],
+      },
+      parameters: { resolution: '720P', watermark: false, audio_setting: 'origin', seed: 7 },
+    })
+    expect(result).toEqual({ job_id: 'edit-1', task_id: 'edit-1', request_id: 'req-edit-1' })
+  })
+  it('分辨率默认取声明里的 1080P，且不带 ratio / duration / audio', async () => {
+    const { ctx, calls } = fakeContext([reply])
+    await editVideo({ video, prompt: 'p' }, ctx, models)
+    expect(calls()[0]?.body).toEqual({
+      model: 'happyhorse-1.0-video-edit',
+      input: { prompt: 'p', media: [{ type: 'video', url: video }] },
+      parameters: { resolution: '1080P' },
+    })
+  })
+  it('联网前拒绝：缺视频 / 本地路径 / 超 5 张参考图 / 非法取值 / 非编辑模型', async () => {
+    const { ctx, calls } = fakeContext([])
+    const bad = async (params: Record<string, unknown>) =>
+      expect(editVideo({ video, prompt: 'p', ...params }, ctx, models)).rejects.toMatchObject({
+        code: 'invalid_input',
+      })
+    await bad({ video: '/tmp/in.mp4' })
+    await bad({ video: 'data:video/mp4;base64,AAAA' })
+    await bad({ prompt: ' ' })
+    await bad({ reference_images: Array(6).fill('https://example.com/r.png') })
+    await bad({ reference_images: ['/tmp/r.png'] })
+    await bad({ resolution: '480P' })
+    await bad({ audio_setting: 'mute' })
+    await bad({ seed: -1 })
+    await bad({ model: 'wan3.0-video' })
+    expect(calls()).toHaveLength(0)
+  })
+  it('缺 task_id 时报 unknown，提醒不要重提', async () => {
+    const { ctx } = fakeContext([{ output: {} }])
+    await expect(editVideo({ video, prompt: 'p' }, ctx, models)).rejects.toMatchObject({
+      code: 'unknown',
+    })
+  })
+  it('runBailianNative 分发 edit-video', async () => {
+    const { ctx } = fakeContext([reply])
+    await expect(
+      runBailianNative('edit-video', { video, prompt: 'p' }, ctx, models),
+    ).resolves.toMatchObject({ task_id: 'edit-1' })
   })
 })

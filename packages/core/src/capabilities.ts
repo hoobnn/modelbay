@@ -26,6 +26,7 @@ export function isNormalizedCapability(value: string): value is NormalizedCapabi
 export const NATIVE_OPERATIONS = [
   'rerank',
   'digital-human-lipsync',
+  'edit-video',
   'context-ir',
   'video-2k-rerender',
   'podcast',
