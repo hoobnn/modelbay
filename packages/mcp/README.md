@@ -63,6 +63,16 @@ server still starts and only the video-reference path is unavailable.
 
 Example: `MODELBAY_MCP_GROUPS=core,realtime modelbay-mcp doubao-speech`.
 
+## Output directory
+
+File results are saved when a call passes `out_dir` (or `output_directory`). Set
+`MODELBAY_MCP_OUT_DIR` to save every call that doesn't: files go to `<dir>/<platform>`, for example
+`MODELBAY_MCP_OUT_DIR=~/Downloads/modelbay` saves Ark results under `~/Downloads/modelbay/ark`.
+Without either, images and audio come back as MCP `image` / `audio` blocks.
+
+Codex only passes whitelisted variables to MCP servers, so add `MODELBAY_MCP_OUT_DIR` to the
+server's `env_vars` list in `~/.codex/config.toml`.
+
 ## How tools are generated
 
 - Each platform package defines its tools in `src/mcp/tools.ts` (`ToolSpec[]`): field shapes,

@@ -2,6 +2,8 @@
  * 启动逻辑：从注册表找到平台、读取密钥、创建注入了 Node 扩展的适配器、生成工具、启动 stdio server。
  */
 import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
 import type { Readable, Writable } from 'node:stream'
 import { createAdapterContext, readSecrets } from 'modelbay'
 import type { PlatformAdapter, PlatformDescriptor } from 'modelbay'
@@ -14,6 +16,7 @@ import { createServer } from './server'
 import { attachStdioTransport } from './stdio-transport'
 import {
   GROUP_ENV_VAR,
+  OUT_DIR_ENV_VAR,
   MCP_TOOL_GROUPS,
   TOOL_GROUPS,
   type GeneratedToolSet,
@@ -68,6 +71,18 @@ export function resolveGroups(env: Record<string, string | undefined>): ToolGrou
   return groups.length > 0 ? groups : [...MCP_TOOL_GROUPS.default]
 }
 
+/** `MODELBAY_MCP_OUT_DIR` → `<目录>/<平台>`；支持开头的 `~`，空值表示不落盘。 */
+export function resolveOutDir(
+  env: Record<string, string | undefined>,
+  platformKey: string,
+): string | undefined {
+  const raw = env[OUT_DIR_ENV_VAR]?.trim()
+  if (!raw) return undefined
+  const home = env.HOME ?? homedir()
+  const base = raw === '~' ? home : raw.startsWith('~/') ? join(home, raw.slice(2)) : raw
+  return join(resolve(base), platformKey)
+}
+
 export interface StartOptions {
   env?: Record<string, string | undefined>
   input?: Readable
@@ -106,6 +121,7 @@ export async function startServer(key: string, options: StartOptions = {}): Prom
     groups,
     secrets: platform.secrets,
     primaryChannel: platform.primaryChannel,
+    defaultOutDir: resolveOutDir(env, platform.key),
     serverInfo: { name: `modelbay-mcp-${platform.key}`, version: VERSION },
   })
   const server = createServer(handlers)

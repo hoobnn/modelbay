@@ -4,6 +4,9 @@ import type { ToolGroup as CoreToolGroup, ToolNature as CoreToolNature, ToolSpec
 /** 打开哪些工具组的环境变量（逗号分隔）。 */
 export const GROUP_ENV_VAR = 'MODELBAY_MCP_GROUPS'
 
+/** 调用没给 `out_dir` 时的默认输出目录；结果落到 `<目录>/<平台>`。不设就不落盘。 */
+export const OUT_DIR_ENV_VAR = 'MODELBAY_MCP_OUT_DIR'
+
 /** 工具组开关。默认只暴露 core；其余三组默认不启用。 */
 export const TOOL_GROUPS = [
   'core',

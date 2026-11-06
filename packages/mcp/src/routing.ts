@@ -45,6 +45,8 @@ export interface RoutingOptions {
   serverInfo: ServerInfo
   /** 未传 model 时在哪个渠道里选默认模型；缺省取适配器的第一个渠道。 */
   primaryChannel?: string
+  /** 调用没给 `out_dir` / `output_directory` 时的输出目录；缺省不落盘。 */
+  defaultOutDir?: string
 }
 
 function toText(value: unknown): string {
@@ -196,7 +198,8 @@ function localResult(
 }
 
 export function createHandlers(options: RoutingOptions): ServerHandlers {
-  const { set, adapter, context, groups, secrets, serverInfo, primaryChannel } = options
+  const { set, adapter, context, groups, secrets, serverInfo, primaryChannel, defaultOutDir } =
+    options
   const models: readonly ModelDeclaration[] = adapter?.models ?? []
   const fallbackCapability = firstCapability(set)
 
@@ -267,7 +270,7 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     )
       return errorResult('job_id 与 task_id 不属于同一任务')
     const record = jobs.get(id) ?? jobs.remember(id, name, undefined)
-    const outDir = outputDirectory(args) ?? record.outDir
+    const outDir = outputDirectory(args) ?? record.outDir ?? defaultOutDir
     // 已落盘到同一目录且文件都还完整：直接给上次的结果，不重复下载，上游链接过期也不影响。
     // 文件被删或不完整时照常查询并重新下载，recover_job 仍能恢复。
     if (
@@ -320,7 +323,7 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     }
 
     const model = modelFor(args, route.capability, adapter, primaryChannel)
-    const outDir = outputDirectory(given)
+    const outDir = outputDirectory(given) ?? defaultOutDir
     const wait = waitSeconds(given)
     const mapped = tool.mapArguments ? tool.mapArguments(given, { model }) : given
     const input: Record<string, unknown> = normalizeArguments(route.capability, mapped)
