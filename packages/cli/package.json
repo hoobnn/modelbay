@@ -1,6 +1,6 @@
 {
   "name": "@modelbay/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Modelbay command line interface",
   "license": "MIT",
   "repository": {
