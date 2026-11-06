@@ -1,0 +1,66 @@
+name: Real smoke
+
+# 每家平台用最便宜的一档跑一次真实调用，发现上游改接口、下线模型或鉴权变化。
+# 目前只手动触发；key 配进 smoke 环境、确认预算后再加 schedule。
+# 没配 key 的平台直接跳过，不算失败。
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    environment: smoke
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ark
+            secret: ARK_API_KEY
+            capability: text.chat
+            model: ark:doubao-seed-2-1-lite-260915
+          - platform: bailian
+            secret: BAILIAN_API_KEY
+            capability: text.chat
+            model: bailian:qwen3.8-flash
+          - platform: minimax
+            secret: MINIMAX_API_KEY
+            capability: text.chat
+            model: minimax:MiniMax-M3.1-Flash
+          - platform: openai
+            secret: OPENAI_API_KEY
+            capability: text.chat
+            model: openai:gpt-6-luna
+          - platform: doubao-speech
+            secret: VOLC_SPEECH_API_KEY
+            capability: audio.speech
+            model: doubao-speech:seed-tts-2.0
+    name: ${{ matrix.platform }}
+    env:
+      KEY: ${{ secrets[matrix.secret] }}
+    steps:
+      - name: Check key
+        id: key
+        run: |
+          if [ -n "$KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::${{ matrix.secret }} 未配置，跳过 ${{ matrix.platform }}"; fi
+      - uses: actions/checkout@v7
+        if: steps.key.outputs.present == 'true'
+      - uses: pnpm/action-setup@v6
+        if: steps.key.outputs.present == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - if: steps.key.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile && pnpm build
+      - name: Call ${{ matrix.model }}
+        if: steps.key.outputs.present == 'true'
+        run: |
+          export "${{ matrix.secret }}=$KEY"
+          node packages/cli/dist/bin/modelbay.mjs generate --capability "${{ matrix.capability }}" --model "${{ matrix.model }}" --prompt "只回答一个字：好"
