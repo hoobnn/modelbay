@@ -63,6 +63,22 @@ export async function loadAdapters(platform: PlatformDescriptor): Promise<Platfo
   }
 }
 
+/**
+ * 不指定模型时实际用哪个渠道：主渠道的 key 配了就是主渠道，否则是第一个配了 key 的渠道。
+ * 工具清单里的默认模型和调用时的默认路由都按它来，两者保持一致。
+ */
+export function effectiveChannel(
+  platform: Pick<PlatformDescriptor, 'primaryChannel' | 'channelSecrets'>,
+  has: (name: string) => boolean,
+): string {
+  const table = platform.channelSecrets
+  if (!table) return platform.primaryChannel
+  const ready = (channel: string) => (table[channel] ?? []).some(has)
+  if (!table[platform.primaryChannel] || ready(platform.primaryChannel))
+    return platform.primaryChannel
+  return Object.keys(table).find(ready) ?? platform.primaryChannel
+}
+
 function primaryAdapter(
   platform: PlatformDescriptor,
   adapters: readonly PlatformAdapter[],
@@ -125,7 +141,8 @@ export async function startServer(key: string, options: StartOptions = {}): Prom
     },
   })
   const groups = resolveGroups(env)
-  const set = generateTools(platform, adapter ? { adapter } : {})
+  const channel = effectiveChannel(platform, (name) => Boolean(secrets[name]))
+  const set = generateTools(platform, { ...(adapter ? { adapter } : {}), channel })
   const handlers = createHandlers({
     set,
     adapter,
@@ -134,7 +151,7 @@ export async function startServer(key: string, options: StartOptions = {}): Prom
     context,
     groups,
     secrets: platform.secrets,
-    primaryChannel: platform.primaryChannel,
+    primaryChannel: channel,
     defaultOutDir: resolveOutDir(env, platform.key),
     serverInfo: { name: `modelbay-mcp-${platform.key}`, version: VERSION },
   })
