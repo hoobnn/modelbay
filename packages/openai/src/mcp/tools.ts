@@ -9,32 +9,32 @@
  */
 import type { ToolSpec } from '@modelbay/core'
 
-const okOutput = {
-  type: 'object',
-  required: ['ok'],
-  properties: { ok: { type: 'boolean' } },
-  additionalProperties: true,
-}
-
 const nullable = (type: string) => ({ anyOf: [{ type }, { type: 'null' }], default: null })
 
+/** 由 MCP 层或通用换算处理、不进 `extra` 的字段（见 docs/mcp.md「路由与元数据」）。 */
+const MCP_FIELDS = ['model', 'wait', 'out_dir', 'output_directory']
+
 /**
- * 把扁平字段与 `parameters` 收进 `extra`，交给适配器按声明的 `optionsSchema` 校验。
- * 显式扁平字段优先于 `parameters`。
+ * 除 `keep` 以外的参数都收进 `extra`，交给适配器按声明的 `optionsSchema` 校验：
+ * 包括工具目录里的扁平字段和运行时从声明派生出的顶层字段（如 `previous_response_id`），
+ * 不会因为没列进白名单被悄悄丢掉。`rename` 把 MCP 字段名换成适配器读的键；
+ * 显式顶层字段优先于 `parameters`。
  */
 function intoExtra(
   args: Record<string, unknown>,
-  flat: Record<string, string>,
+  keep: string[],
+  rename: Record<string, string> = {},
 ): Record<string, unknown> {
   const { parameters, ...rest } = args
+  const kept: Record<string, unknown> = {}
   const extra: Record<string, unknown> = {
     ...(typeof parameters === 'object' && parameters !== null ? parameters : {}),
   }
-  for (const [field, key] of Object.entries(flat)) {
-    if (rest[field] !== undefined) extra[key] = rest[field]
-    delete rest[field]
+  for (const [key, value] of Object.entries(rest)) {
+    if (keep.includes(key) || MCP_FIELDS.includes(key)) kept[key] = value
+    else extra[rename[key] ?? key] = value
   }
-  return Object.keys(extra).length > 0 ? { ...rest, extra } : rest
+  return Object.keys(extra).length > 0 ? { ...kept, extra } : kept
 }
 
 export const openaiTools: ToolSpec[] = [
@@ -43,13 +43,13 @@ export const openaiTools: ToolSpec[] = [
     description:
       '调用 OpenAI 官方对话模型（Responses API）。history 用 Chat 消息格式，不含本轮 prompt，工具不保存对话；images 支持本地路径或 URL。\n' +
       'reasoning_effort 控制思考强度，verbosity 控制回答详略；默认 store=false，不在 OpenAI 侧保存响应。\n' +
-      '其他字段（service_tier、prompt_cache_key、previous_response_id、truncation 等）放 parameters：声明里有的按声明校验取值，没有的原样传给 Responses API。\n' +
+      '其他声明字段（service_tier、prompt_cache_key、previous_response_id、truncation 等）可直接传或放 parameters，按声明校验取值；parameters 里声明外的字段原样传给 Responses API。\n' +
       '返回 content、reasoning、usage，按 token 计费。完整用法见 get_tool_help。\n',
     capability: 'text.chat',
     // 字段名与取值见各模型声明的 optionsSchema。
     // 来源：https://developers.openai.com/api/docs/models/gpt-6.1-terra（核对日期 2026-11-05）
     mapArguments: (args) =>
-      intoExtra(args, { reasoning_effort: 'reasoning_effort', verbosity: 'verbosity' }),
+      intoExtra(args, ['prompt', 'system', 'history', 'images', 'max_tokens', 'temperature']),
     inputSchema: {
       type: 'object',
       title: 'chatArguments',
@@ -78,26 +78,19 @@ export const openaiTools: ToolSpec[] = [
       },
       required: ['prompt'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_image',
     description:
       '调用 OpenAI 生图模型生成图片；传 images（本地路径或 URL）时按参考图编辑。\n' +
       'aspect_ratio 选画幅，size 填 auto 或 宽x高（优先于 aspect_ratio），n 为张数；quality、background（transparent 需 png/webp）、output_format（png/jpeg/webp/svg/gif）直接对应接口字段。\n' +
-      '其他声明支持的字段（complexity、output_compression、moderation、frame_count 等）放 parameters，声明外的字段会报错。\n' +
-      '同步返回 files、artifacts、usage，给 out_dir 时落盘。按张数与画质计费。完整用法见 get_tool_help。\n',
+      '其他声明支持的字段（complexity、output_compression、moderation、frame_count 等）可直接传或放 parameters，声明外的字段会报错。\n' +
+      '同步返回结果，不建任务记录；给 out_dir 时落盘。按张数与画质计费。完整用法见 get_tool_help。\n',
     capability: 'image.generate',
     // 适配器从 extra.aspectRatio / extra.size 换算尺寸，其余字段按声明 optionsSchema 透传。
     // 来源：https://developers.openai.com/api/docs/guides/image-generation（核对日期 2026-11-05）
     mapArguments: (args) =>
-      intoExtra(args, {
-        aspect_ratio: 'aspectRatio',
-        size: 'size',
-        quality: 'quality',
-        background: 'background',
-        output_format: 'output_format',
-      }),
+      intoExtra(args, ['prompt', 'images', 'n'], { aspect_ratio: 'aspectRatio' }),
     modelParams: { aspect_ratio: 'aspectRatio', n: 'count', images: 'references' },
     inputSchema: {
       type: 'object',
@@ -123,7 +116,6 @@ export const openaiTools: ToolSpec[] = [
       },
       required: ['prompt'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_tool_help',
@@ -134,26 +126,10 @@ export const openaiTools: ToolSpec[] = [
       properties: { tool: { type: 'string' } },
       required: ['tool'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_capabilities',
     description: '列出本 MCP 的 OpenAI 能力和官方来源，不联网，不代表当前账号权限。',
     inputSchema: { type: 'object', title: 'list_capabilitiesArguments', properties: {} },
-    outputSchema: okOutput,
-  },
-  {
-    name: 'list_jobs',
-    description:
-      '列出最近本地任务，不联网。工具超时未拿到结果时可按时间/model/summary 找回记录；limit=1–100，kind 可筛选 text/image。',
-    inputSchema: {
-      type: 'object',
-      title: 'list_jobsArguments',
-      properties: {
-        limit: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
-        kind: nullable('string'),
-      },
-    },
-    outputSchema: okOutput,
   },
 ]
