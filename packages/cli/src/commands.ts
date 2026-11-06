@@ -33,7 +33,20 @@ export interface CliOutput {
 export interface CliDoctorEntry {
   platform: string
   names: readonly string[]
+  /** 已配置的名字；缺省时只列出全部名字 */
+  present?: readonly string[]
   configured: boolean
+}
+
+/** 列出哪些密钥名已配置、哪些没配置（任选一组配齐即可），只有名字没有值。 */
+function doctorNames(entry: CliDoctorEntry): string {
+  if (!entry.present) return entry.names.join(', ')
+  const set = entry.names.filter((name) => entry.present!.includes(name))
+  const unset = entry.names.filter((name) => !entry.present!.includes(name))
+  return [
+    ...(set.length > 0 ? [`set: ${set.join(', ')}`] : []),
+    ...(unset.length > 0 ? [`not set: ${unset.join(', ')}`] : []),
+  ].join('; ')
 }
 
 export interface CliDoctorReport {
@@ -181,7 +194,7 @@ function showDoctor(io: CliIO, deps: CliDeps): number {
   const lines = report.entries.map(
     (entry) =>
       `${entry.platform}: ${entry.configured ? 'configured' : 'missing'} ` +
-      `(${entry.names.join(', ')})`,
+      `(${doctorNames(entry)})`,
   )
   io.stdout(`${lines.join('\n')}\n`)
   return report.ok ? 0 : 1
