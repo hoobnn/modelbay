@@ -8,6 +8,9 @@ name: Release (manual, maintainer approved)
 # - 实施 agent 不执行 `npm publish`、不打发布标签。每次发布都由维护者批准并触发。
 # - changesets 的 Version Packages PR 由维护者用 `pnpm changeset` /
 #   `pnpm version-packages` 生成并合并；fixed 组保证所有包同版本号。
+# - 鉴权用 npm trusted publishing（OIDC）：不存长期 token，provenance 自动生成。
+#   npm 上三个包都要把本工作流（release.yml、环境 release）登记为 trusted publisher，
+#   见 docs/engineering.md#版本与发布。
 
 on:
   workflow_dispatch:
@@ -40,12 +43,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: 发布前全量校验（含 build / publint / attw / 许可 / core-runtime 检查）
         run: pnpm verify
-      - name: Publish with npm provenance (changesets)
-        if: ${{ !inputs.dry_run }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: "true"
-        run: pnpm exec changeset publish
-      - name: Dry run summary
-        if: ${{ inputs.dry_run }}
-        run: echo "dry run：已通过 pnpm verify，未执行发布。正式发布仍需维护者在 release Environment 批准。"
+      - name: Publish via npm trusted publishing (OIDC, provenance)
+        run: node scripts/publish-packages.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
