@@ -23,7 +23,7 @@
 - **不自动合并声明改动。** 对账工具会生成生命周期补丁和新模型骨架，但都附官方原文引用、走草稿 PR，由人核对原文后合并。
 - **不做其他语言的 SDK。**
 - **不管计费、配额和密钥。** SDK 只上报用量，key 由宿主传入，SDK 不存储。
-- **不负责结果的下载和入库。** 结果只返回 URL 或字节。
+- **不负责结果入库。** SDK 只返回 URL 或字节；MCP 按 `out_dir` 或 `MODELBAY_MCP_OUT_DIR` 落到本地目录，此外不做存储。
 
 ## 现状
 
@@ -38,14 +38,9 @@
 
 接下来：
 
-- **首次发布 0.x。** 需要维护者批准，见 [工程规范](engineering.md#版本与发布)。
-- **在 MCP 客户端里实跑。** 目前用本地 stdio 冒烟代替。
-- **夜间真实冒烟。** 每家用最便宜的一档跑一次真实调用；key 放在哪、预算多少还没定。
+- **夜间真实冒烟。** `.github/workflows/smoke.yml` 已就绪，每家用最便宜的一档跑一次真实调用，目前只能手动触发。把各家 key 配进 `smoke` 环境、定好预算后再加定时触发。
 - **补回首发前删掉的未实现功能。** 补回时附官方来源，并加 `real-<平台>.test.ts`：
   - 方舟：Responses API 的 `web_search` / `previous_response_id`，多模态 `embed`。
-  - 百炼：`edit_video`，做成原生视频编辑操作。
   - 豆包语音：实时会话工具、`upgrade_voice`、异步任务 `poll`。
 - **SDK 遗留问题。**
-  - 百炼：`generate_video` 接受 `happyhorse-video-edit` 但请求体形状不对；原生 lipsync 返回驼峰的 `taskId`。
-  - 豆包语音：podcast 操作不保存音频；几个端点未经实测；`sampleRate` 可选值偏少。
-  - MiniMax：`design_voice` 强制要求 `voice_id`；rerender 漏传 `resolution`；`file_id` 按字符串发送。
+  - 豆包语音：播客走的 `/api/v3/podcast/sse` 不在官方文档里（官方写的是 WebSocket），2026-11-06 实测可用；同声传译、会议纪要等几个端点还没有真实调用过。

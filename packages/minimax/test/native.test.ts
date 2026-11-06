@@ -68,7 +68,7 @@ describe('context-ir (required native op)', () => {
     const result = await submitNativeTask(ctx, 'context-ir', { prompt: '一只猫在海边' })
     expect(calls()[0]?.url).toBe(f.request.url)
     expect(calls()[0]?.body).toEqual(f.request.body)
-    expect(result.taskId).toBe('ctx-1')
+    expect(result.task_id).toBe('ctx-1')
   })
 })
 
@@ -112,7 +112,7 @@ describe('video-2k-rerender (required native op)', () => {
     const { ctx, calls } = fakeContext([f.response.body])
     const result = await submitNativeTask(ctx, 'video-2k-rerender', { source_task_id: 'task-1' })
     expect(calls()[0]?.url).toBe(f.request.url)
-    expect(result.taskId).toBe('re-1')
+    expect(result.task_id).toBe('re-1')
   })
   it('refuses a missing task_id', async () => {
     const { ctx } = fakeContext([{ base_resp: { status_code: 0 } }])
