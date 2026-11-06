@@ -259,6 +259,7 @@ export const bailianTools: ToolSpec[] = [
   {
     name: 'edit_video',
     native: 'edit-video',
+    capability: 'video.generate',
     mapArguments: mapEditVideoArguments,
     description:
       '视频指令编辑（HappyHorse）：按prompt改风格、替换局部元素；输入1个视频加0–5张参考图，只提交任务，返回job_id/task_id，之后用get_job查进度，完成时取结果。\n' +

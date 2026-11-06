@@ -188,3 +188,15 @@ describe('requestJson (recorded fixtures)', () => {
     expect(calls()[0]?.url).toBe(f.request.url)
   })
 })
+
+describe('int64 file_id', () => {
+  it('数字串按 JSON 数字写出，前导 0 规范掉', async () => {
+    const { stringifyBody } = await import('../src/http')
+    const text = stringifyBody({
+      file_id: '00042',
+      clone_prompt: { prompt_audio: '9007199254740993' },
+    })
+    expect(text).toBe('{"file_id":42,"clone_prompt":{"prompt_audio":9007199254740993}}')
+    expect(() => JSON.parse(text)).not.toThrow()
+  })
+})

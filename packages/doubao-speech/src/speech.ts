@@ -12,21 +12,24 @@ import {
   type SubmitResult,
   type VoicePreset,
 } from '@modelbay/core'
+import { all } from './models/index'
 import { asJson, events, failure, incomplete, postRaw, readSecret, type Json } from './http'
 
-/**
- * 语音合成（单向流式 HTTP / WebSocket）支持的采样率。
- * 来源：https://docs.volcengine.com/docs/6561/1598757 与 https://docs.volcengine.com/docs/6561/1719100
- * （2026-11-06 核对）：`req_params.audio_params.sample_rate`「音频采样率，可选值
- * [8000,16000,22050,24000,32000,44100,48000]」，默认 24000。
- */
-export const TTS_SAMPLE_RATES = [8000, 16000, 22050, 24000, 32000, 44100, 48000] as const
+/** 声明里出现过的全部采样率：宿主设置表单的可选值（具体模型的范围以它自己的声明为准）。 */
+const DECLARED_SAMPLE_RATES = [...new Set(all.flatMap((model) => model.limits?.sampleRates ?? []))]
+  .sort((a, b) => a - b)
+  .map(String) as [string, ...string[]]
 
-/**
- * Seed Audio 1.0 支持的采样率。
- * 来源：https://docs.volcengine.com/docs/6561/2499930（模型列表页，2026-11-06 核对）：「采样率 8K,16K,24K,48K」。
- */
-export const AUDIO_SAMPLE_RATES = [8000, 16000, 24000, 48000] as const
+/** 按模型声明的 `limits.sampleRates` 检查采样率；声明外的模型（如自定义资源 ID）不检查。 */
+export function checkSampleRate(model: string, sampleRate: number): void {
+  const declared = all.find(
+    (item) =>
+      item.id === model || item.canonicalId === model || item.channels.some((c) => c.id === model),
+  )
+  const rates = declared?.limits?.sampleRates
+  if (rates?.length && !rates.includes(sampleRate))
+    throw new ProviderError('invalid_input', `${declared!.title} 采样率须为 ${rates.join(' / ')}`)
+}
 
 /**
  * 播客支持的采样率。
@@ -43,10 +46,7 @@ export const PODCAST_SAMPLE_RATES = [16000, 24000, 48000] as const
 export const speechSettings = z.object({
   voice: z.string().min(1).default('zh_female_vv_uranus_bigtts').meta({ title: '默认音色 ID' }),
   format: z.enum(['mp3', 'wav']).default('mp3').meta({ title: '音频格式' }),
-  sampleRate: z
-    .enum(TTS_SAMPLE_RATES.map(String) as [string, ...string[]])
-    .default('24000')
-    .meta({ title: '采样率' }),
+  sampleRate: z.enum(DECLARED_SAMPLE_RATES).default('24000').meta({ title: '采样率' }),
   speed: z.number().min(0.5).max(2).default(1).meta({ title: '语速' }),
 })
 export type SpeechSettings = z.output<typeof speechSettings>
@@ -297,6 +297,7 @@ export async function synthesizeSpeech(
     ...settingsOverrides(input as SpeechExtras),
     ...(input.speed === undefined ? {} : { speed: input.speed }),
   })
+  checkSampleRate(model, Number(settings.sampleRate))
   const { path, resource, body } = buildSpeechRequest(model, input, settings, plan)
   const response = await postRaw(ctx, path, body, { resource })
   const data = response.decode((raw) => decodeAudioStream(raw, 'data', ctx, settings, true))

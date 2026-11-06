@@ -134,18 +134,18 @@ const INT64_TOKEN = '__modelbay_int64__'
 export function normalizeFileId(value: unknown): string | number | undefined {
   if (typeof value === 'number')
     return Number.isSafeInteger(value) && value >= 0 ? value : undefined
+  // 前导 0 的数字串（如 '00042'）规范成 '42'，否则写成 JSON 数字时不合法
   if (typeof value === 'string' && /^\d{1,19}$/.test(value) && BigInt(value) <= INT64_MAX)
-    return value
+    return BigInt(value).toString()
   return undefined
 }
 
 /** 序列化请求体：file_id / prompt_audio 的数字字符串按 JSON 数字（int64）原样写出，不经过 Number。 */
 export function stringifyBody(body: Json): string {
-  const text = JSON.stringify(body, (key, value) =>
-    INT64_KEYS.has(key) && normalizeFileId(value) !== undefined && typeof value === 'string'
-      ? `${INT64_TOKEN}${value}`
-      : value,
-  )
+  const text = JSON.stringify(body, (key, value) => {
+    const id = INT64_KEYS.has(key) && typeof value === 'string' ? normalizeFileId(value) : undefined
+    return id === undefined ? value : `${INT64_TOKEN}${id}`
+  })
   return text.replace(new RegExp(`"${INT64_TOKEN}(\\d+)"`, 'g'), '$1')
 }
 
