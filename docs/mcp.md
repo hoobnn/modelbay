@@ -36,7 +36,7 @@
 
 - 素材：`src/assets.ts` 给适配器上下文注入 `assets`，按 `assetId` 读本地路径（相对 server 的工作目录，支持 `~`）、`file://`、`http(s)://` 和 `data:` URL。方舟的参考视频 / 音频是公网 URL 或 `asset://ID` 时由适配器原样转给上游，不经这里读取。
 - 异步任务：提交返回 `job_id`（就是平台任务 ID，和 `task_id` 同值）。`wait` 秒内（最多 90）接着轮询 `adapter.poll()`；`get_job` / `recover_job` 按 `job_id` 或 `task_id` 查询，别处提交的任务也能查。任务记录只在进程内存里，`list_jobs` 只列本进程提交的任务。
-- 结果：给了 `out_dir` / `output_directory` 时，文件结果写到该目录（URL 先下载），条目带 `path`。文件名总带时间戳和序号，适配器给的名字只当前缀，多张输出、多次调用不会互相覆盖。已落盘的任务再用 `get_job` 查同一目录时直接返回上次结果，不重复下载。没给时，字节（`Uint8Array`）不进 JSON 文本：图片、音频按 MCP 标准的 base64 `image` / `audio` 块返回，其他文件用内嵌 `resource` 块，文本里只留字节数和块序号；URL 原样给出。
+- 结果：给了 `out_dir` / `output_directory` 时，文件结果写到该目录（URL 先下载）；没给时用环境变量 `MODELBAY_MCP_OUT_DIR` 下按平台分的子目录（如 `~/Downloads/modelbay/ark`），两者都没有才不落盘。条目带 `path`。文件名总带时间戳和序号，适配器给的名字只当前缀，多张输出、多次调用不会互相覆盖。已落盘的任务再用 `get_job` 查同一目录时直接返回上次结果，不重复下载。没给时，字节（`Uint8Array`）不进 JSON 文本：图片、音频按 MCP 标准的 base64 `image` / `audio` 块返回，其他文件用内嵌 `resource` 块，文本里只留字节数和块序号；URL 原样给出。
 
 `test/real-adapter.test.ts` 和 `test/real-<平台>.test.ts` 用真实适配器加注入的 fetch 断言 MCP 参数真的进了上游请求体；其余测试用假适配器，测不出字段名对不上。
 

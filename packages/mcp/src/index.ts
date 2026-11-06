@@ -9,7 +9,14 @@ export type { McpServer } from './server'
 export { createHandlers } from './routing'
 export type { RoutingOptions } from './routing'
 
-export { startServer, loadAdapter, resolveGroups, resolvePlatform, mcpPlatforms } from './launch'
+export {
+  startServer,
+  loadAdapter,
+  resolveGroups,
+  resolveOutDir,
+  resolvePlatform,
+  mcpPlatforms,
+} from './launch'
 export type { StartOptions, StartedServer } from './launch'
 
 export { attachStdioTransport } from './stdio-transport'
@@ -24,7 +31,7 @@ export type { ModelParameterPart } from './derive'
 export { deriveMeta, EXTRA_TOOL_NAMES, isOptionalGroup } from './tool-meta'
 export type { ToolMeta } from './tool-meta'
 
-export { GROUP_ENV_VAR, MCP_TOOL_GROUPS, TOOL_GROUPS, TOOL_NATURES } from './types'
+export { GROUP_ENV_VAR, OUT_DIR_ENV_VAR, MCP_TOOL_GROUPS, TOOL_GROUPS, TOOL_NATURES } from './types'
 export type {
   CallToolContent,
   CallToolResult,
