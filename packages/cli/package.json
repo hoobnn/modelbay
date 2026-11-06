@@ -1,6 +1,6 @@
 {
   "name": "@modelbay/cli",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Command-line tool for Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech and OpenAI: generate images, video, speech and music or chat from the terminal",
   "keywords": [
     "cli",
