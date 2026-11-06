@@ -1,6 +1,6 @@
 # @modelbay/cli
 
-Command-line interface for [Modelbay](../../README.md). The command name is
+Command-line interface for [Modelbay](https://github.com/hoobnn/modelbay#readme). The command name is
 `modelbay`.
 
 MIT licensed.
