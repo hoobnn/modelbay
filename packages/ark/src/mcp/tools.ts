@@ -28,6 +28,32 @@ function intoExtra(
   return { ...rest, extra: merged }
 }
 
+/** 由 MCP 层或通用换算处理、不进 `extra` 的字段（见 docs/mcp.md「路由与元数据」）。 */
+const MCP_FIELDS = ['model', 'wait', 'out_dir', 'output_directory']
+
+/**
+ * 除 `keep` 以外的参数都收进 `extra`，交给适配器按声明的 `optionsSchema` 校验：
+ * 运行时从声明派生出的顶层字段（如 `web_search`、`previous_response_id`、`dimensions`）
+ * 不会因为没列进白名单被悄悄丢掉。已有 `extra` 不覆盖：显式顶层字段优先于 `parameters`。
+ */
+function restIntoExtra(
+  args: Record<string, unknown>,
+  keep: string[],
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const { parameters, ...rest } = args
+  const kept: Record<string, unknown> = {}
+  const merged: Record<string, unknown> = {
+    ...(typeof parameters === 'object' && parameters !== null ? parameters : {}),
+  }
+  for (const [key, value] of Object.entries(rest)) {
+    if (keep.includes(key) || MCP_FIELDS.includes(key)) kept[key] = value
+    else merged[key] = value
+  }
+  Object.assign(merged, extra)
+  return Object.keys(merged).length > 0 ? { ...kept, extra: merged } : kept
+}
+
 export const arkTools: ToolSpec[] = [
   {
     name: 'chat',
@@ -35,6 +61,8 @@ export const arkTools: ToolSpec[] = [
       '调用方舟语言/多模态模型。其他方舟模型（含目录中的 DeepSeek）传完整ID。不同平台的型号与权限不可通用。\n' +
       'images支持本地图片或URL。history用Chat消息格式，工具不保存对话。\n' +
       'thinking=true/false映射enabled/disabled；不传则按模型默认。parameters透传模型支持的高级字段：top_p、frequency_penalty、presence_penalty、prompt_cache_key，其余字段会报错。\n' +
+      '联网搜索与续接：web_search（传{}用默认设置，或设limit、max_keyword、sources、user_location）、previous_response_id、max_tool_calls只在声明了它们的按量模型上可用，带其中任一项就改走Responses API（非流式、不支持frequency_penalty/presence_penalty、工具调用与结构化输出，套餐渠道不支持）。\n' +
+      '走Responses时返回的json输出里有response_id，下一轮传previous_response_id即可续接（官方默认保存响应，会带入上轮输入输出，输入token相应增加；连续请求建议间隔约100毫秒）；有联网时带citations引用来源和web_searches。联网需先在方舟控制台开通联网内容插件或豆包搜索，另行计费。\n' +
       'parameters.prompt_cache_key为可选缓存路由标识；省略不关闭隐式缓存，设置也不保证命中。\n' +
       '同一Endpoint和模型下连续上下文复用不可读内部Session ID，不同用户或并行会话使用不同值；不要传个人信息、凭证或prompt原文。\n' +
       '官方建议单key总流量低于每分钟15个请求；这是路由建议而非硬限流，扩缩容等仍可能重新路由。\n' +
@@ -42,14 +70,22 @@ export const arkTools: ToolSpec[] = [
     capability: 'text.chat',
     // Chat API `thinking.type` 取 enabled / disabled。
     // 来源：https://docs.volcengine.com/docs/82379/1494384（核对日期 2026-11-06）
-    mapArguments: (args) =>
-      intoExtra(
-        Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'thinking')),
-        [],
-        typeof args.thinking === 'boolean'
-          ? { thinking: { type: args.thinking ? 'enabled' : 'disabled' } }
-          : {},
-      ),
+    // web_search 在 Responses API 里是 tools 里的 { type: 'web_search', ... }，传 true 等价于 {}（用默认设置）。
+    // 来源：https://docs.volcengine.com/docs/82379/1569618 与 https://docs.volcengine.com/docs/82379/1756990（核对日期 2026-11-06）
+    mapArguments: (args) => {
+      const { thinking, web_search: search, ...rest } = args
+      return restIntoExtra(
+        rest,
+        ['prompt', 'system', 'history', 'images', 'max_tokens', 'temperature'],
+        {
+          ...(typeof thinking === 'boolean'
+            ? { thinking: { type: thinking ? 'enabled' : 'disabled' } }
+            : {}),
+          ...(search === true ? { web_search: {} } : {}),
+          ...(typeof search === 'object' && search !== null ? { web_search: search } : {}),
+        },
+      )
+    },
     inputSchema: {
       type: 'object',
       title: 'chatArguments',
@@ -77,6 +113,48 @@ export const arkTools: ToolSpec[] = [
         },
       },
       required: ['prompt'],
+    },
+  },
+  {
+    name: 'embed',
+    description:
+      '方舟多模态向量化（doubao-embedding-vision），把文本、图片、视频转成向量。百炼 text-embedding / qwen3-vl-embedding 及 rerank 用 ali-bailian。\n' +
+      '必须且只能选一种输入：texts（文本列表）；contents（官方input结构，如[{"type":"text","text":"猫"},{"type":"image_url","image_url":{"url":"https://example.com/cat.png"}}]，也可写{"text":"猫"}、{"image":"URL"}、{"video":"URL"}，视频抽帧参数fps、max_video_tokens等放在video_url对象里）；或images/videos（可与texts混用，按文本、图片、视频顺序）。\n' +
+      '图片、视频用公网URL或Base64 Data URI，不读本地路径。必须显式指定model（如doubao-embedding-vision）；套餐渠道的向量化模型不对API调用开放。\n' +
+      'dimensions、encoding_format、instructions、multi_embedding、sparse_embedding等取值见各模型声明，可直接传或放parameters，声明外的字段会报错。\n' +
+      '返回向量data和usage，data按官方响应原样返回。按输入token计费，不自动建索引或知识库；尚未完成云端验证。\n',
+    capability: 'text.embed',
+    // 请求体与字段来源：https://docs.volcengine.com/docs/82379/1523520（核对日期 2026-11-06）
+    mapArguments: (args) => restIntoExtra(args, ['texts', 'contents', 'images', 'videos']),
+    inputSchema: {
+      type: 'object',
+      title: 'embedArguments',
+      properties: {
+        model: { type: 'string' },
+        texts: {
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+          default: null,
+        },
+        contents: {
+          anyOf: [
+            { type: 'array', items: { type: 'object', additionalProperties: true } },
+            { type: 'null' },
+          ],
+          default: null,
+        },
+        images: {
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+          default: null,
+        },
+        videos: {
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+          default: null,
+        },
+        parameters: {
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          default: null,
+        },
+      },
     },
   },
   {

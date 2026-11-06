@@ -8,6 +8,7 @@ import {
   type AdapterContext,
   type CapabilityInput,
   type ChatMessage,
+  type ModelDeclaration,
   type SubmitResult,
 } from '@modelbay/core'
 import { chatCompletion as sharedChat, requireSseDone } from '@modelbay/shared'
@@ -22,10 +23,12 @@ import {
   type TransportMessages,
 } from './http'
 import { capturePlanContinuation } from './plan-chat'
+import { responsesChat, usesResponses } from './responses'
 
 /**
  * `input.extra` 在对话里只放行这些平台字段；其余一律报错，不能覆盖模型 / 输入 / 路由。
- * 前四项是通用参数；`prompt_cache_key` 是缓存路由标识。联网搜索 / 续接响应需要 Responses API，这里不支持。
+ * 前四项是通用参数；`prompt_cache_key` 是缓存路由标识。联网搜索 / 续接响应 / 最大工具调用轮次只有
+ * Responses API 有，带这些字段的请求改走 `./responses`，不经过这个白名单。
  */
 export const CHAT_EXTRA = [
   'thinking',
@@ -58,16 +61,30 @@ export interface ChatCall {
   input: CapabilityInput<'text.chat'>
   /** Agent Plan：保存并回传思考摘要 / 加密续传内容 */
   plan: boolean
+  /** 解析出的模型声明；Responses 专属参数按它的 `optionsSchema` 放行 */
+  declaration?: ModelDeclaration
 }
 
 export async function chatCompletion(call: ChatCall): Promise<SubmitResult> {
   const { ctx, input, apiKey: key, label } = call
   if (!input.messages.length) throw new ProviderError('invalid_input', `对话至少需要一条消息`)
-  extraParams(input.extra, CHAT_EXTRA)
   const messages: TransportMessages = {
     cancelled: `${label}请求已取消`,
     network: `${label}网络请求失败；对话结果可能未知，不会自动重新提交`,
   }
+  if (usesResponses(input.extra))
+    return responsesChat({
+      ctx,
+      baseURL: call.baseURL,
+      model: call.model,
+      apiKey: key,
+      label,
+      input,
+      messages,
+      plan: call.plan,
+      ...(call.declaration ? { declaration: call.declaration } : {}),
+    })
+  extraParams(input.extra, CHAT_EXTRA)
   const continuation: NonNullable<ChatMessage['continuation']> = { model: call.model }
   const result = await sharedChat({
     ctx,
