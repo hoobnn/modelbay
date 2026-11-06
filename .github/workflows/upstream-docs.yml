@@ -7,7 +7,8 @@ name: Upstream docs audit
 # 3. 下线公告点名的模型，生命周期补丁直接写进声明文件（--apply），有改动就更新
 #    upstream-docs/<平台> 分支上的草稿 PR；
 # 4. 声明这一侧有差距时，开或更新标题为「上游文档对账：<平台>」的 issue，报告就是正文；
-#    差距消失后自动关掉。
+#    issue 指派给仓库所有者并 @ 提醒处理；报告有变化时再评论 @ 一次，没变化不重复打扰；
+#    差距消失后自动关掉。草稿 PR 同样指派给仓库所有者。
 #
 # 定时任务不合并、不打 tag、不发布；补丁必须人工对照原文核对。抓取失败时 job 显式失败。
 
@@ -84,6 +85,7 @@ jobs:
             由上游文档对账定时任务生成，补丁附官方原文引用，合并前逐条核对。
           title: "🐛 fix(${{ matrix.platform }}): 按官方下线公告更新生命周期"
           body-path: ${{ env.REPORT }}
+          assignees: ${{ github.repository_owner }}
           delete-branch: true
       - name: 更新跟踪 issue
         if: steps.audit.outcome == 'success'
@@ -91,15 +93,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TITLE: 上游文档对账：${{ matrix.platform }}
           ATTENTION: ${{ steps.audit.outputs.attention }}
+          OWNER: ${{ github.repository_owner }}
         run: |
           gh label create upstream-docs --color BFD4F2 --force >/dev/null
           number=$(gh issue list --state open --label upstream-docs --search "in:title \"$TITLE\"" \
             --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          ask="@$OWNER 请对照报告里的官方原文核对，更新声明或关闭本 issue。"
           if [ "$ATTENTION" = "true" ]; then
+            body="$RUNNER_TEMP/issue-body.md"
+            { cat "$REPORT"; printf '\n---\n\n%s\n' "$ask"; } > "$body"
             if [ -n "$number" ]; then
-              gh issue edit "$number" --body-file "$REPORT"
+              # 报告没变就不重复提醒；变了才更新正文并评论 @ 一次
+              old=$(gh issue view "$number" --json body --jq .body)
+              if [ "$old" != "$(cat "$body")" ]; then
+                gh issue edit "$number" --body-file "$body"
+                gh issue comment "$number" --body "对账结果有更新。$ask"
+              fi
             else
-              gh issue create --title "$TITLE" --label upstream-docs --body-file "$REPORT"
+              gh issue create --title "$TITLE" --label upstream-docs --assignee "$OWNER" --body-file "$body"
             fi
           elif [ -n "$number" ]; then
             gh issue close "$number" --comment "最新一次对账没有声明侧的差距，自动关闭。"
