@@ -41,3 +41,11 @@
 - **首次发布 0.x。** 需要维护者批准，见 [工程规范](engineering.md#版本与发布)。
 - **在 MCP 客户端里实跑。** 目前用本地 stdio 冒烟代替。
 - **夜间真实冒烟。** 每家用最便宜的一档跑一次真实调用；key 放在哪、预算多少还没定。
+- **补回首发前删掉的未实现功能。** 补回时附官方来源，并加 `real-<平台>.test.ts`：
+  - 方舟：Responses API 的 `web_search` / `previous_response_id`，多模态 `embed`。
+  - 百炼：`edit_video`，做成原生视频编辑操作。
+  - 豆包语音：实时会话工具、`upgrade_voice`、异步任务 `poll`。
+- **SDK 遗留问题。**
+  - 百炼：`generate_video` 接受 `happyhorse-video-edit` 但请求体形状不对；原生 lipsync 返回驼峰的 `taskId`。
+  - 豆包语音：podcast 操作不保存音频；几个端点未经实测；`sampleRate` 可选值偏少。
+  - MiniMax：`design_voice` 强制要求 `voice_id`；rerender 漏传 `resolution`；`file_id` 按字符串发送。
