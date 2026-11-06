@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
 import { describe, expect, it } from 'vite-plus/test'
 import { FramedReader, encodeMessage, parseContentLength } from '../src/framing'
@@ -409,5 +410,13 @@ describe('launch', () => {
     const response = messages[0] as { result?: { tools?: unknown[] } }
     expect(response.result?.tools?.length).toBeGreaterThanOrEqual(9)
     started.detach()
+  })
+})
+
+describe('serverInfo 版本号', () => {
+  it('取自 package.json，不写死在代码里', async () => {
+    const { VERSION } = await import('../src/launch')
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+    expect(VERSION).toBe(pkg.version)
   })
 })

@@ -1,6 +1,7 @@
 /**
  * 启动逻辑：从注册表找到平台、读取密钥、创建注入了 Node 扩展的适配器、生成工具、启动 stdio server。
  */
+import { readFileSync } from 'node:fs'
 import type { Readable, Writable } from 'node:stream'
 import { createAdapterContext, readSecrets } from 'modelbay'
 import type { PlatformAdapter, PlatformDescriptor } from 'modelbay'
@@ -19,7 +20,10 @@ import {
   type ToolGroup,
 } from './types'
 
-const VERSION = '0.1.0'
+/** 版本号以 package.json 为准（源码和 dist 都在包目录下一层），发版时不用改代码。 */
+export const VERSION: string = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+).version
 
 /** 有 MCP 工具目录的平台。 */
 export function mcpPlatforms(): PlatformDescriptor[] {
