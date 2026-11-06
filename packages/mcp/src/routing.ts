@@ -258,6 +258,31 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
   function adapterOfChannel(channel: string | undefined): PlatformAdapter | undefined {
     return (channel && pool.find((item) => item.channels.includes(channel))) || defaultAdapter()
   }
+
+  /**
+   * 查询任务。记得提交渠道就只查那个渠道；不记得（如 MCP 重启后、别处提交的任务）时，
+   * 先查默认渠道，查不到再依次试其他配了 key 的渠道，查到后记住渠道。
+   */
+  async function pollAcrossChannels(
+    record: { channel?: string },
+    id: string,
+    wait: number,
+  ): Promise<PollResult> {
+    if (record.channel) return pollUntil(adapterOfChannel(record.channel)!, id, context, wait)
+    const first = defaultAdapter()!
+    const candidates = [first, ...pool.filter((item) => item !== first && usable(item))]
+    let lastError: unknown
+    for (const candidate of candidates) {
+      try {
+        const value = await pollUntil(candidate, id, context, wait)
+        record.channel = candidate.channels[0]
+        return value
+      } catch (error) {
+        lastError = error
+      }
+    }
+    throw lastError
+  }
   const fallbackCapability = firstCapability(set)
 
   const jobs = new JobRegistry()
@@ -353,7 +378,7 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       (await deliveredIntact(record.delivered.payload))
     )
       return result(record.delivered.payload)
-    const value = await pollUntil(adapterOfChannel(record.channel)!, id, context, waitSeconds(args))
+    const value = await pollAcrossChannels(record, id, waitSeconds(args))
     return jobResult(record.tool, id, value, outDir)
   }
 

@@ -15,6 +15,8 @@ export interface GenerateOptions {
   adapter?: PlatformAdapter
   /** 直接给声明（测试构造伪造声明时用）。优先于 adapter.models。 */
   models?: readonly ModelDeclaration[]
+  /** 在哪个渠道里派生默认模型；缺省取平台主渠道（只配了套餐 key 时传套餐渠道）。 */
+  channel?: string
 }
 
 /** 去掉内部字段，得到 MCP tools/list 的公开工具形状。 */
@@ -54,7 +56,15 @@ export function generateTools(
 
   const all: GeneratedTool[] = []
   for (const entry of entries) {
-    all.push(buildTool(entry, platform.primaryChannel, models, defaultCapability, nodeOnly))
+    all.push(
+      buildTool(
+        entry,
+        options.channel ?? platform.primaryChannel,
+        models,
+        defaultCapability,
+        nodeOnly,
+      ),
+    )
   }
   for (const name of EXTRA_TOOL_NAMES) {
     all.push(buildExtraTool(name))
