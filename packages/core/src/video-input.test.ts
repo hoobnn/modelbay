@@ -24,7 +24,10 @@ describe('视频参考编号和预检', () => {
       ['audio', 1],
     ])
     expect(videoReferencePrompt(text, 'ark')).toBe(
-      '@image2 跟随 @video1，使用 @audio1；@林夏 a@image1.com \\@image1 @@video1',
+      '@图片2 跟随 @视频1，使用 @音频1；@林夏 a@image1.com \\@image1 @@video1',
+    )
+    expect(videoReferencePrompt(text, 'bailian')).toBe(
+      '图2 跟随 视频1，使用 音频1；@林夏 a@image1.com \\@image1 @@video1',
     )
     expect(videoReferencePrompt(text, 'minimax')).toBe(
       '图片2 跟随 视频1，使用 音频1；@林夏 a@image1.com \\@image1 @@video1',

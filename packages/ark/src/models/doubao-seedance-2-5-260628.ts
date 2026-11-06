@@ -1,5 +1,8 @@
 import type { ModelDeclaration } from '@modelbay/core'
 
+/**
+ * output_format（mp4 / mov）来源：https://docs.volcengine.com/docs/ark/seedance-2-5?lang=zh（2026-11-06 核对）
+ */
 export default {
   canonicalId: 'volc/doubao-seedance-2-5-260628',
   id: 'doubao-seedance-2-5-260628',
@@ -99,6 +102,12 @@ export default {
         enum: ['default', 'flex'],
       },
       watermark: { title: '水印', type: 'boolean' },
+      output_format: {
+        title: '输出格式',
+        labels: { mp4: 'MP4', mov: 'MOV' },
+        type: 'string',
+        enum: ['mp4', 'mov'],
+      },
       omni_reference_task_type: {
         title: '参考任务',
         labels: {

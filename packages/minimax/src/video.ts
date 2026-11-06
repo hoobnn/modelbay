@@ -60,7 +60,7 @@ export async function video(
   const counts = { image: 0, video: 0, audio: 0 }
   for (const ref of input.references ?? [])
     if (ref.kind === 'image' || ref.kind === 'video' || ref.kind === 'audio') counts[ref.kind]++
-  const referenceProblem = videoReferenceProblem(input.prompt, counts)
+  const referenceProblem = videoReferenceProblem(input.prompt, counts, 'minimax-video')
   if (referenceProblem) throw new ProviderError('invalid_input', referenceProblem)
   const content: unknown[] = [{ type: 'text', text: videoReferencePrompt(input.prompt, 'minimax') }]
   for (const [role, refs] of [

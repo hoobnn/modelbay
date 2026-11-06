@@ -46,16 +46,20 @@ export function videoReferenceProblem(
   return null
 }
 
-/** 平台仅接收当前实际素材的编号，原提示词仍保留在画布上。 */
-export function videoReferencePrompt(prompt: string, platform: 'ark' | 'minimax') {
-  const labels = { image: '图片', video: '视频', audio: '音频' }
+const PROMPT_STYLES = {
+  ark: 'ark-video',
+  minimax: 'minimax-video',
+  bailian: 'bailian-video',
+} as const
+
+/** 平台仅接收当前实际素材的编号，原提示词仍保留在画布上；写法与 referenceMediaLabel 同源。 */
+export function videoReferencePrompt(prompt: string, platform: 'ark' | 'minimax' | 'bailian') {
+  const style = PROMPT_STYLES[platform]
   let text = prompt
   for (const token of videoReferenceTokens(prompt).reverse())
     text =
       text.slice(0, token.start) +
-      (platform === 'ark'
-        ? `@${token.kind}${token.index}`
-        : `${labels[token.kind]}${token.index}`) +
+      referenceMediaLabel(style, token.kind, token.index) +
       text.slice(token.end)
   return text
 }
@@ -66,6 +70,13 @@ const VIDEO_MODE_LABELS: Record<string, string> = {
   lastFrame: '仅尾帧',
   frames: '首尾帧',
   reference: '多模态参考',
+}
+
+function videoLabelStyle(modelId: string): ReferenceLabelStyle {
+  if (modelId.startsWith('MiniMax-H3')) return 'minimax-video'
+  if (modelId.startsWith('doubao-seedance-')) return 'ark-video'
+  if (modelId.startsWith('wan3.0-video')) return 'bailian-video'
+  return 'video'
 }
 
 /** 浏览器和服务端预览共用，实际 Provider 仍负责素材字节级校验。 */
@@ -104,7 +115,7 @@ export function videoModelProblem(
   const problem = videoReferenceProblem(
     prompt,
     refs ? counts : { image: 0, video: 0, audio: 0 },
-    model.id.startsWith('MiniMax-H3') ? 'minimax-video' : 'video',
+    videoLabelStyle(model.id),
   )
   if (problem && !options.deferReferenceCounts) return problem
   if (

@@ -13,6 +13,7 @@ import {
   resolveModel,
   selectDefaultModel,
   toModelInfo,
+  videoReferencePrompt,
   type AdapterContext,
   type AdapterRequest,
   type AssetRef,
@@ -466,7 +467,10 @@ async function generateVideo(
     VIDEO_SYNTHESIS_PATH,
     {
       model,
-      input: { prompt: input.prompt, ...(media.length ? { media } : {}) },
+      input: {
+        prompt: videoReferencePrompt(input.prompt, 'bailian'),
+        ...(media.length ? { media } : {}),
+      },
       parameters: {
         watermark: false,
         ...passthroughParameters(input),

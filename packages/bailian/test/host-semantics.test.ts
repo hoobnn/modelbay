@@ -501,6 +501,7 @@ describe('图片尺寸与预检', () => {
     ['qwen-image-3.0-pro', { extra: { prompt_extend_mode: 'agent' }, references: [reference] }],
     ['qwen-image-3.0-pro', { extra: { prompt_extend_mode: 'bogus' } }],
     ['qwen-image-3.0-pro', { width: 1024 }],
+    ['z-image-turbo', { count: 2 }],
   ] as const)('%s 无效组合不读取素材、不联网：%j', async (model, input) => {
     const { ctx, fetch } = setup()
     await expect(generate(ctx, model, input)).rejects.toMatchObject({ code: 'invalid_input' })
@@ -636,6 +637,12 @@ describe('视频', () => {
     await generate(ctx, { duration: 5, extra: { adaptive_duration: true } })
     expect(body().parameters.duration).toBe(-1)
     expect(body().parameters).not.toHaveProperty('adaptive_duration')
+  })
+
+  it('提示词里的 @ 引用改写成万相 3.0 官方的「图N / 视频N / 音频N」', async () => {
+    const { ctx, body } = setup([{ output: { task_id: 't' } }])
+    await generate(ctx, { prompt: '@image1 的角色按 @视频1 运镜，配 @audio1' })
+    expect(body().input.prompt).toBe('图1 的角色按 视频1 运镜，配 音频1')
   })
 
   it.each([
