@@ -1,6 +1,6 @@
 {
   "name": "modelbay",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "One TypeScript SDK for Volcengine Ark (Doubao, Seedream, Seedance), Alibaba Bailian / DashScope (Qwen, Wan), MiniMax, Doubao Speech and OpenAI: chat, image, video, speech and music with one API",
   "keywords": [
     "sdk",
