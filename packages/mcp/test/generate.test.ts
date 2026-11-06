@@ -12,7 +12,13 @@ describe('工具目录解析', () => {
     expect(counts.reduce((a, b) => a + b, 0)).toBe(59)
   })
 
-  it('目录条目只含 name/description/inputSchema/outputSchema（无 annotations）', () => {
+  it('平台工具不声明 outputSchema：结果形状随工具变化，声明了客户端会按它校验', () => {
+    for (const key of MCP_KEYS) {
+      for (const entry of toolsOf(key)) expect(entry.outputSchema).toBeUndefined()
+    }
+  })
+
+  it('目录条目只含 name/description/inputSchema（无 annotations）', () => {
     for (const entry of toolsOf('ark')) {
       expect(entry.name).toBeTruthy()
       expect(entry.inputSchema.type).toBe('object')
@@ -158,7 +164,7 @@ describe('generateTools / listTools / toMCPTool', () => {
     const tool = set.all.find((item) => item.name === 'chat')!
     const publicTool = toMCPTool(tool)
     expect(Object.keys(publicTool).sort()).toEqual(
-      ['annotations', 'description', 'inputSchema', 'name', 'outputSchema'].sort(),
+      ['annotations', 'description', 'inputSchema', 'name'].sort(),
     )
     expect('group' in publicTool).toBe(false)
     expect('route' in publicTool).toBe(false)

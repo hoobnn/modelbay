@@ -19,13 +19,6 @@ import {
   mapWordTable,
 } from './map'
 
-const okOutput = {
-  type: 'object',
-  required: ['ok'],
-  properties: { ok: { type: 'boolean' } },
-  additionalProperties: true,
-}
-
 const optional = (schema: Record<string, unknown>) => ({
   anyOf: [schema, { type: 'null' }],
   default: null,
@@ -55,7 +48,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['speaker_id', 'audio_file'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'design_voice',
@@ -75,7 +67,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['speaker_id', 'preview_text', 'description'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_voice',
@@ -89,7 +80,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       properties: { speaker_id: string },
       required: ['speaker_id'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_audio',
@@ -110,7 +100,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['prompt'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_podcast',
@@ -144,7 +133,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
         parameters: optional({ type: 'object', additionalProperties: true }),
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_speech_usage_examples',
@@ -161,7 +149,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
         category: optional(string),
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_tool_help',
@@ -172,7 +159,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       properties: { tool: { type: 'string' } },
       required: ['tool'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'interpret_audio',
@@ -196,14 +182,12 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['audio', 'source_language', 'target_language'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_speech_capabilities',
     description:
       '列出豆包语音产品、工具、未启用的工具组及启用方法、管理 Action、官方链接和接入边界；不联网、不计费。',
     inputSchema: { type: 'object', title: 'list_speech_capabilitiesArguments', properties: {} },
-    outputSchema: okOutput,
   },
   {
     name: 'manage_word_table',
@@ -226,7 +210,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['action', 'parameters'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'speech_console',
@@ -246,7 +229,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['action', 'parameters'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'speech_raw_request',
@@ -272,7 +254,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['product'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'speech_to_text',
@@ -299,7 +280,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['audio'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'summarize_meeting',
@@ -333,7 +313,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
         bundle_billing: { type: 'boolean', default: false },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'text_to_speech',
@@ -362,7 +341,6 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['text'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'translate_text',
@@ -385,6 +363,5 @@ export const doubaoSpeechTools: ToolSpec[] = [
       },
       required: ['texts', 'target_language'],
     },
-    outputSchema: okOutput,
   },
 ]

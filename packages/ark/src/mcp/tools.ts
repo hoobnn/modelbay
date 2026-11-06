@@ -7,13 +7,6 @@
  */
 import type { ToolSpec } from '@modelbay/core'
 
-const okOutput = {
-  type: 'object',
-  required: ['ok'],
-  properties: { ok: { type: 'boolean' } },
-  additionalProperties: true,
-}
-
 /**
  * 把 MCP 的扁平字段与 `parameters` 收进 `extra`（适配器按白名单放行，白名单外的键会报错而不是静默忽略）。
  * 已有 `extra` 不覆盖：显式扁平字段优先于 `parameters`。
@@ -85,7 +78,6 @@ export const arkTools: ToolSpec[] = [
       },
       required: ['prompt'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_image',
@@ -132,7 +124,6 @@ export const arkTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_video',
@@ -202,7 +193,6 @@ export const arkTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_job',
@@ -220,7 +210,6 @@ export const arkTools: ToolSpec[] = [
         wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_tool_help',
@@ -231,14 +220,12 @@ export const arkTools: ToolSpec[] = [
       properties: { tool: { type: 'string' } },
       required: ['tool'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_capabilities',
     description:
       '列出本MCP的方舟能力和官方来源，不联网，不代表当前账号权限；新增功能尚未完成云端验证。',
     inputSchema: { type: 'object', title: 'list_capabilitiesArguments', properties: {} },
-    outputSchema: okOutput,
   },
   {
     name: 'list_jobs',
@@ -252,7 +239,6 @@ export const arkTools: ToolSpec[] = [
         kind: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'recover_job',
@@ -269,6 +255,5 @@ export const arkTools: ToolSpec[] = [
       },
       required: ['job_id'],
     },
-    outputSchema: okOutput,
   },
 ]

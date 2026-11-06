@@ -16,13 +16,6 @@ import {
   mapTranscribeArguments,
 } from './arguments'
 
-const okOutput = {
-  type: 'object',
-  required: ['ok'],
-  properties: { ok: { type: 'boolean' } },
-  additionalProperties: true,
-}
-
 export const bailianTools: ToolSpec[] = [
   {
     name: 'animate_portrait',
@@ -46,7 +39,6 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['image', 'audio'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'chat',
@@ -88,7 +80,6 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['prompt'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'clone_voice',
@@ -118,7 +109,6 @@ export const bailianTools: ToolSpec[] = [
         url: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'design_voice',
@@ -146,7 +136,6 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['voice_prompt', 'preview_text'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'embed',
@@ -181,7 +170,6 @@ export const bailianTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_image',
@@ -216,7 +204,6 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['prompt'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'generate_video',
@@ -267,7 +254,6 @@ export const bailianTools: ToolSpec[] = [
         },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_job',
@@ -285,7 +271,6 @@ export const bailianTools: ToolSpec[] = [
         wait: { type: 'integer', default: 0, minimum: 0, maximum: 90 },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_tool_help',
@@ -296,7 +281,6 @@ export const bailianTools: ToolSpec[] = [
       properties: { tool: { type: 'string' } },
       required: ['tool'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'get_voice',
@@ -313,14 +297,12 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['voice'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_capabilities',
     description:
       '列出百炼MCP工具和官方来源，不联网，不代表账号权限；各工具已于2026-10-13用北京地域账号做过小样本云端验证。',
     inputSchema: { type: 'object', title: 'list_capabilitiesArguments', properties: {} },
-    outputSchema: okOutput,
   },
   {
     name: 'list_jobs',
@@ -334,7 +316,6 @@ export const bailianTools: ToolSpec[] = [
         kind: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_models',
@@ -350,7 +331,6 @@ export const bailianTools: ToolSpec[] = [
         max_pages: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'list_voices',
@@ -368,7 +348,6 @@ export const bailianTools: ToolSpec[] = [
         prefix: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
     },
-    outputSchema: okOutput,
   },
   {
     name: 'recover_job',
@@ -384,7 +363,6 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['job_id'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'rerank',
@@ -407,7 +385,6 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['query', 'documents'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'speech_to_text',
@@ -438,7 +415,6 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['audio'],
     },
-    outputSchema: okOutput,
   },
   {
     name: 'text_to_speech',
@@ -479,6 +455,5 @@ export const bailianTools: ToolSpec[] = [
       },
       required: ['text'],
     },
-    outputSchema: okOutput,
   },
 ]
