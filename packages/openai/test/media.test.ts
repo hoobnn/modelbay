@@ -166,6 +166,19 @@ describe('parseImageResponse：图片响应解析', () => {
   it('空 / 非法 base64 抛 unknown', () => {
     expect(() => parseImageResponse({}, 'png')).toThrow(ProviderError)
     expect(() => parseImageResponse({ data: [{ b64_json: '!!!' }] }, 'png')).toThrow(ProviderError)
+    expect(() => parseImageResponse({ data: [{ b64_json: 'QUJD=' }] }, 'png')).toThrow(
+      ProviderError,
+    )
+    expect(() => parseImageResponse({ data: [{ b64_json: 'QU=J' }] }, 'png')).toThrow(ProviderError)
+  })
+
+  it('几 MB 的高分辨率图片不爆栈', () => {
+    const bytes = new Uint8Array(12 * 1024 * 1024).fill(7)
+    const result = parseImageResponse(
+      { data: [{ b64_json: Buffer.from(bytes).toString('base64') }] },
+      'png',
+    )
+    expect(result.state === 'succeeded' && result.outputs[0]).toMatchObject({ type: 'file' })
   })
 })
 

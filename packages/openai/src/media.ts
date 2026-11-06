@@ -309,7 +309,9 @@ async function readFile(
   return ctx.assets.load(ref.assetId)
 }
 
-const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+// 不用 `(?:x{4})*` 分组重复：V8 对几 MB 的高分辨率图片会抛「Maximum call stack size exceeded」
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/
+const isBase64 = (text: string) => text.length % 4 === 0 && BASE64.test(text)
 
 function unknownImage(): ProviderError {
   return new ProviderError('unknown', 'OpenAI 图片响应无效，提交可能已计费，请勿直接重提', {
@@ -324,7 +326,7 @@ export function parseImageResponse(data: Json, format: string): SubmitResult {
   if (!items.length) throw unknownImage()
   const outputs: ProviderOutput[] = items.map((item) => {
     const encoded = asJson(item).b64_json
-    if (typeof encoded !== 'string' || !encoded || !BASE64.test(encoded)) throw unknownImage()
+    if (typeof encoded !== 'string' || !isBase64(encoded)) throw unknownImage()
     return {
       type: 'file',
       kind: 'image',
