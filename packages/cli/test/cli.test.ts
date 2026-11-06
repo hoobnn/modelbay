@@ -222,6 +222,29 @@ describe('runCli', () => {
     expect(captured?.input).toEqual({ text: '你好' })
   })
 
+  it('对话 generate 把 prompt 包成一条 user 消息', async () => {
+    const { io } = fakeIO()
+    let captured: CliGenerateRequest | undefined
+    const deps = makeDeps({
+      generate: async (request) => {
+        captured = request
+        return { outputs: [{ type: 'text', text: '5' }] }
+      },
+    })
+    await runCli(['generate', '--capability', 'text.chat', '--prompt', '2+3=?'], io, deps)
+    expect(captured?.input).toEqual({ messages: [{ role: 'user', content: '2+3=?' }] })
+  })
+
+  it('需要输入文件的能力不在 generate 里提供', async () => {
+    for (const capability of ['image.edit', 'image.process', 'audio.transcribe']) {
+      const { io, err } = fakeIO()
+      expect(
+        await runCli(['generate', '--capability', capability, '--prompt', 'x'], io, makeDeps()),
+      ).toBe(1)
+      expect(err.join('')).toContain('unsupported capability')
+    }
+  })
+
   it('不支持的 capability 报错', async () => {
     const { io, err } = fakeIO()
     const code = await runCli(
