@@ -188,6 +188,37 @@ describe('生命周期', () => {
     expect(gaps[0]!.proposed.source).toBe('https://x/list')
   })
 
+  it('替代列里的模型和其他渠道仍在当前小节的模型不归档', () => {
+    const history: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: [
+        '## 历史模型',
+        '| 模型 | 推荐替代 |',
+        '| --- | --- |',
+        '| mx-old | mx-new |',
+        '| mx-shared | |',
+      ].join('\n'),
+    }
+    const other: Snapshot = {
+      url: 'https://x/plan',
+      role: 'list',
+      channel: 'd',
+      markdown: '## 当前模型\n\n- mx-shared',
+    }
+    const shared = model('mx-shared', {
+      channels: [
+        { channel: 'c', id: 'mx-shared' },
+        { channel: 'd', id: 'mx-shared' },
+      ],
+    })
+    const gaps = run([history, other], [model('mx-old'), model('mx-new'), shared])
+    expect(gaps.filter((gap) => gap.kind === 'lifecycle').map((gap) => gap.canonicalId)).toEqual([
+      'v/mx-old',
+    ])
+  })
+
   it('历史小节的归档覆盖公告推算的 sunsetting', () => {
     const notice: Snapshot = {
       url: 'https://x/dep',

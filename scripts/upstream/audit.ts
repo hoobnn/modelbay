@@ -323,10 +323,14 @@ export function audit(input: AuditInput): Gap[] {
       const legacy =
         row.path.some((heading) => LEGACY_SECTION.test(heading.text)) ||
         (row.header.length > 0 && RETIRED_WORDS.test(relevantText(row)))
+      // 归档只认被归为历史的那一列：替代 / 推荐列里的新模型不算
+      const archivable = legacy
+        ? new Set([...tokens(relevantText(row)), ...linkIds(relevantText(row))].map(lower))
+        : undefined
       for (const token of [...tokens(row.raw), ...linkIds(row.raw)]) {
         const name = lower(token)
         if (legacy) {
-          const model = byName.get(name)
+          const model = archivable!.has(name) ? byName.get(name) : undefined
           if (model && !legacyHits.has(`${channel}\n${model.canonicalId}`)) {
             legacyHits.set(`${channel}\n${model.canonicalId}`, {
               model,
@@ -399,8 +403,13 @@ export function audit(input: AuditInput): Gap[] {
     const channel = key.split('\n')[0]!
     const model = hit.model
     if (model.status === 'retired') continue
+    // 声明是整份归档的：任一渠道的当前小节还列着它，就不归档
     const names = [...model.channels.map((ref) => ref.id), ...model.aliases].map(lower)
-    if (names.some((name) => currentNames.has(`${channel}\n${name}`))) continue
+    const channels = new Set([channel, ...model.channels.map((ref) => ref.channel)])
+    const current = [...channels].some((item) =>
+      names.some((name) => currentNames.has(`${item}\n${name}`)),
+    )
+    if (current) continue
     const entry = archived.get(model)
     if (entry) {
       if (!entry.ids.includes(hit.id)) entry.ids.push(hit.id)
