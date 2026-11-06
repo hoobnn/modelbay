@@ -31,6 +31,7 @@ const MIME_BY_EXT: Record<string, string> = {
   '.opus': 'audio/opus',
   '.flac': 'audio/flac',
   '.pcm': 'audio/pcm',
+  '.amr': 'audio/amr',
 }
 
 const EXT_BY_MIME: Record<string, string> = Object.fromEntries(
@@ -57,8 +58,26 @@ function decodeDataUrl(ref: string): LoadedAsset {
   const body = match[3] ?? ''
   const data = match[2]?.includes(';base64')
     ? Uint8Array.from(Buffer.from(body, 'base64'))
-    : new TextEncoder().encode(decodeURIComponent(body))
+    : percentDecode(body)
   return { data, mime }
+}
+
+/** 百分号转义直接解成字节（二进制内容不一定是合法 UTF-8，不能走 decodeURIComponent）。 */
+function percentDecode(body: string): Uint8Array {
+  const bytes: number[] = []
+  const encoder = new TextEncoder()
+  for (let i = 0; i < body.length;) {
+    const hex = body[i] === '%' ? body.slice(i + 1, i + 3) : ''
+    if (/^[0-9a-f]{2}$/i.test(hex)) {
+      bytes.push(Number.parseInt(hex, 16))
+      i += 3
+      continue
+    }
+    const char = String.fromCodePoint(body.codePointAt(i)!)
+    bytes.push(...encoder.encode(char))
+    i += char.length
+  }
+  return Uint8Array.from(bytes)
 }
 
 function localPath(ref: string, cwd: string): string {

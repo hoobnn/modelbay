@@ -6,7 +6,7 @@
  * 别处提交的任务只要给 `task_id` 也能查。`wait` 秒内轮询 `adapter.poll()`。
  */
 import { mkdir, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import { ProviderError } from '@modelbay/core'
 import type {
   AdapterContext,
@@ -26,6 +26,8 @@ interface JobRecord {
   outDir?: string
   state: 'running' | 'delivered' | 'failed'
   createdAt: string
+  /** 已落盘的结果：再查同一目录时直接返回，不再下载、不再写新文件 */
+  delivered?: { outDir: string; payload: Record<string, unknown> }
 }
 
 export class JobRegistry {
@@ -47,8 +49,11 @@ export class JobRegistry {
     return this.jobs.get(id)
   }
 
-  list(limit: number): JobRecord[] {
-    return [...this.jobs.values()].reverse().slice(0, limit)
+  list(limit: number): Omit<JobRecord, 'delivered'>[] {
+    return [...this.jobs.values()]
+      .reverse()
+      .slice(0, limit)
+      .map(({ delivered: _delivered, ...rest }) => rest)
   }
 }
 
@@ -67,15 +72,16 @@ export function waitSeconds(args: Record<string, unknown>): number {
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((done, fail) => {
-    const timer = setTimeout(done, ms)
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer)
-        fail(new ProviderError('cancelled', '已取消'))
-      },
-      { once: true },
-    )
+    const onAbort = () => {
+      clearTimeout(timer)
+      fail(new ProviderError('cancelled', '已取消'))
+    }
+    // 正常到点也要摘掉监听：server 整个生命周期共用一个 signal，不摘会越积越多
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      done()
+    }, ms)
+    signal.addEventListener('abort', onAbort, { once: true })
   })
 }
 
@@ -111,15 +117,21 @@ export async function settle(
 
 let sequence = 0
 
+/**
+ * 落盘文件名总带时间戳、进程内序号和输出序号：适配器给的名字（如 `bailian.png`）只当前缀，
+ * 同一次多张输出、多次调用都不会互相覆盖。
+ */
 function fileName(tool: string, index: number, output: Extract<ProviderOutput, { type: 'file' }>) {
-  if (output.name && /\.[a-z0-9]+$/i.test(output.name)) return output.name
+  const named = output.name ? /^(.+?)(\.[a-z0-9]+)$/i.exec(basename(output.name)) : null
+  const prefix = (named?.[1] ?? tool).replace(/[^\w.-]+/g, '_')
   const ext =
+    named?.[2] ||
     extensionFor(output.mime) ||
     (output.url ? extensionFor(mimeFromName(output.url) ?? '') : '') ||
     '.bin'
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*$/, '')
   sequence += 1
-  return `${tool}-${stamp}-${sequence}-${index}${ext}`
+  return `${prefix}-${stamp}-${sequence}-${index}${ext}`
 }
 
 /**

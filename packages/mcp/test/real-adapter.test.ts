@@ -3,13 +3,13 @@
  * 其余 MCP 测试用假适配器，测不出「工具参数名」和「适配器读的归一化字段」对不上；
  * 这里断言 MCP 参数真的落到了上游请求体里，字节结果按 MCP 标准内容块返回。
  */
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createAdapterContext, readSecrets } from '@modelbay/core'
 import { describe, expect, it } from 'vite-plus/test'
 import { normalizeArguments } from '../src/arguments'
-import { createMcpAssetSource } from '../src/assets'
+import { createMcpAssetSource, mimeFromName } from '../src/assets'
 import { generateTools } from '../src/generate'
 import { createHandlers } from '../src/routing'
 import { MCP_TOOL_GROUPS } from '../src/types'
@@ -162,10 +162,42 @@ describe('MCP 素材参数经真实适配器', () => {
     expect(readFileSync(view.outputs[0]!.path)).toEqual(Buffer.from([0, 0, 0, 8]))
     expect(view.outputs[0]!.path.startsWith(join(dir, 'out'))).toBe(true)
 
+    // 再查同一任务：直接给上次落盘的结果，不再轮询、不再下载、不写新文件
+    const requests = captured.length
+    const again = await handlers.callTool('get_job', { task_id: 'cgt-1' })
+    expect(again.structuredContent).toEqual(view)
+    expect(captured.length).toBe(requests)
+    expect(readdirSync(join(dir, 'out'))).toHaveLength(1)
+
     const listed = await handlers.callTool('list_jobs', {})
     expect(listed.structuredContent).toMatchObject({
       jobs: [{ id: 'cgt-1', tool: 'generate_video', state: 'delivered' }],
     })
+    expect(JSON.stringify(listed.structuredContent)).not.toContain('payload')
+  })
+
+  it('ark generate_video：公网 URL 与 asset:// 的参考视频 / 音频原样转给上游', async () => {
+    const { handlers, captured } = handlersWith('ark', { ARK_API_KEY: 'k' }, () =>
+      Response.json({ id: 'cgt-2' }),
+    )
+    const submitted = await handlers.callTool('generate_video', {
+      prompt: '跳舞',
+      model: 'ark:doubao-seedance-2-5-260628',
+      reference_videos: ['asset://video-1', 'https://example.com/v.mp4'],
+      reference_audios: ['asset://audio-1'],
+    })
+    expect(submitted.isError).toBeFalsy()
+    expect(captured).toHaveLength(1)
+    const content = captured[0]!.body.content as Array<Record<string, unknown>>
+    expect(content.filter((item) => item.role !== undefined && item.type !== 'text')).toEqual([
+      { type: 'video_url', video_url: { url: 'asset://video-1' }, role: 'reference_video' },
+      {
+        type: 'video_url',
+        video_url: { url: 'https://example.com/v.mp4' },
+        role: 'reference_video',
+      },
+      { type: 'audio_url', audio_url: { url: 'asset://audio-1' }, role: 'reference_audio' },
+    ])
   })
 
   it('素材来源读 data URL 和本地路径，找不到文件时报 invalid_input', async () => {
@@ -173,6 +205,13 @@ describe('MCP 素材参数经真实适配器', () => {
     expect(await source.load('data:text/plain;base64,aGk=')).toMatchObject({ mime: 'text/plain' })
     expect((await source.load('frame.png')).mime).toBe('image/png')
     await expect(source.load('missing.png')).rejects.toThrow(/找不到素材文件/)
+    // 百分号转义的二进制 data URL 按字节解码，不要求是合法 UTF-8
+    const png = await source.load('data:image/png,%89PNG%0D%0A%1A%0A')
+    expect([...png.data]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    expect([...(await source.load('data:text/plain,%E4%BD%A0a')).data]).toEqual([
+      0xe4, 0xbd, 0xa0, 0x61,
+    ])
+    expect(mimeFromName('memo.amr')).toBe('audio/amr')
   })
 })
 

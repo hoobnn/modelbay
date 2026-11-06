@@ -223,14 +223,18 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     }
     if (value.state !== 'succeeded' || !Array.isArray(value.outputs)) return result(value)
     const outputs = await deliver(value.outputs, outDir, tool, context)
-    if (record) record.state = 'delivered'
-    return result({
+    const payload = {
       ...ids,
       job_state: 'delivered',
       completed: true,
       outputs,
       ...(value.usage ? { usage: value.usage } : {}),
-    })
+    }
+    if (record) {
+      record.state = 'delivered'
+      if (outDir) record.delivered = { outDir, payload }
+    }
+    return result(payload)
   }
 
   function listJobs(args: Record<string, unknown>): CallToolResult {
@@ -255,8 +259,12 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     )
       return errorResult('job_id 与 task_id 不属于同一任务')
     const record = jobs.get(id) ?? jobs.remember(id, name, undefined)
+    const outDir = outputDirectory(args) ?? record.outDir
+    // 已落盘到同一目录：直接给上次的结果，不重复下载，上游任务或下载链接过期也不影响
+    if (record.delivered && record.delivered.outDir === outDir)
+      return result(record.delivered.payload)
     const value = await pollUntil(adapter!, id, context, waitSeconds(args))
-    return jobResult(record.tool, id, value, outputDirectory(args) ?? record.outDir)
+    return jobResult(record.tool, id, value, outDir)
   }
 
   async function callTool(name: string, args: Record<string, unknown>): Promise<CallToolResult> {
