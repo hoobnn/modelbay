@@ -39,8 +39,7 @@
 接下来：
 
 - **夜间真实冒烟。** `.github/workflows/smoke.yml` 已就绪，每家用最便宜的一档跑一次真实调用，目前只能手动触发。把各家 key 配进 `smoke` 环境、定好预算后再加定时触发。
-- **补回首发前删掉的未实现功能。** 补回时附官方来源，并加 `real-<平台>.test.ts`：
-  - 方舟：Responses API 的 `web_search` / `previous_response_id`，多模态 `embed`。
-  - 豆包语音：实时会话工具、`upgrade_voice`、异步任务 `poll`。
+- **补回首发前删掉的未实现功能。** 补回时附官方来源，并加 `real-<平台>.test.ts`：豆包语音的实时会话工具、`upgrade_voice`、异步任务 `poll`。
 - **SDK 遗留问题。**
+  - 方舟：联网搜索、续接响应（Responses API）和多模态 `embed` 只按官方文档实现，还没有真实调用过；Responses 这条路不流式输出。
   - 豆包语音：播客走的 `/api/v3/podcast/sse` 不在官方文档里（官方写的是 WebSocket），2026-11-06 实测可用；同声传译、会议纪要等几个端点还没有真实调用过。
