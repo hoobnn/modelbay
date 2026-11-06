@@ -131,7 +131,7 @@ PR 合并前 `pnpm verify` 必须通过，CI 跑的就是这一条。
 
 - 三个发布包同一个版本号（changesets 的 `fixed` 组）。内部包不记版本、不打标签（`privatePackages`），改内部包的 changeset 写 `modelbay`。
 - 1.0 之前都是 `0.x`：不兼容的改动升次版本号，兼容的新增和修复升修订号。什么时候发 1.0 由维护者决定。
-- 发布通过 `.github/workflows/release.yml` 手动触发，绑定需要审批的 `release` 环境，用 npm trusted publishing（OIDC）鉴权，不存 npm token，provenance 自动生成。**每次发布都要维护者批准**，agent 不能执行 `npm publish`，也不能打发布标签。
+- 发布通过 `.github/workflows/release.yml` 手动触发，绑定需要审批的 `release` 环境，用 npm trusted publishing（OIDC）鉴权，不存 npm token，provenance 自动生成。**每次发布都要维护者批准**，agent 不能执行 `npm publish`，也不手动打发布标签。
 - 发布步骤是 `scripts/publish-packages.mjs`：按 `modelbay` → `@modelbay/mcp` → `@modelbay/cli` 的顺序 `pnpm pack` 再 `npm publish <tarball>`，npm 上已有的版本跳过，`dry_run` 只预演不上传。不用 `changeset publish`，因为它走 `pnpm publish`，而 npm 只给 npm CLI 文档化了 OIDC 和自动 provenance。
 - 每个发布包在 npm 上都要登记 trusted publisher（仓库 `hoobnn/modelbay`、工作流 `release.yml`、环境 `release`）。新增发布包时由维护者执行，需要 2FA：
 
@@ -139,4 +139,4 @@ PR 合并前 `pnpm verify` 必须通过，CI 跑的就是这一条。
   npm trust github <包名> --repository hoobnn/modelbay --file release.yml --environment release --allow-publish
   ```
 
-- 发布后由维护者打标签：`git tag modelbay@<版本> && git push origin modelbay@<版本>`。
+- 三个包都发布成功后，`release.yml` 自动在发布的提交上打 `modelbay@<版本>` 标签并推送；标签已存在就跳过，dry run 不打。

@@ -31,5 +31,5 @@
 - 平台包之间不互相依赖（唯一例外：方舟依赖豆包语音），公共代码放 `@modelbay/shared`。
 - 内部包标 `private`，不发布；发布包的依赖和产物里不能引用它们（`pnpm check:packages` 检查）。`@modelbay/mcp`、`@modelbay/cli` 只从 `modelbay` 导入。
 - 许可证是 MIT。不要引入 AGPL / GPL 依赖。
-- 不执行 `npm publish`，也不打发布标签。发布要维护者批准。
+- 不执行 `npm publish`，也不手动打发布标签。发布要维护者批准；标签由 `release.yml` 在发布成功后自动打。
 - 合并前 `pnpm verify` 必须通过。PR 里附上验证命令的输出。

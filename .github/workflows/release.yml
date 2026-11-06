@@ -5,7 +5,8 @@ name: Release (manual, maintainer approved)
 #   仓库里不存在「推到 main 就自动 npm publish」的路径。
 # - publish job 绑定 GitHub Environment `release`，需在仓库设置里配置 required
 #   reviewers；维护者在 Environment 审批通过后才会执行带 provenance 的发布。
-# - 实施 agent 不执行 `npm publish`、不打发布标签。每次发布都由维护者批准并触发。
+# - 实施 agent 不执行 `npm publish`、不手动打发布标签。三个包都发布成功后，本工作流
+#   自动打 `modelbay@<版本>` 标签，维护者的环境审批同时就是对这个标签的批准。
 # - changesets 的 Version Packages PR 由维护者用 `pnpm changeset` /
 #   `pnpm version-packages` 生成并合并；fixed 组保证所有包同版本号。
 # - 鉴权用 npm trusted publishing（OIDC）：不存长期 token，provenance 自动生成。
@@ -21,7 +22,7 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write # 发布成功后推送 modelbay@<版本> 标签
   id-token: write # npm provenance (OIDC)
 
 concurrency:
@@ -45,3 +46,13 @@ jobs:
         run: pnpm verify
       - name: Publish via npm trusted publishing (OIDC, provenance)
         run: node scripts/publish-packages.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: 打发布标签 modelbay@<版本>
+        if: ${{ !inputs.dry_run }}
+        run: |
+          tag="modelbay@$(node -p "require('./packages/modelbay/package.json').version")"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "$tag 已存在，跳过"
+          else
+            git tag "$tag" "$GITHUB_SHA"
+            git push origin "refs/tags/$tag"
+          fi
