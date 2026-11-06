@@ -16,7 +16,15 @@ import type {
 } from '@modelbay/core'
 import { normalizeArguments } from './arguments'
 import { listTools } from './generate'
-import { JobRegistry, deliver, outputDirectory, pollUntil, settle, waitSeconds } from './jobs'
+import {
+  JobRegistry,
+  deliver,
+  deliveredIntact,
+  outputDirectory,
+  pollUntil,
+  settle,
+  waitSeconds,
+} from './jobs'
 import type {
   CallToolContent,
   CallToolResult,
@@ -260,8 +268,13 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       return errorResult('job_id 与 task_id 不属于同一任务')
     const record = jobs.get(id) ?? jobs.remember(id, name, undefined)
     const outDir = outputDirectory(args) ?? record.outDir
-    // 已落盘到同一目录：直接给上次的结果，不重复下载，上游任务或下载链接过期也不影响
-    if (record.delivered && record.delivered.outDir === outDir)
+    // 已落盘到同一目录且文件都还完整：直接给上次的结果，不重复下载，上游链接过期也不影响。
+    // 文件被删或不完整时照常查询并重新下载，recover_job 仍能恢复。
+    if (
+      record.delivered &&
+      record.delivered.outDir === outDir &&
+      (await deliveredIntact(record.delivered.payload))
+    )
       return result(record.delivered.payload)
     const value = await pollUntil(adapter!, id, context, waitSeconds(args))
     return jobResult(record.tool, id, value, outDir)

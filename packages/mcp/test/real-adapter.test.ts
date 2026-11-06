@@ -3,7 +3,7 @@
  * 其余 MCP 测试用假适配器，测不出「工具参数名」和「适配器读的归一化字段」对不上；
  * 这里断言 MCP 参数真的落到了上游请求体里，字节结果按 MCP 标准内容块返回。
  */
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createAdapterContext, readSecrets } from '@modelbay/core'
@@ -168,6 +168,13 @@ describe('MCP 素材参数经真实适配器', () => {
     expect(again.structuredContent).toEqual(view)
     expect(captured.length).toBe(requests)
     expect(readdirSync(join(dir, 'out'))).toHaveLength(1)
+
+    // 落盘文件被删后 recover_job 重新查询并下载，不返回指向已删文件的缓存
+    rmSync(view.outputs[0]!.path)
+    const recovered = await handlers.callTool('recover_job', { task_id: 'cgt-1' })
+    const restored = recovered.structuredContent as { outputs: Array<{ path: string }> }
+    expect(captured.length).toBeGreaterThan(requests)
+    expect(readFileSync(restored.outputs[0]!.path)).toEqual(Buffer.from([0, 0, 0, 8]))
 
     const listed = await handlers.callTool('list_jobs', {})
     expect(listed.structuredContent).toMatchObject({

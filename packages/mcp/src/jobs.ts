@@ -5,7 +5,7 @@
  * 进程内只记下提交时的工具名与输出目录，供 `get_job` / `recover_job` / `list_jobs` 使用；
  * 别处提交的任务只要给 `task_id` 也能查。`wait` 秒内轮询 `adapter.poll()`。
  */
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import { ProviderError } from '@modelbay/core'
 import type {
@@ -164,4 +164,16 @@ export async function deliver(
       return { ...rest, path, bytes: data.byteLength }
     }),
   )
+}
+
+/** 缓存结果里每个落盘文件都还在、大小与写入时一致。 */
+export async function deliveredIntact(payload: Record<string, unknown>): Promise<boolean> {
+  const outputs = Array.isArray(payload.outputs) ? payload.outputs : []
+  for (const output of outputs) {
+    const { path, bytes } = (output ?? {}) as { path?: unknown; bytes?: unknown }
+    if (typeof path !== 'string') continue
+    const info = await stat(path).catch(() => undefined)
+    if (!info?.isFile() || info.size !== bytes) return false
+  }
+  return true
 }
