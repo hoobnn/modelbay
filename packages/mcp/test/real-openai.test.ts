@@ -179,7 +179,7 @@ describe('MCP OpenAI 工具经真实适配器', () => {
 
   it('从声明派生的顶层字段也进请求体，不会被丢掉', async () => {
     const { handlers, captured } = handlersWith(responsesSse)
-    const tools = handlers.listTools()
+    const tools = await handlers.listTools()
     const chat = tools.find((tool) => tool.name === 'chat')!
     expect(Object.keys(chat.inputSchema.properties ?? {})).toContain('previous_response_id')
     await handlers.callTool('chat', {
@@ -206,7 +206,7 @@ describe('MCP OpenAI 工具经真实适配器', () => {
 
   it('同步平台不暴露 list_jobs，工具不声明与结果不符的 outputSchema', async () => {
     const { handlers } = handlersWith(imageJson)
-    const tools = handlers.listTools()
+    const tools = await handlers.listTools()
     const names = tools.map((tool) => tool.name)
     expect(names).not.toContain('list_jobs')
     for (const name of ['chat', 'generate_image', 'get_tool_help', 'list_capabilities'])
