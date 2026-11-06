@@ -386,6 +386,8 @@ export interface ModelLimits {
   imageOperations?: Array<'upscale' | 'outpaint' | 'cutout'>
   /** 语速范围（倍速）；false 表示不支持，表单隐藏，宿主不传 */
   speed?: { min: number; max: number } | false
+  /** 音频输出可选的采样率（Hz）；不声明表示由平台决定 */
+  sampleRates?: number[]
   /** false 表示不支持自然语言语气指令，表单隐藏，宿主不传 */
   instruction?: boolean
   /** 语音合成（audio.speech）模型专属的约束与默认值 */

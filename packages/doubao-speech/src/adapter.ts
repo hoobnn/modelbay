@@ -26,7 +26,7 @@ import {
 import { asJson, arr, events, failure, headers, incomplete, postRaw, type Json } from './http'
 import { cloneVoice, designVoice, voiceStatus } from './voice'
 import {
-  AUDIO_SAMPLE_RATES,
+  checkSampleRate,
   buildSpeechRequest,
   decodeAudioStream,
   resolveSpeechSettings,
@@ -65,17 +65,14 @@ export function buildAudioCreateBody(
   input: CapabilityInput<'audio.music'>,
   settings: SpeechSettings,
   kind: 'audio.music' | 'audio.sfx',
+  model: string,
 ): Json {
   if (
     input.duration !== undefined &&
     (!Number.isFinite(input.duration) || input.duration <= 0 || input.duration > 120)
   )
     throw new ProviderError('invalid_input', '音频时长须大于 0 且不超过 120 秒')
-  if (!(AUDIO_SAMPLE_RATES as readonly number[]).includes(Number(settings.sampleRate)))
-    throw new ProviderError(
-      'invalid_input',
-      `Seed Audio 采样率须为 ${AUDIO_SAMPLE_RATES.join(' / ')}`,
-    )
+  checkSampleRate(model, Number(settings.sampleRate))
   const prompt = text(input.prompt, '音频描述')
   const lead =
     kind === 'audio.music' ? '仅生成音乐，不要人声对白。' : '仅生成音效，不要音乐或人声对白。'
@@ -245,7 +242,7 @@ export function createDoubaoAdapter(
         case 'audio.sfx': {
           const input = request.input as CapabilityInput<'audio.music'>
           const settings = resolveSpeechSettings(ctx, settingsOverrides(input as SpeechExtras))
-          const body = buildAudioCreateBody(input, settings, capability)
+          const body = buildAudioCreateBody(input, settings, capability, model)
           const response = await postRaw(ctx, AUDIO_CREATE_PATH, { model, ...body })
           const data = response.decode((raw) =>
             decodeAudioStream(raw, 'audio', ctx, settings, false),

@@ -427,3 +427,19 @@ describe('管理类工具', () => {
     expect(captured[0]!.headers['x-api-resource-id']).toBe('seed-icl-2.0')
   })
 })
+
+describe('采样率 schema 从声明派生', () => {
+  it('text_to_speech 与 generate_audio 的 sample_rate 可选值各自不同', async () => {
+    const { handlers } = await setup()
+    const tools = await handlers.listTools()
+    const rates = (name: string) =>
+      (
+        tools.find((tool) => tool.name === name)!.inputSchema.properties as Record<
+          string,
+          { enum?: unknown[] }
+        >
+      ).sample_rate!.enum
+    expect(rates('text_to_speech')).toEqual([8000, 16000, 22050, 24000, 32000, 44100, 48000])
+    expect(rates('generate_audio')).toEqual([8000, 16000, 24000, 48000])
+  })
+})

@@ -20,6 +20,7 @@ export type ModelParamKind =
   | 'count'
   | 'seed'
   | 'speed'
+  | 'sampleRate'
   | 'promptLength'
   | 'references'
 
@@ -88,6 +89,11 @@ export function modelParamSpec(
         text: `语速 ${speed.min}–${speed.max} 倍`,
       }
     }
+    case 'sampleRate': {
+      const values = limits.sampleRates
+      if (!values?.length) return null
+      return { schema: { enum: [...values] }, text: `采样率 ${values.join('/')} Hz` }
+    }
     case 'promptLength': {
       const max = limits.promptMaxLength
       if (max === undefined) return null
@@ -123,7 +129,7 @@ export function deriveModelParam(
 ): DerivedModelParam {
   const schema: Record<string, unknown> = {}
   const perModel: Record<string, string> = {}
-  const enums = new Set<string>()
+  const enums = new Set<string | number>()
   let minimum: number | undefined
   let maximum: number | undefined
 
@@ -133,7 +139,7 @@ export function deriveModelParam(
     perModel[declaration.canonicalId] = spec.text
     for (const [key, value] of Object.entries(spec.schema)) {
       if (key === 'enum' && Array.isArray(value)) {
-        for (const item of value) enums.add(String(item))
+        for (const item of value) enums.add(typeof item === 'number' ? item : String(item))
       } else if (key === 'minimum' && typeof value === 'number') {
         minimum = minimum === undefined ? value : Math.min(minimum, value)
       } else if (key === 'maximum' && typeof value === 'number') {
@@ -200,6 +206,7 @@ export function modelLimitsText(declaration: ModelDeclaration): string {
     'count',
     'seed',
     'speed',
+    'sampleRate',
     'promptLength',
     'references',
   ] as ModelParamKind[]) {

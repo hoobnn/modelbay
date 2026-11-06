@@ -9,7 +9,6 @@
  * 官方文档里查不到的字段、适配器没实现的能力不在这里出现。
  */
 import type { ToolSpec } from '@modelbay/core'
-import { AUDIO_SAMPLE_RATES, TTS_SAMPLE_RATES } from '../speech'
 import {
   mapCloneVoice,
   mapDesignVoice,
@@ -88,14 +87,14 @@ export const doubaoSpeechTools: ToolSpec[] = [
       'Seed Audio 按文字描述生成配乐或音频；只朗读文字用 text_to_speech。\n' +
       'prompt 为音频描述。format=mp3 或 wav；sample_rate 为采样率。按服务规则计费。',
     capability: 'audio.music',
-    modelParams: { prompt: 'promptLength' },
+    modelParams: { prompt: 'promptLength', sample_rate: 'sampleRate' },
     inputSchema: {
       type: 'object',
       title: 'generate_audioArguments',
       properties: {
         prompt: string,
         format: { type: 'string', enum: ['mp3', 'wav'], default: 'mp3' },
-        sample_rate: { type: 'integer', enum: [...AUDIO_SAMPLE_RATES], default: 24000 },
+        sample_rate: { type: 'integer', default: 24000 },
         model: string,
         out_dir: optional(string),
       },
@@ -324,7 +323,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
       'speech_rate / loudness_rate 为官方整数刻度 -50..100（0 为原速 / 原音量，100 为 2 倍）；pitch 为 -12..12 的音调。\n' +
       'format=mp3或wav；sample_rate为采样率。按字数计费。完整音色与调节范围见get_tool_help。\n',
     capability: 'audio.speech',
-    modelParams: { text: 'promptLength' },
+    modelParams: { text: 'promptLength', sample_rate: 'sampleRate' },
     inputSchema: {
       type: 'object',
       title: 'text_to_speechArguments',
@@ -337,7 +336,7 @@ export const doubaoSpeechTools: ToolSpec[] = [
         loudness_rate: { type: 'integer', minimum: -50, maximum: 100 },
         pitch: { type: 'integer', minimum: -12, maximum: 12 },
         format: { type: 'string', enum: ['mp3', 'wav'], default: 'mp3' },
-        sample_rate: { type: 'integer', enum: [...TTS_SAMPLE_RATES], default: 24000 },
+        sample_rate: { type: 'integer', default: 24000 },
         model: optional(string),
         out_dir: optional(string),
       },
