@@ -166,6 +166,27 @@ describe('runCli', () => {
     expect(out.join('')).toContain('ark: configured (ARK_API_KEY)')
   })
 
+  it('doctor 分开列出已配置和未配置的密钥名', async () => {
+    const { io, out } = fakeIO()
+    const deps = makeDeps({
+      doctor: () => ({
+        entries: [
+          {
+            platform: 'ark',
+            names: ['ARK_API_KEY', 'ARK_AGENT_PLAN_API_KEY'],
+            present: ['ARK_API_KEY'],
+            configured: true,
+          },
+        ],
+        ok: true,
+      }),
+    })
+    await runCli(['doctor'], io, deps)
+    expect(out.join('')).toContain(
+      'ark: configured (set: ARK_API_KEY; not set: ARK_AGENT_PLAN_API_KEY)',
+    )
+  })
+
   it('doctor 全部缺失时退出 1', async () => {
     const { io } = fakeIO()
     const deps = makeDeps({

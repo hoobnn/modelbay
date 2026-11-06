@@ -101,6 +101,8 @@ export interface DoctorEntry {
   names: readonly string[]
   /** 还缺的密钥名；已配置时为空 */
   missing: readonly string[]
+  /** `names` 里已配置的那些；只给名字，不给值 */
+  present: readonly string[]
   configured: boolean
 }
 
@@ -223,11 +225,14 @@ export function createModelbay(options: ModelbayOptions = {}): Modelbay {
 
   function doctor(): DoctorReport {
     const entries: DoctorEntry[] = PLATFORMS.map((platform) => {
-      const missing = missingSecrets(platform.secrets, (name) => Boolean(secrets[name]?.trim()))
+      const has = (name: string) => Boolean(secrets[name]?.trim())
+      const missing = missingSecrets(platform.secrets, has)
+      const names = platform.secrets.required.flat()
       return {
         platform: platform.key,
-        names: platform.secrets.required.flat(),
+        names,
         missing,
+        present: names.filter(has),
         configured: missing.length === 0,
       }
     })
