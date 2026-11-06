@@ -219,6 +219,22 @@ describe('生命周期', () => {
     ])
   })
 
+  it('共用声明有渠道没抓到列表页时不归档', () => {
+    const history: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: '## 历史模型\n\n- mx-shared',
+    }
+    const shared = model('mx-shared', {
+      channels: [
+        { channel: 'c', id: 'mx-shared' },
+        { channel: 'd', id: 'mx-shared' },
+      ],
+    })
+    expect(run([history], [shared]).some((gap) => gap.kind === 'lifecycle')).toBe(false)
+  })
+
   it('历史小节的归档覆盖公告推算的 sunsetting', () => {
     const notice: Snapshot = {
       url: 'https://x/dep',

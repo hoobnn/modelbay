@@ -406,6 +406,8 @@ export function audit(input: AuditInput): Gap[] {
     // 声明是整份归档的：任一渠道的当前小节还列着它，就不归档
     const names = [...model.channels.map((ref) => ref.id), ...model.aliases].map(lower)
     const channels = new Set([channel, ...model.channels.map((ref) => ref.channel)])
+    // 有渠道没抓到列表页（抓取失败或没配置），判断不了它还在不在当前小节，先不归档
+    if ([...channels].some((item) => !listedByChannel.has(item))) continue
     const current = [...channels].some((item) =>
       names.some((name) => currentNames.has(`${item}\n${name}`)),
     )
