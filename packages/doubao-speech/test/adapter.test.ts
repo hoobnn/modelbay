@@ -176,6 +176,14 @@ describe('request builders / ASR parsing', () => {
     )
     const body = buildAudioCreateBody({ prompt: 'x', duration: 12.5 }, settings, 'audio.music')
     expect(body.text_prompt as string).toContain('目标时长 12.5 秒')
+    // Seed Audio 官方采样率只有 8K/16K/24K/48K，22050 等 TTS 才有的值要拒绝
+    expect(
+      buildAudioCreateBody({ prompt: 'x' }, { ...settings, sampleRate: '8000' }, 'audio.music')
+        .audio_config,
+    ).toEqual({ format: 'mp3', sample_rate: 8000 })
+    expect(() =>
+      buildAudioCreateBody({ prompt: 'x' }, { ...settings, sampleRate: '22050' }, 'audio.music'),
+    ).toThrow(ProviderError)
   })
   it('buildFlashAsrBody validates the format (size comes from the declaration)', () => {
     expect(() =>

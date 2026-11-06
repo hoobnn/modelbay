@@ -26,6 +26,7 @@ import {
 import { asJson, arr, events, failure, headers, incomplete, postRaw, type Json } from './http'
 import { cloneVoice, designVoice, voiceStatus } from './voice'
 import {
+  AUDIO_SAMPLE_RATES,
   buildSpeechRequest,
   decodeAudioStream,
   resolveSpeechSettings,
@@ -70,6 +71,11 @@ export function buildAudioCreateBody(
     (!Number.isFinite(input.duration) || input.duration <= 0 || input.duration > 120)
   )
     throw new ProviderError('invalid_input', '音频时长须大于 0 且不超过 120 秒')
+  if (!(AUDIO_SAMPLE_RATES as readonly number[]).includes(Number(settings.sampleRate)))
+    throw new ProviderError(
+      'invalid_input',
+      `Seed Audio 采样率须为 ${AUDIO_SAMPLE_RATES.join(' / ')}`,
+    )
   const prompt = text(input.prompt, '音频描述')
   const lead =
     kind === 'audio.music' ? '仅生成音乐，不要人声对白。' : '仅生成音效，不要音乐或人声对白。'
