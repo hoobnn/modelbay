@@ -6,6 +6,10 @@ export default {
   title: 'gpt-6-luna',
   capabilities: ['text.chat'],
   features: ['vision', 'tools', 'structured'],
+  // 上下文窗口与最大输出：https://developers.openai.com/api/docs/models/gpt-6-luna
+  // 页面写「1,050,000 context window」「128,000 max output tokens」，2026-11-07 核对原文。
+  contextWindow: 1050000,
+  maxOutputTokens: 128000,
   limits: { temperature: false },
   optionsSchema: {
     type: 'object',
@@ -57,6 +61,6 @@ export default {
   },
   source: {
     url: 'https://developers.openai.com/api/docs/models/gpt-6-luna',
-    checkedAt: '2026-11-05',
+    checkedAt: '2026-11-07',
   },
 } satisfies ModelDeclaration
