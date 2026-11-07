@@ -157,14 +157,14 @@ export function validateDeclaration(model: ModelDeclaration): string[] {
   for (const channel of model.channels) {
     if (!channel.channel || !channel.id) problems.push('渠道缺少 channel 或 id')
   }
-  const tokenFields = [
+  const tokenFields: Array<[string, number | undefined]> = [
     ['contextWindow', model.contextWindow],
     ['maxOutputTokens', model.maxOutputTokens],
-    ...model.channels.flatMap((channel) => [
+    ...model.channels.flatMap((channel): Array<[string, number | undefined]> => [
       [`${channel.channel}.contextWindow`, channel.contextWindow],
       [`${channel.channel}.maxOutputTokens`, channel.maxOutputTokens],
     ]),
-  ] as const
+  ]
   for (const [name, value] of tokenFields) {
     if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
       problems.push(`${name} 应为正整数`)
