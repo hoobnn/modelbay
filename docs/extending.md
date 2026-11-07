@@ -7,6 +7,7 @@
 1. 在 `packages/<平台>/src/models/` 下新建 `<模型>.ts`，写成 `export default { ... } satisfies ModelDeclaration`。只写数据，不写函数、条件分支或计算出来的值。格式见 [0003](decisions/0003-capabilities-and-model-declarations.md)。
 2. 在同目录的 `index.ts` 里导入它，并放进 `all` 数组。数组顺序就是模型清单和 MCP 说明里的展示顺序。
 3. 填 `source`、`lifecycle.source`，以及各渠道的 `source`（有的话）：都要是官方文档的 https 链接，再加实际读原文的日期 `YYYY-MM-DD`。域名要在 `scripts/upstream/sources.ts` 的 `OFFICIAL_HOST_SUFFIXES` 白名单里，新平台的文档站要先加进去。
+   对话模型还要填 `contextWindow` / `maxOutputTokens`（官方公布了才填），在字段上方的注释里写官方页面链接、原文用词和核对日期，换算规则见 0003。
 4. 不用写测试：`packages/modelbay/test/declarations.test.ts` 会自动检查所有声明，包括有没有登记进 `all`、是否纯数据、来源和日期、生命周期、默认冲突、别名冲突、`optionsSchema`。只有改了请求构造或路由时，才在平台包的 `test/` 里补夹具测试。
 
 模型下线、改名或换默认，都只改声明，不改代码。
