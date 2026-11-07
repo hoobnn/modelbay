@@ -170,16 +170,23 @@ export function validateDeclaration(model: ModelDeclaration): string[] {
       problems.push(`${name} 应为正整数`)
     }
   }
-  const windows = [model.contextWindow, ...model.channels.map((channel) => channel.contextWindow)]
-  const outputs = [
-    model.maxOutputTokens,
-    ...model.channels.map((channel) => channel.maxOutputTokens),
-  ]
-  if (
-    windows.every((value) => value === undefined) &&
-    outputs.some((value) => value !== undefined)
-  ) {
-    problems.push('声明了 maxOutputTokens 就应同时声明 contextWindow')
+  // 按每个渠道的生效值检查（渠道覆盖优先，模型级兜底），不让别的渠道的窗口替它满足要求
+  const effective = model.channels.length
+    ? model.channels.map((channel) => ({
+        // 渠道没覆盖任何一项时问题出在模型级，不按渠道重复报告
+        name:
+          channel.contextWindow === undefined && channel.maxOutputTokens === undefined
+            ? ''
+            : `${channel.channel}.`,
+        window: channel.contextWindow ?? model.contextWindow,
+        output: channel.maxOutputTokens ?? model.maxOutputTokens,
+      }))
+    : [{ name: '', window: model.contextWindow, output: model.maxOutputTokens }]
+  for (const { name, window, output } of effective) {
+    const problem = `${name}声明了 maxOutputTokens 就应同时声明 contextWindow`
+    if (output !== undefined && window === undefined && !problems.includes(problem)) {
+      problems.push(problem)
+    }
   }
   return problems
 }
