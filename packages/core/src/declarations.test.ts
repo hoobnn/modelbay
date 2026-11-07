@@ -294,6 +294,37 @@ describe('toModelInfo', () => {
     expect(info.optionsSchema).toBeUndefined()
   })
 
+  it('contextWindow 与 maxOutputTokens 从声明到达模型信息，渠道级覆盖只作用于该渠道', () => {
+    const declaration = patch({
+      contextWindow: 256_000,
+      maxOutputTokens: 128_000,
+      channels: [
+        { channel: 'a', id: 'x' },
+        { channel: 'b', id: 'y', contextWindow: 1_000_000, maxOutputTokens: 384_000 },
+      ],
+    })
+    const [open, scoped] = declaration.channels
+    expect(toModelInfo(declaration, open)).toMatchObject({
+      contextWindow: 256_000,
+      maxOutputTokens: 128_000,
+    })
+    expect(toModelInfo(declaration, scoped)).toMatchObject({
+      contextWindow: 1_000_000,
+      maxOutputTokens: 384_000,
+    })
+    const info = toModelInfo(patch({}))
+    expect('contextWindow' in info).toBe(false)
+    expect('maxOutputTokens' in info).toBe(false)
+  })
+
+  it('token 数必须是正整数，声明了最大输出就要有上下文窗口', () => {
+    expect(validateDeclaration(patch({ contextWindow: 0 }))).toContain('contextWindow 应为正整数')
+    expect(validateDeclaration(patch({ maxOutputTokens: 100 }))).toContain(
+      '声明了 maxOutputTokens 就应同时声明 contextWindow',
+    )
+    expect(validateDeclaration(patch({ contextWindow: 1000, maxOutputTokens: 100 }))).toEqual([])
+  })
+
   it('retired 模型带 deprecated 标记', () => {
     const retired = patch({ lifecycle: { status: 'retired', source } })
     expect(toModelInfo(retired).deprecated).toBe(true)

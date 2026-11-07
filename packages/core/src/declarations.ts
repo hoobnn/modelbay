@@ -58,6 +58,10 @@ export interface ChannelRef {
   description?: string
   /** 这个渠道里该模型的对话特性；不填用声明的 `features`。 */
   features?: ModelFeature[]
+  /** 这个渠道里该模型的上下文窗口（输入 + 输出的总 token 数）；不填用声明的 `contextWindow`。 */
+  contextWindow?: number
+  /** 这个渠道里该模型单次最多输出的 token 数；不填用声明的 `maxOutputTokens`。 */
+  maxOutputTokens?: number
   /** 这个渠道不支持 `optionsSchema` 里的这些参数：派生出的模型信息里不展示。 */
   omitOptions?: string[]
 }
@@ -152,6 +156,30 @@ export function validateDeclaration(model: ModelDeclaration): string[] {
   }
   for (const channel of model.channels) {
     if (!channel.channel || !channel.id) problems.push('渠道缺少 channel 或 id')
+  }
+  const tokenFields = [
+    ['contextWindow', model.contextWindow],
+    ['maxOutputTokens', model.maxOutputTokens],
+    ...model.channels.flatMap((channel) => [
+      [`${channel.channel}.contextWindow`, channel.contextWindow],
+      [`${channel.channel}.maxOutputTokens`, channel.maxOutputTokens],
+    ]),
+  ] as const
+  for (const [name, value] of tokenFields) {
+    if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
+      problems.push(`${name} 应为正整数`)
+    }
+  }
+  const windows = [model.contextWindow, ...model.channels.map((channel) => channel.contextWindow)]
+  const outputs = [
+    model.maxOutputTokens,
+    ...model.channels.map((channel) => channel.maxOutputTokens),
+  ]
+  if (
+    windows.every((value) => value === undefined) &&
+    outputs.some((value) => value !== undefined)
+  ) {
+    problems.push('声明了 maxOutputTokens 就应同时声明 contextWindow')
   }
   return problems
 }
@@ -290,6 +318,12 @@ export function toModelInfo(declaration: ModelDeclaration, channel?: ChannelRef)
       : {}),
     ...((channel?.features ?? declaration.features)
       ? { features: channel?.features ?? declaration.features }
+      : {}),
+    ...((channel?.contextWindow ?? declaration.contextWindow) !== undefined
+      ? { contextWindow: channel?.contextWindow ?? declaration.contextWindow }
+      : {}),
+    ...((channel?.maxOutputTokens ?? declaration.maxOutputTokens) !== undefined
+      ? { maxOutputTokens: channel?.maxOutputTokens ?? declaration.maxOutputTokens }
       : {}),
     ...(declaration.limits || channel?.limits
       ? { limits: { ...declaration.limits, ...channel?.limits } }

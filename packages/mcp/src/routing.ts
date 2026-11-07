@@ -183,6 +183,17 @@ function localResult(
           capabilities: model.capabilities,
           status: model.lifecycle.status,
           notice: lifecycleNotice(model),
+          // 上下文窗口与最大输出按渠道给出：渠道声明优先，缺省沿用模型级；官方未公布的不出现
+          channels: model.channels.map((entry) => {
+            const contextWindow = entry.contextWindow ?? model.contextWindow
+            const maxOutputTokens = entry.maxOutputTokens ?? model.maxOutputTokens
+            return {
+              channel: entry.channel,
+              id: entry.id,
+              ...(contextWindow !== undefined ? { contextWindow } : {}),
+              ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
+            }
+          }),
         }))
       return result({ models: list })
     }
