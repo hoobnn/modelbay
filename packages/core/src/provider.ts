@@ -417,6 +417,13 @@ export interface ModelSpec {
   version?: string
   /** 对话模型的额外特性：tools（工具调用，内置智能体要用）、vision（看图）、structured（宿主要求 jsonSchema 时能交回符合 schema 的 JSON，包括由适配器本地校验） */
   features?: ModelFeature[]
+  /**
+   * 该模型一次请求能接受的总 token 数（输入 + 输出），以平台官方公布的上下文长度为准。
+   * 官方只给最大输入和最大输出时取两者之和；不确定就不填，宿主按未知处理。
+   */
+  contextWindow?: number
+  /** 单次请求最多能输出的 token 数；平台官方公布了才填。 */
+  maxOutputTokens?: number
   /** 仅供内置 Agent 使用，不用于普通画布生成。 */
   agentOnly?: boolean
   limits?: ModelLimits

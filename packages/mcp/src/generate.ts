@@ -153,7 +153,7 @@ function buildExtraTool(name: string): GeneratedTool {
   return {
     name,
     description:
-      '列出本平台声明的模型 ID、能力与生命周期提示（从 ModelDeclaration 派生），不联网、不计费。',
+      '列出本平台声明的模型 ID、能力、生命周期提示与各渠道的上下文窗口 / 最大输出（从 ModelDeclaration 派生），不联网、不计费。',
     inputSchema: {
       type: 'object',
       title: 'listDeclaredModelsArguments',

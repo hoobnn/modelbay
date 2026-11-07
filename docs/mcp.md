@@ -70,7 +70,7 @@
 ## 统一工具名与额外工具
 
 - 同一个归一化能力在所有平台用同一个工具名：`generate_image`、`generate_video`、`text_to_speech`、`clone_voice`、`design_voice`、`get_job`……每个能力只注册一个工具，不提供同义名。
-- 每个平台额外有一个 `list_declared_models`：列出声明里的模型、能力和生命周期提示，客户端不用硬编码模型清单。它不叫 `list_models`，因为百炼的 `list_models` 是官方模型目录查询，语义不同。工具名要符合 `^[a-zA-Z0-9_-]{1,64}$`，所以不用带冒号的名字。
+- 每个平台额外有一个 `list_declared_models`：列出声明里的模型、能力、生命周期提示和各渠道的上下文窗口 / 最大输出（官方公布了才有），客户端不用硬编码模型清单。它不叫 `list_models`，因为百炼的 `list_models` 是官方模型目录查询，语义不同。工具名要符合 `^[a-zA-Z0-9_-]{1,64}$`，所以不用带冒号的名字。
 - `resources/list`、`resources/templates/list`、`prompts/list` 返回空集合，避免部分客户端探测时报 `-32601`。
 
 ## `voice.list` 的命名

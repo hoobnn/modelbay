@@ -294,6 +294,53 @@ describe('toModelInfo', () => {
     expect(info.optionsSchema).toBeUndefined()
   })
 
+  it('contextWindow 与 maxOutputTokens 从声明到达模型信息，渠道级覆盖只作用于该渠道', () => {
+    const declaration = patch({
+      contextWindow: 256_000,
+      maxOutputTokens: 128_000,
+      channels: [
+        { channel: 'a', id: 'x' },
+        { channel: 'b', id: 'y', contextWindow: 1_000_000, maxOutputTokens: 384_000 },
+      ],
+    })
+    const [open, scoped] = declaration.channels
+    expect(toModelInfo(declaration, open)).toMatchObject({
+      contextWindow: 256_000,
+      maxOutputTokens: 128_000,
+    })
+    expect(toModelInfo(declaration, scoped)).toMatchObject({
+      contextWindow: 1_000_000,
+      maxOutputTokens: 384_000,
+    })
+    const info = toModelInfo(patch({}))
+    expect('contextWindow' in info).toBe(false)
+    expect('maxOutputTokens' in info).toBe(false)
+  })
+
+  it('token 数必须是正整数，声明了最大输出就要有上下文窗口', () => {
+    expect(validateDeclaration(patch({ contextWindow: 0 }))).toContain('contextWindow 应为正整数')
+    const missing = (problems: string[]) =>
+      problems.filter((p) => p.includes('声明了 maxOutputTokens 就应同时声明 contextWindow'))
+    expect(missing(validateDeclaration(patch({ maxOutputTokens: 100 })))).toHaveLength(1)
+    expect(validateDeclaration(patch({ contextWindow: 1000, maxOutputTokens: 100 }))).toEqual([])
+    // 每个渠道按生效值检查：别的渠道的窗口不能替它满足要求
+    const split = patch({
+      channels: [
+        { channel: 'a', id: 'a', contextWindow: 1000 },
+        { channel: 'b', id: 'b', maxOutputTokens: 100 },
+      ],
+    })
+    expect(missing(validateDeclaration(split))).toEqual([
+      'b.声明了 maxOutputTokens 就应同时声明 contextWindow',
+    ])
+    // 模型级窗口可以为渠道级最大输出兜底
+    const inherited = patch({
+      contextWindow: 1000,
+      channels: [{ channel: 'b', id: 'b', maxOutputTokens: 100 }],
+    })
+    expect(validateDeclaration(inherited)).toEqual([])
+  })
+
   it('retired 模型带 deprecated 标记', () => {
     const retired = patch({ lifecycle: { status: 'retired', source } })
     expect(toModelInfo(retired).deprecated).toBe(true)

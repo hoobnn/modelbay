@@ -13,7 +13,7 @@ import {
   type MCPTool,
   type ServerHandlers,
 } from '../src/types'
-import { fakeAdapter, fakeContext, platformOf } from './fixtures'
+import { fakeAdapter, fakeContext, fakeModels, platformOf } from './fixtures'
 
 const sampleTool: MCPTool = {
   name: 'chat',
@@ -329,6 +329,33 @@ describe('createHandlers tools/call 路由', () => {
     expect((jobs as CallToolResult).content[0]?.text).toContain('任务记录不落盘')
     const caps = await handlers.callTool('list_capabilities', {})
     expect((caps as CallToolResult).structuredContent).toBeDefined()
+  })
+
+  it('list_declared_models 带出各渠道的上下文窗口与最大输出，未声明的不出现', async () => {
+    const [chat] = fakeModels
+    const models = [
+      {
+        ...chat!,
+        contextWindow: 256_000,
+        channels: [
+          { channel: 'ark', id: 'chat-pro', maxOutputTokens: 128_000 },
+          { channel: 'ark-plan', id: 'chat-pro-plan', contextWindow: 1_000_000 },
+        ],
+      },
+      fakeModels[1]!,
+    ]
+    const handlers = handlersFor('minimax', fakeAdapter({ models }).adapter, {})
+    const out = (await handlers.callTool('list_declared_models', {})) as CallToolResult
+    const list = (
+      out.structuredContent as { models: Array<{ canonicalId: string; channels: unknown[] }> }
+    ).models
+    expect(list.find((item) => item.canonicalId === 'fake/chat-pro')?.channels).toEqual([
+      { channel: 'ark', id: 'chat-pro', contextWindow: 256_000, maxOutputTokens: 128_000 },
+      { channel: 'ark-plan', id: 'chat-pro-plan', contextWindow: 1_000_000 },
+    ])
+    expect(list.find((item) => item.canonicalId === 'fake/chat-old')?.channels).toEqual([
+      { channel: 'ark', id: 'chat-old' },
+    ])
   })
 
   it('豆包语音本地处理器：usage-examples / capabilities / voices', async () => {
