@@ -123,6 +123,14 @@ describe('录音文件转写', () => {
     expect(calls()[2]!.headers).toMatchObject({ 'X-DashScope-OssResourceResolve': 'enable' })
   })
 
+  it('speaker_count 按声明的范围校验，越界时不上传也不提交', async () => {
+    const { ctx, fetch } = fakeContext([], { mime: 'audio/wav' })
+    await expect(
+      native('asr-filetrans', { audio: { assetId: 'a', kind: 'audio' }, speaker_count: 1 }, ctx),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('拒绝 Data URI', async () => {
     await expect(
       native('asr-filetrans', { audio: 'data:audio/wav;base64,AAAA' }, fakeContext([]).ctx),
@@ -237,6 +245,22 @@ describe('音频生成（qwen-audio-3.1-tts-next）', () => {
         name: 'audio-generation.mp3',
       },
     ])
+  })
+
+  it('format 写在 parameters 里时输出文件也按它命名；参考音频可由 files.read 读取', async () => {
+    const { ctx, body } = fakeContext(
+      [{ output: { audio: { url: 'https://example.com/a.pcm' } } }],
+      { mime: 'audio/wav', files: {} },
+    )
+    const result = (await native(
+      'audio-generation',
+      { prompt: 'x', references: [{ assetId: 'v', kind: 'audio' }], parameters: { format: 'pcm' } },
+      ctx,
+    )) as { outputs: Array<{ mime: string; name: string }> }
+    expect(body(0).input.references[0].audio_data).toMatch(/^data:audio\/wav;base64,/)
+    expect(ctx.files!.read).toHaveBeenCalled()
+    expect(ctx.assets!.load).not.toHaveBeenCalled()
+    expect(result.outputs[0]).toMatchObject({ mime: 'audio/pcm', name: 'audio-generation.pcm' })
   })
 
   it('按声明挡住超量参考、越界参数和未知参数', async () => {

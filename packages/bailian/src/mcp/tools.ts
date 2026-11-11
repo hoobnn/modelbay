@@ -549,7 +549,7 @@ export const bailianTools: ToolSpec[] = [
       '完成时返回全文（text）和带时间戳的句子（json.segments，单位秒）。5 分钟以内的短音频用 speech_to_text 更快。\n' +
       '- audio：公网 URL、oss:// 地址或本地路径；本地文件会先上传到百炼临时存储（48 小时有效，不超过 15MB），更大的文件请给公网 URL。\n' +
       '- language：已知语种时指定（zh、en 等），写入 language_hints。\n' +
-      '- diarization：说话人分离（只对单声道音频生效），speaker_count 给参考人数（2–100，不保证）。\n' +
+      '- diarization：说话人分离（只对单声道音频生效），speaker_count 给参考人数（不保证），取值范围见 get_tool_help。\n' +
       '- parameters：合并进官方 parameters 对象（如 keep_dialect、vocabulary、vocabulary_id、channel_id）。\n' +
       '按 token 计费；channel_id 指定多个音轨时每个音轨单独计费。\n',
     inputSchema: {

@@ -89,7 +89,8 @@ export async function generateAudio(
     throw new ProviderError('unknown', '百炼没有返回生成的音频')
   // 官方返回的 OSS 链接是 http，同一地址可走 https。
   const url = audio.url.replace(/^http:\/\//i, 'https://')
-  const format = typeof opts.options.format === 'string' ? opts.options.format : 'wav'
+  // 以实际发出的 input 为准（format 也可能来自 parameters）；官方默认 wav
+  const format = typeof input.format === 'string' ? input.format : 'wav'
   return {
     model: spec.id,
     outputs: [

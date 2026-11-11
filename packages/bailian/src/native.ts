@@ -75,6 +75,7 @@ export function nativeOperationSchemas(
   const asr = asrModels(models)
   const rerankModel = selectNativeModel(models, 'rerank', 'bailian')?.channel.id
   const audioGen = selectNativeModel(models, 'audio-generation', 'bailian')
+  const filetrans = selectNativeModel(models, 'asr-filetrans', 'bailian')
   const embedModel = selectDefaultModel(models, 'text.embed', 'bailian')?.channel.id
   return {
     listModels: { type: 'object', properties: {} },
@@ -138,8 +139,8 @@ export function nativeOperationSchemas(
           ...(asr.filetrans.length ? { enum: asr.filetrans, default: asr.filetrans[0] } : {}),
         },
         language: { type: 'string' },
-        diarization: { type: 'boolean' },
-        speaker_count: { type: 'integer', minimum: 2, maximum: 100 },
+        // diarization / speaker_count 的取值范围来自声明的 optionsSchema
+        ...((filetrans?.declaration.optionsSchema?.properties ?? {}) as Record<string, unknown>),
         parameters: { type: 'object' },
       },
     },
@@ -497,6 +498,26 @@ export async function asrFiletrans(
   const available = asrModels(models)
   const model = asString(params.model) || available.filetrans[0] || ''
   const source = audioSource(params.audio)
+  const speakerCount = params.speaker_count
+  const declaration = models.find(
+    (item) =>
+      item.native?.includes('asr-filetrans') &&
+      item.channels.some((ref) => ref.channel === 'bailian' && ref.id === model),
+  )
+  const options = Object.fromEntries(
+    Object.entries({ diarization: params.diarization, speaker_count: speakerCount }).filter(
+      ([, value]) => value !== undefined,
+    ),
+  )
+  if (!declaration)
+    throw new ProviderError(
+      'invalid_input',
+      available.filetrans.length
+        ? `文件转写只支持 ${available.filetrans.join('、')}`
+        : '当前没有声明文件转写模型',
+    )
+  if (optionsProblem(declaration.optionsSchema, options))
+    throw new ProviderError('invalid_input', '文件转写参数无效（diarization / speaker_count）')
   let fileUrl: string
   if (typeof source === 'string') {
     if (source.startsWith('data:'))
@@ -506,7 +527,6 @@ export async function asrFiletrans(
     if (!upload) throw new ProviderError('invalid_input', '当前宿主不支持上传本地音频')
     fileUrl = await upload(ctx, source, model)
   }
-  const speakerCount = params.speaker_count
   const { path, body } = buildFiletransRequest(
     {
       fileUrl,

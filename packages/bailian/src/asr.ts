@@ -7,7 +7,7 @@
  */
 import { ProviderError, selectDefaultModel, toBase64, type AssetRef } from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
-import { asJson, arr, requestJson, type Json } from './http'
+import { asJson, arr, readAsset, requestJson, type Json } from './http'
 
 export const ASR_PATH = '/compatible-mode/v1/chat/completions'
 export const ASR_NATIVE_PATH = '/api/v1/services/aigc/multimodal-generation/generation'
@@ -210,9 +210,10 @@ export async function resolveAudio(src: string | AssetRef, ctx: AdapterContext):
     if (isRemote(src)) return src
     throw new ProviderError('invalid_input', '不支持本地路径，请传 URL、Data URI 或素材引用')
   }
-  if (!ctx.assets)
+  if (!ctx.files && !ctx.assets)
     throw new ProviderError('invalid_input', '读取素材引用的音频需要宿主提供素材来源')
-  const loaded = await ctx.assets.load(src.assetId)
+  // 与其他素材一致：优先宿主的 files.read，回退到 assets.load
+  const loaded = await readAsset(ctx, src)
   const mime = (loaded.mime || src.mime || '').toLowerCase()
   const subtype = mime.split('/')[1] ?? ''
   // 既认扩展名式的子类型（audio/mp3），也认标准 MIME 子类型（audio/mpeg、audio/x-wav）
