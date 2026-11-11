@@ -79,7 +79,7 @@ function undeclaredSection(gaps: UndeclaredGap[], skeletons: Map<string, string>
   if (gaps.length === 0) return []
   const out = ['## 官方 → 声明', '']
   out.push(
-    `官方列表页上有 ${gaps.length} 个模型 ID 没有声明。要支持哪个，用 \`--skeleton <id>\` 重跑生成声明骨架，照原文补齐能力、上下限和默认值。`,
+    `官方列表页上有 ${gaps.length} 个模型 ID 没有声明。要支持哪个，用 \`--skeleton <id>\` 重跑生成声明骨架，照原文补齐能力、上下限和默认值；决定不接的，加进 \`scripts/upstream/sources.ts\` 的 \`skipped\` 并写明原因。`,
     '',
   )
   for (const gap of gaps) {
@@ -111,9 +111,12 @@ function pagesSection(pages: PageStatus[]): string[] {
   return out
 }
 
-/** 声明这一侧有没有需要人处理的差距（决定跟踪 issue 开着还是关掉）。未声明的模型只列出，不算。 */
+/**
+ * 有没有需要人处理的差距（决定跟踪 issue 开着还是关掉）。未声明的模型也算：决定不接的登记进
+ * `sources.ts` 的 `skipped`，不会出现在这里。
+ */
 export function needsAttention(gaps: Gap[]): boolean {
-  return gaps.some((gap) => gap.kind !== 'undeclared')
+  return gaps.length > 0
 }
 
 export function renderReport(input: ReportInput): string {
@@ -137,7 +140,9 @@ export function renderReport(input: ReportInput): string {
     '',
   )
   out.push('## 声明 → 官方', '')
-  if (!needsAttention(input.gaps)) out.push('每个声明都能在官方文档里对上。', '')
+  if (lifecycle.length === 0 && unlisted.length === 0) {
+    out.push('每个声明都能在官方文档里对上。', '')
+  }
   out.push(
     ...lifecycleSection(lifecycle, input.applied),
     ...unlistedSection(unlisted),

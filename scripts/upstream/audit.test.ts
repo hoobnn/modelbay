@@ -275,11 +275,12 @@ describe('列表对账', () => {
       '| --- | --- |',
       '| doubao-img-2 | 新 |',
       '| doubao-img-1 | 旧 |',
+      '| doubao-img-3 | 不接 |',
       '| [Doubao Img](https://x/detail?name=doubao-img-9) | 链接参数不算 |',
     ].join('\n'),
   }
 
-  it('找出未声明的 ID、列表里找不到的声明，unlisted 和已下线的跳过', () => {
+  it('找出未声明的 ID、列表里找不到的声明，unlisted、skipped 和已下线的跳过', () => {
     const gaps = run(
       [list],
       [
@@ -288,7 +289,7 @@ describe('列表对账', () => {
         model('doubao-custom'),
         model('doubao-old-1', { status: 'retired' }),
       ],
-      { unlisted: ['doubao-custom'] },
+      { unlisted: ['doubao-custom'], skipped: ['Doubao-Img-3'] },
     )
     expect(gaps).toContainEqual(
       expect.objectContaining({
@@ -301,9 +302,10 @@ describe('列表对账', () => {
       expect.objectContaining({ canonicalId: 'v/doubao-gone-1', channel: 'c' }),
     ])
     expect(gaps.some((gap) => gap.kind === 'undeclared' && gap.id === 'doubao-img-9')).toBe(false)
+    expect(gaps.some((gap) => gap.kind === 'undeclared' && gap.id === 'doubao-img-3')).toBe(false)
   })
 
-  it('列表页漏列、但声明自己的来源页写着它的 ID，不算缺失；未声明的 ID 不算待处理', () => {
+  it('列表页漏列、但声明自己的来源页写着它的 ID，不算缺失；未声明的 ID 也算待处理', () => {
     const ref: Snapshot = {
       url: 'https://x/api',
       role: 'reference',
@@ -311,7 +313,8 @@ describe('列表对账', () => {
     }
     const gaps = run([list, ref], [model('doubao-gone-1', { sources: ['https://x/api'] })])
     expect(gaps.some((gap) => gap.kind === 'unlisted')).toBe(false)
-    expect(needsAttention(gaps)).toBe(false)
+    expect(needsAttention(gaps)).toBe(true)
+    expect(needsAttention(gaps.filter((gap) => gap.kind !== 'undeclared'))).toBe(false)
     const elsewhere = run([list, ref], [model('doubao-gone-1')])
     expect(elsewhere).toContainEqual(expect.objectContaining({ kind: 'unlisted' }))
     expect(needsAttention(elsewhere)).toBe(true)

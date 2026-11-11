@@ -113,7 +113,7 @@ jobs:
               gh issue create --title "$TITLE" --label upstream-docs --assignee "$OWNER" --body-file "$body"
             fi
           elif [ -n "$number" ]; then
-            gh issue close "$number" --comment "最新一次对账没有声明侧的差距，自动关闭。"
+            gh issue close "$number" --comment "最新一次对账没有差距，自动关闭。"
           fi
       - name: 抓取失败时让 job 失败
         if: steps.audit.outputs.errors != '0'

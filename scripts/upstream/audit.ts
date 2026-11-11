@@ -10,7 +10,8 @@
  * - `unlisted`：渠道内 ID 和别名在该渠道的列表页、声明自己引用的来源页里都找不到。
  *
  * 官方 → 声明：
- * - `undeclared`：官方列表页当前小节里有、我们没声明的模型 ID。历史模型不再支持，不报。
+ * - `undeclared`：官方列表页当前小节里有、我们没声明的模型 ID。历史模型不再支持，不报；
+ *   `skipped` 里登记过、决定不接的也不报。
  */
 import { dates, parseRows, plainText, type Row, tokens } from './markdown'
 
@@ -94,6 +95,8 @@ export interface AuditInput {
   excludePrefixes?: string[]
   /** 本来就不在官方列表和来源页里的渠道内 ID。 */
   unlisted?: string[]
+  /** 官方列表页上有、决定不接的渠道内 ID。 */
+  skipped?: string[]
 }
 
 /** 表头里表示「替代 / 迁移目标」的列：这些列里出现的模型不是被下线的那个。 */
@@ -246,6 +249,7 @@ export function audit(input: AuditInput): Gap[] {
     model.channels.every((ref) => ref.id === lower(ref.id)),
   )
   const unlisted = new Set((input.unlisted ?? []).map(lower))
+  const skipped = new Set((input.skipped ?? []).map(lower))
 
   // 已声明的名字 → 模型（渠道内 ID 和别名都算）
   const byName = new Map<string, DeclaredModel>()
@@ -351,6 +355,7 @@ export function audit(input: AuditInput): Gap[] {
         if (
           legacy ||
           byName.has(name) ||
+          skipped.has(name) ||
           candidates.has(key) ||
           !isCandidateId(token, prefixes, lowercaseOnly)
         ) {
