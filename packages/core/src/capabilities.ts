@@ -28,6 +28,7 @@ export const NATIVE_OPERATIONS = [
   'digital-human-lipsync',
   'edit-video',
   'context-ir',
+  'image-context-ir',
   'video-2k-rerender',
   'podcast',
   'simultaneous-interpretation',

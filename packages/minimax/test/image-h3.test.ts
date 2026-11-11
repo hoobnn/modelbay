@@ -1,7 +1,7 @@
-/** MiniMax-H3-Image：文生图 / 图片编辑的请求形状、尺寸映射、逐张失败与错误码。 */
+/** MiniMax-H3-Image：文生图 / 图片编辑的请求形状、尺寸映射、逐张失败与错误码，以及单独的 Prompt 增强。 */
 import { describe, expect, it } from 'vite-plus/test'
 import { minimaxAdapter } from '../src/index'
-import { hostContext, httpResponse } from './helpers'
+import { fakeContext, hostContext, httpResponse } from './helpers'
 
 // https://platform.minimax.cn/docs/api-reference/image-generation-h3-generations
 // https://platform.minimax.cn/docs/api-reference/image-generation-h3-edits
@@ -131,5 +131,48 @@ describe('MiniMax-H3-Image', () => {
       }),
     ])
     await expect(quota.result).rejects.toMatchObject({ code: 'quota' })
+  })
+})
+
+describe('MiniMax-H3-Image Prompt 增强（image-context-ir）', () => {
+  const native = (params: Record<string, unknown>, replies: unknown[] = []) => {
+    const f = fakeContext(replies as never, { mime: 'image/png' })
+    return { f, result: minimaxAdapter.native!('image-context-ir', params, f.ctx) }
+  }
+
+  it('文生图增强：默认模型取声明里标了 native 的 MiniMax-H3-Image，返回增强结果', async () => {
+    const { f, result } = native({ prompt: '一只猫', area: '2K' }, [
+      { revised_prompt: '一只橘猫……', aspect_ratio: '3:2', usage: { input_tokens: 10 } },
+    ])
+    expect(await result).toEqual({
+      revised_prompt: '一只橘猫……',
+      aspect_ratio: '3:2',
+      usage: { input_tokens: 10 },
+    })
+    const call = f.calls()[0]!
+    expect(call.url).toBe('https://api.minimax.cn/v1/h3_image_context_ir')
+    expect(call.body).toEqual({ model: 'MiniMax-H3-Image', prompt: '一只猫', area: '2K' })
+  })
+
+  it('参考图：远端地址原样传，素材 ID 读成 data URI', async () => {
+    const { f, result } = native(
+      { prompt: '换成狗', images: ['https://e.com/a.jpg', 'mm_file://1', 'local.png'] },
+      [{ revised_prompt: 'x' }],
+    )
+    await result
+    expect(f.calls()[0]!.body.images).toEqual([
+      { image_url: 'https://e.com/a.jpg' },
+      { image_url: 'mm_file://1' },
+      { image_url: 'data:image/png;base64,AQID' },
+    ])
+  })
+
+  it('Highspeed 不支持；宽x高 与画幅互斥', async () => {
+    await expect(
+      native({ prompt: 'x', model: 'MiniMax-H3-Image-Highspeed' }).result,
+    ).rejects.toThrow('不支持单独调用 Prompt 增强')
+    await expect(
+      native({ prompt: 'x', size: '2048x2048', aspect_ratio: '1:1' }).result,
+    ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 })
