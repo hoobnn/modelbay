@@ -76,6 +76,12 @@ export function nativeOperationSchemas(
   const rerankModel = selectNativeModel(models, 'rerank', 'bailian')?.channel.id
   const audioGen = selectNativeModel(models, 'audio-generation', 'bailian')
   const filetrans = selectNativeModel(models, 'asr-filetrans', 'bailian')
+  const rerankOptions = Object.assign(
+    {},
+    ...models
+      .filter((item) => item.native?.includes('rerank'))
+      .map((item) => (item.optionsSchema?.properties ?? {}) as Record<string, unknown>),
+  ) as Record<string, unknown>
   const embedModel = selectDefaultModel(models, 'text.embed', 'bailian')?.channel.id
   return {
     listModels: { type: 'object', properties: {} },
@@ -89,7 +95,8 @@ export function nativeOperationSchemas(
         top_n: { type: 'integer' },
         return_documents: { type: 'boolean' },
         instruct: { type: 'string' },
-        fps: { type: 'number', minimum: 0, maximum: 1 },
+        // 模型专属参数（如 qwen3-vl-rerank 的 fps）及其范围来自声明的 optionsSchema
+        ...rerankOptions,
       },
     },
     'text-embed': {
@@ -324,13 +331,27 @@ export async function rerank(
   const docs = multimodal
     ? documents.map((item) => (typeof item === 'string' ? { text: item } : item))
     : documents
-  const parameters: Json = { return_documents: params.return_documents === true }
+  const model =
+    asString(params.model) || selectNativeModel(models, 'rerank', 'bailian')?.channel.id || ''
+  const declaration = models.find(
+    (item) =>
+      item.native?.includes('rerank') &&
+      item.channels.some((ref) => ref.channel === 'bailian' && ref.id === model),
+  )
+  // 模型专属参数按声明的 optionsSchema 收与校验（如 fps 只有 qwen3-vl-rerank 有）
+  const names = optionKeys(declaration?.optionsSchema)
+  const options = Object.fromEntries(
+    names.filter((key) => params[key] !== undefined).map((key) => [key, params[key]]),
+  )
+  if (params.fps !== undefined && !names.includes('fps'))
+    throw new ProviderError('invalid_input', `${model} 不支持 fps`)
+  if (optionsProblem(declaration?.optionsSchema, options))
+    throw new ProviderError('invalid_input', '重排序参数无效')
+  const parameters: Json = { return_documents: params.return_documents === true, ...options }
   if (topN !== undefined) parameters.top_n = topN
   if (typeof params.instruct === 'string' && params.instruct) parameters.instruct = params.instruct
-  if (typeof params.fps === 'number') parameters.fps = params.fps
   const body: Json = {
-    model:
-      asString(params.model) || selectNativeModel(models, 'rerank', 'bailian')?.channel.id || '',
+    model,
     input: { query, documents: docs },
     parameters,
   }

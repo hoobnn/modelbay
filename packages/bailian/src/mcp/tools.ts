@@ -203,12 +203,6 @@ export const bailianTools: ToolSpec[] = [
           default: null,
         },
         model: { type: 'string' },
-        format: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        sample_rate: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
-        channels: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
-        volume: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
-        rate: { anyOf: [{ type: 'number' }, { type: 'null' }], default: null },
-        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
@@ -447,7 +441,7 @@ export const bailianTools: ToolSpec[] = [
     description:
       '对候选文档按与query的相关性排序，返回原索引和relevance_score；top_n控制数量，return_documents返回原文。\n' +
       'query与documents的每一项可以是文本，也可以是只含一个键的对象：{"text":…}、{"image":公网URL或Data URI}、documents里还可以{"video":公网URL}；' +
-      '图片、视频只有 qwen3-vl-rerank 支持，不上传本地文件。instruct自定义任务说明（建议英文），fps控制视频抽帧（0–1，仅 qwen3-vl-rerank）。\n' +
+      '图片、视频只有 qwen3-vl-rerank 支持，不上传本地文件。instruct自定义任务说明（建议英文），fps控制视频抽帧（仅 qwen3-vl-rerank，取值范围见 get_tool_help）。\n' +
       '所有模型统一走原生text-rerank接口。分数用于本次请求内比较。按输入计费，模型及地域权限以服务端为准。\n',
     capability: 'text.embed',
     mapArguments: mapRerankArguments,
@@ -461,7 +455,6 @@ export const bailianTools: ToolSpec[] = [
         top_n: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         return_documents: { type: 'boolean', default: false },
         instruct: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        fps: { anyOf: [{ type: 'number' }, { type: 'null' }], default: null },
       },
       required: ['query', 'documents'],
     },
@@ -559,8 +552,6 @@ export const bailianTools: ToolSpec[] = [
         audio: { type: 'string' },
         model: { type: 'string' },
         language: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        diarization: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
-        speaker_count: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         parameters: {
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
           default: null,

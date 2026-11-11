@@ -333,3 +333,15 @@ describe('多模态重排序', () => {
       })
   })
 })
+
+describe('重排序的模型专属参数', () => {
+  it('fps 按 qwen3-vl-rerank 声明校验，其他模型传 fps 直接报错', async () => {
+    for (const params of [
+      { model: 'qwen3-vl-rerank', query: '猫', documents: ['a'], fps: 2 },
+      { model: 'qwen3.7-text-rerank', query: '猫', documents: ['a'], fps: 0.5 },
+    ])
+      await expect(native('rerank', params, fakeContext([]).ctx)).rejects.toMatchObject({
+        code: 'invalid_input',
+      })
+  })
+})
