@@ -24,9 +24,82 @@ function submit(input: Record<string, unknown>, replies: unknown[] = [], model =
   return { f, result }
 }
 
+// 流式响应：等待期间的 keepalive 注释、按完成先后推送的逐张事件
+const sse = (events: Array<Record<string, unknown>>) =>
+  new Response(
+    [': keepalive', ...events.map((e) => `event: ${String(e.type)}\ndata: ${JSON.stringify(e)}`)]
+      .map((block) => `${block}\n\n`)
+      .join(''),
+    { headers: { 'content-type': 'text/event-stream' } },
+  )
+
 const url = (f: ReturnType<typeof hostContext>) => String(f.fetch.mock.calls[0]?.[0])
 
 describe('MiniMax-H3-Image', () => {
+  it('流式结果按 image_index 还原，逐张失败只记日志', async () => {
+    const { f, result } = submit({ count: 3, extra: { output_format: 'webp' } }, [
+      sse([
+        {
+          type: 'image_generation.partial_succeeded',
+          image_index: 1,
+          url: 'https://e.com/2.webp',
+          output_format: 'webp',
+        },
+        {
+          type: 'image_generation.partial_failed',
+          image_index: 2,
+          code: '1027',
+          message: 'unsafe',
+        },
+        {
+          type: 'image_generation.partial_succeeded',
+          image_index: 0,
+          url: 'https://e.com/1.webp',
+          output_format: 'webp',
+        },
+        { type: 'image_generation.completed', usage: { generated_images: 2 }, request_id: 'r' },
+      ]),
+    ])
+    const out = await result
+    expect(
+      out.state === 'succeeded' && out.outputs.map((o) => o.type === 'file' && [o.url, o.mime]),
+    ).toEqual([
+      ['https://e.com/1.webp', 'image/webp'],
+      ['https://e.com/2.webp', 'image/webp'],
+    ])
+    expect(f.ctx.log).toHaveBeenCalled()
+  })
+
+  it('流式 error 事件按其中的 HTTP 状态码与业务码归类；没有结束事件视为中断', async () => {
+    const failed = submit({}, [
+      sse([
+        {
+          type: 'image_generation.partial_failed',
+          image_index: 0,
+          code: '1027',
+          message: 'unsafe',
+        },
+        {
+          type: 'error',
+          error: { type: 'unprocessable_entity_error', message: 'unsafe (1027)', http_code: '422' },
+          usage: {},
+        },
+      ]),
+    ])
+    await expect(failed.result).rejects.toMatchObject({ code: 'content_policy' })
+
+    const cut = submit({}, [
+      sse([
+        { type: 'image_generation.partial_succeeded', image_index: 0, url: 'https://e.com/1.jpeg' },
+      ]),
+    ])
+    await expect(cut.result).rejects.toMatchObject({
+      code: 'unknown',
+      retryable: false,
+      outcome: 'unknown',
+    })
+  })
+
   it('文生图：画幅与分辨率映射成 aspect_ratio / area，固定 url 返回', async () => {
     const { f, result } = submit(
       { count: 2, resolution: '2K', extra: { aspectRatio: '16:9', output_format: 'png' } },
@@ -42,6 +115,7 @@ describe('MiniMax-H3-Image', () => {
       area: '2K',
       output_format: 'png',
       response_format: 'url',
+      stream: true,
     })
     expect(out.state === 'succeeded' && out.outputs).toEqual([
       { type: 'file', kind: 'image', mime: 'image/png', url: 'https://e.com/1.png' },
