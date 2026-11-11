@@ -6,10 +6,10 @@ import { MCP_TOOL_GROUPS, TOOL_GROUPS, TOOL_NATURES } from '../src/types'
 import { fakeAdapter, fakeModels, MCP_KEYS, toolsOf } from './fixtures'
 
 describe('工具目录解析', () => {
-  it('四个平台目录数量与盘点一致（共 61）', () => {
+  it('四个平台目录数量与盘点一致（共 62）', () => {
     const counts = MCP_KEYS.map((platform) => toolsOf(platform).length)
-    expect(counts).toEqual([9, 17, 19, 16])
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(61)
+    expect(counts).toEqual([9, 18, 19, 16])
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(62)
   })
 
   it('平台工具不声明 outputSchema：结果形状随工具变化，声明了客户端会按它校验', () => {
