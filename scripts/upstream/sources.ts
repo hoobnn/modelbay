@@ -101,6 +101,12 @@ export const SOURCES: PlatformSources[] = [
     key: 'bailian',
     pages: [
       { url: 'https://help.aliyun.com/zh/model-studio/models', role: 'list', channel: 'bailian' },
+      // 总览页只挑几个展示，完整的文本 / 视觉理解模型清单在这一页（总览页「查看更多」）
+      {
+        url: 'https://help.aliyun.com/zh/model-studio/text-generation-model',
+        role: 'list',
+        channel: 'bailian',
+      },
       {
         url: 'https://help.aliyun.com/zh/model-studio/tts-model',
         role: 'list',
@@ -207,6 +213,8 @@ export const SOURCES: PlatformSources[] = [
       'qwen3-asr-flash-filetrans',
       'qwen-audio-3.0-asr-flash-streaming',
       'qwen-audio-3.0-asr-flash',
+      // 实时语音对话（WebSocket 双向流），不在支持的能力内
+      'qwen-audio-3.1-realtime-flash',
     ],
   },
   {

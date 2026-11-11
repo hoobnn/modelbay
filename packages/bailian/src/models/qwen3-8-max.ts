@@ -16,7 +16,13 @@ export default {
   aliases: { official: [], short: ['max'] },
   lifecycle: {
     status: 'active',
-    source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-05' },
+    source: {
+      url: 'https://help.aliyun.com/zh/model-studio/text-generation-model',
+      checkedAt: '2026-11-11',
+    },
   },
-  source: { url: 'https://help.aliyun.com/zh/model-studio/models', checkedAt: '2026-11-05' },
+  source: {
+    url: 'https://help.aliyun.com/zh/model-studio/text-generation-model',
+    checkedAt: '2026-11-11',
+  },
 } satisfies ModelDeclaration
