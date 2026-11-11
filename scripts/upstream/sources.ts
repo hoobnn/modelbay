@@ -67,34 +67,39 @@ export const SOURCES: PlatformSources[] = [
       'doubao-seedream-5.0-pro',
     ],
     skipped: [
-      // 2026-11-11 基线：改成「未声明即提醒」时官方列表上已有、当时没接的 ID，没有逐个评估。
-      // 要接的从这里删掉再写声明；以后新增的条目写明不接的原因。
-      'doubao-seed-character-251128',
+      // 2026-11-11 逐个核对官方列表页后分组；要接的从这里删掉再写声明，新增条目写明不接的原因。
+      // 写法变体：套餐表格的短横线写法，套餐接口用点号，已按点号声明
+      'doubao-seed-2-0-mini',
+      'doubao-seedream-5-0-pro',
+      // 旧版本 / 旧快照：已声明更新的版本（Seed 2.1、Seedream 5.0、Seedance 2.x、embedding-vision-251215）
       'doubao-seed-2-0-lite-260428',
       'doubao-seed-2-0-mini-260428',
       'doubao-seed-2-0-pro-260215',
       'doubao-seed-2-0-lite-260215',
       'doubao-seed-2-0-mini-260215',
-      'doubao-seed-2-0-code-preview-260215',
+      'doubao-seedream-4-5-251128',
+      'doubao-seedream-4-0-250828',
+      'doubao-seedance-1-0-pro-250528',
+      'doubao-seedance-1-0-pro-fast-251015',
+      'doubao-embedding-vision-250615',
+      // 专用对话模型（角色扮演、翻译、代码预览）：不单独声明，需要时用 custom-chat 填 ID
+      'doubao-seed-character-251128',
       'doubao-seed-character-260628',
       'doubao-seed-translation-250915',
-      'glm-5-3-flash-260828',
-      'glm-5-2-260617',
-      'kimi-k3-1-pro-261024',
+      'doubao-seed-2-0-code-preview-260215',
+      // 3D 生成：没有对应能力
+      'doubao-seed3d-2-0-260328',
+      // 待定：第三方模型的按量版本。同款已作为套餐模型声明（agentOnly），按量渠道要不要开放待决定；
+      // 旧快照（deepseek-v4-1-flash-260910、deepseek-v4-pro-260425、glm-5-2-260617）决定后一并处理
       'deepseek-v4-1-flash-261017',
-      'deepseek-v4-1-flash-260910',
       'deepseek-v4-1-flash-economy-261017',
       'deepseek-v4-pro-ga-260813',
       'deepseek-v4-flash-ga-260731',
+      'glm-5-3-flash-260828',
+      'kimi-k3-1-pro-261024',
+      'deepseek-v4-1-flash-260910',
       'deepseek-v4-pro-260425',
-      'doubao-seedance-1-0-pro-250528',
-      'doubao-seedance-1-0-pro-fast-251015',
-      'doubao-seedream-4-5-251128',
-      'doubao-seedream-4-0-250828',
-      'doubao-seed3d-2-0-260328',
-      'doubao-embedding-vision-250615',
-      'doubao-seed-2-0-mini',
-      'doubao-seedream-5-0-pro',
+      'glm-5-2-260617',
     ],
   },
   {
@@ -139,27 +144,26 @@ export const SOURCES: PlatformSources[] = [
       },
     ],
     skipped: [
-      // 2026-11-11 基线：改成「未声明即提醒」时官方列表上已有、当时没接的 ID，没有逐个评估。
-      // 要接的从这里删掉再写声明；以后新增的条目写明不接的原因。
-      'happyhorse-1.1-t2v',
-      'happyhorse-1.1-i2v',
-      'happyhorse-1.1-r2v',
-      'qwen-audio-3.1-asr-flash-message',
-      'qwen-audio-3.1-asr-flash-streaming',
-      'qwen-audio-3.1-asr-flash',
-      'qwen-audio-3.1-asr-flash-filetrans',
-      'qwen-audio-3.1-realtime-plus',
-      'qwen3.5-omni-plus',
-      'qwen-audio-3.1-tts-next',
-      'qwen3.7-text-embedding-flash',
-      'qwen3.7-text-embedding',
-      'qwen3.8-omni-flash',
-      'qwen3.8-omni-flash-realtime',
+      // 2026-11-11 逐个核对官方列表页后分组；要接的从这里删掉再写声明，新增条目写明不接的原因。
+      // 不是模型 ID：文档链接路径里的短横线写法（qwen-audio-3.1-tts-* 已按点号声明）
       'qwen3-5-omni-plus',
       'qwen-audio-3-1-tts-flash',
       'qwen-audio-3-1-tts-plus',
+      // 不是百炼模型：迁移对照表里列的 OpenAI 模型
+      'text-embedding-3-large',
+      // 实时 / 全模态对话（WebSocket 双向流或音频输出），不在支持的能力内
+      'qwen-audio-3.1-realtime-flash',
+      'qwen-audio-3.1-realtime-plus',
+      'qwen3.5-omni-plus',
+      'qwen3.8-omni-flash',
+      'qwen3.8-omni-flash-realtime',
       'qwen3-tts-flash-realtime',
-      'wan2.7-image',
+      'qwen3-asr-flash-realtime',
+      'qwen-audio-3.1-asr-flash-streaming',
+      'qwen-audio-3.0-asr-flash-streaming',
+      'qwen-audio-3.1-asr-flash-message',
+      // 旧版本 / 旧快照：已声明更新的版本（qwen-image-3.0、wan2.7-image-pro、wan3.0-video、text-embedding-v4、
+      // qwen3-vl-embedding、qwen3.7-text-rerank、qwen3-asr-flash）
       'wan2.6-t2i',
       'wan2.6-image',
       'wan2.5-t2i-preview',
@@ -174,12 +178,6 @@ export const SOURCES: PlatformSources[] = [
       'qwen-image-2.0-pro-2026-03-03',
       'qwen-image-2.0',
       'qwen-image-2.0-2026-03-03',
-      'wan2.7-videoedit',
-      'wan2.2-animate-move',
-      'wan2.2-animate-mix',
-      'happyhorse-1.0-t2v',
-      'happyhorse-1.0-i2v',
-      'happyhorse-1.0-r2v',
       'wan2.7-t2v',
       'wan2.7-t2v-2026-06-12',
       'wan2.7-t2v-2026-04-25',
@@ -203,18 +201,30 @@ export const SOURCES: PlatformSources[] = [
       'wan2.1-i2v-turbo',
       'wan2.1-kf2v-plus',
       'wan2.1-vace-plus',
-      'text-embedding-3-large',
-      'qwen3-rerank',
+      'happyhorse-1.0-t2v',
+      'happyhorse-1.0-i2v',
+      'happyhorse-1.0-r2v',
       'text-embedding-v3',
       'qwen2.5-vl-embedding',
-      'qwen3-vl-rerank',
-      'qwen-audio-3.0-asr-flash-filetrans',
-      'qwen3-asr-flash-realtime',
-      'qwen3-asr-flash-filetrans',
-      'qwen-audio-3.0-asr-flash-streaming',
+      'qwen3-rerank',
       'qwen-audio-3.0-asr-flash',
-      // 实时语音对话（WebSocket 双向流），不在支持的能力内
-      'qwen-audio-3.1-realtime-flash',
+      'qwen-audio-3.0-asr-flash-filetrans',
+      'qwen3-asr-flash-filetrans',
+      // 专用视频模型（特效 / 运镜复刻、角色动画、换人），没有对应的归一化能力
+      'wan2.7-videoedit',
+      'wan2.2-animate-move',
+      'wan2.2-animate-mix',
+      // 待定：比已声明版本更新、能力也在范围内，建议接入，等决定
+      'happyhorse-1.1-t2v',
+      'happyhorse-1.1-i2v',
+      'happyhorse-1.1-r2v',
+      'qwen3.7-text-embedding',
+      'qwen3.7-text-embedding-flash',
+      'qwen-audio-3.1-asr-flash',
+      'qwen-audio-3.1-asr-flash-filetrans',
+      'qwen-audio-3.1-tts-next',
+      'wan2.7-image',
+      'qwen3-vl-rerank',
     ],
   },
   {
@@ -223,12 +233,13 @@ export const SOURCES: PlatformSources[] = [
       { url: 'https://platform.minimax.cn/docs/faq/models', role: 'list', channel: 'minimax' },
     ],
     skipped: [
-      // 2026-11-11 基线：改成「未声明即提醒」时官方列表上已有、当时没接的 ID，没有逐个评估。
-      // 要接的从这里删掉再写声明；以后新增的条目写明不接的原因。
+      // 2026-11-11 逐个核对官方列表页后分组；要接的从这里删掉再写声明，新增条目写明不接的原因。
+      // 不是模型 ID：文档链接路径
+      'speech-t2a-websocket',
+      // 旧版本：已声明 MiniMax-H3 视频与 speech-2.8
       'MiniMax-Hailuo-2.3',
       'MiniMax-Hailuo-2.3-Fast',
       'MiniMax-Hailuo-02',
-      'speech-t2a-websocket',
       'speech-2.6-hd',
       'speech-2.6-turbo',
       'speech-02-hd',
@@ -246,8 +257,8 @@ export const SOURCES: PlatformSources[] = [
       { url: 'https://developers.openai.com/api/docs/deprecations', role: 'deprecation' },
     ],
     skipped: [
-      // 2026-11-11 基线：改成「未声明即提醒」时官方列表上已有、当时没接的 ID，没有逐个评估。
-      // 要接的从这里删掉再写声明；以后新增的条目写明不接的原因。
+      // 2026-11-11 逐个核对官方列表页后分组；要接的从这里删掉再写声明，新增条目写明不接的原因。
+      // 旧版本：已声明 gpt-6 / gpt-6.1 系列
       'gpt-5.2',
       'gpt-5.2-pro',
       'gpt-5.4',
@@ -255,20 +266,23 @@ export const SOURCES: PlatformSources[] = [
       'gpt-5.4-pro',
       'gpt-5.5',
       'gpt-5.5-pro',
-      'gpt-5.6-cyber',
       'gpt-5.6-luna',
       'gpt-5.6-sol',
       'gpt-5.6-terra',
       'gpt-6-sol',
+      // 需单独申请权限的安全研究模型
+      'gpt-5.6-cyber',
       'gpt-6-cyber',
+      // 实时 / 音频对话，不在支持的能力内
       'gpt-audio-1.5',
       'gpt-live-1',
-      'gpt-oss-120b',
-      'gpt-oss-20b',
       'gpt-realtime-1.5',
       'gpt-realtime-2',
       'gpt-realtime-2.1',
       'gpt-realtime-2.1-mini',
+      // 开放权重模型，平台不提供托管调用
+      'gpt-oss-120b',
+      'gpt-oss-20b',
     ],
   },
 ]
