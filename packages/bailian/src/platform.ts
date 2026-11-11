@@ -9,7 +9,11 @@ export const bailianPlatform = definePlatform<BailianAdapterOptions>({
   key: 'bailian',
   title: 'Alibaba Bailian',
   primaryChannel: 'bailian',
-  channelSecrets: { bailian: ['BAILIAN_API_KEY'], 'bailian-plan': [PLAN_API_KEY] },
+  // 渠道就绪按环境变量名判断，按量渠道的别名也要列上
+  channelSecrets: {
+    bailian: ['BAILIAN_API_KEY', 'DASHSCOPE_API_KEY'],
+    'bailian-plan': [PLAN_API_KEY],
+  },
   secrets: {
     required: [['BAILIAN_API_KEY'], [PLAN_API_KEY]],
     optional: ['BAILIAN_BASE_URL', 'BAILIAN_POLL_INTERVAL_MS'],

@@ -33,6 +33,11 @@ const RESERVED = new Set([
 export interface ChatOptions {
   /** Responses 无状态工具循环需要回传加密思考块。 */
   openaiResponses?: boolean
+  /**
+   * Chat Completions 的思考内容要随工具调用回传（`reasoning_content`）：有工具调用时把思考内容放进
+   * `continuation.reasoningContent`，下一轮同一模型的 assistant 消息再原样带上。
+   */
+  replayReasoning?: boolean
   /** 原生协议模型；缺省使用共享 Chat Completions 适配器。 */
   languageModel?: LanguageModel
   providerOptions?: Parameters<typeof streamText>[0]['providerOptions']
@@ -85,10 +90,17 @@ async function toMessages(opts: ChatOptions): Promise<ModelMessage[]> {
           opts.openaiResponses && m.continuation?.model === opts.model
             ? m.continuation.encryptedContent
             : undefined
-        if (!m.toolCalls?.length && !encrypted) return { role: 'assistant', content: said }
+        const reasoning =
+          opts.replayReasoning && m.continuation?.model === opts.model
+            ? m.continuation.reasoningContent
+            : undefined
+        if (!m.toolCalls?.length && !encrypted && !reasoning)
+          return { role: 'assistant', content: said }
         return {
           role: 'assistant',
           content: [
+            // openai-compatible 把 reasoning 分片写回 assistant 消息的 reasoning_content
+            ...(reasoning ? [{ type: 'reasoning' as const, text: reasoning }] : []),
             ...(encrypted
               ? [
                   {
@@ -290,6 +302,12 @@ export async function chatCompletion(opts: ChatOptions) {
       if (output?.type === 'tool_calls')
         output.continuation = { model: opts.model, encryptedContent: encrypted }
     }
+  }
+  if (opts.replayReasoning && calls.length) {
+    const reasoning = await result.reasoningText
+    const output = outputs.find((p) => p.type === 'tool_calls')
+    if (reasoning && output?.type === 'tool_calls')
+      output.continuation = { model: opts.model, reasoningContent: reasoning }
   }
   if (input.jsonSchema) {
     try {

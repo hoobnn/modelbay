@@ -58,6 +58,55 @@ describe('百炼 Token Plan 渠道', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('工具调用多轮：思考内容放进 continuation，下一轮按 reasoning_content 回传', async () => {
+    const first = sse(
+      [
+        '{"choices":[{"delta":{"reasoning_content":"先查天气"}}]}',
+        '{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1","type":"function","function":{"name":"weather","arguments":"{\\"city\\":\\"杭州\\"}"}}]},"finish_reason":"tool_calls"}]}',
+      ]
+        .map((line) => `data: ${line}\n\n`)
+        .join('') + 'data: [DONE]\n\n',
+    )
+    const keys = { secrets: { [PLAN_API_KEY]: 'plan-key' } }
+    const tools = [{ name: 'weather', parameters: { type: 'object', properties: {} } }]
+    const one = fakeContext([first], keys)
+    const out = await plan.submit(
+      { ...chat('qwen4-max-preview'), input: { ...chat('').input, tools } } as never,
+      one.ctx,
+    )
+    const call =
+      out.state === 'succeeded' ? out.outputs.find((o) => o.type === 'tool_calls') : undefined
+    expect(call).toMatchObject({
+      calls: [{ id: 'c1', name: 'weather' }],
+      continuation: { model: 'qwen4-max-preview', reasoningContent: '先查天气' },
+    })
+
+    const two = fakeContext([DONE.clone()], keys)
+    await plan.submit(
+      {
+        ...chat('qwen4-max-preview'),
+        input: {
+          tools,
+          messages: [
+            { role: 'user', content: '杭州天气' },
+            {
+              role: 'assistant',
+              content: '',
+              toolCalls: call!.type === 'tool_calls' ? call!.calls : [],
+              continuation: call!.type === 'tool_calls' ? call!.continuation : undefined,
+            },
+            { role: 'tool', toolCallId: 'c1', toolName: 'weather', content: '晴' },
+          ],
+        },
+      } as never,
+      two.ctx,
+    )
+    expect(two.body().messages[1]).toMatchObject({
+      role: 'assistant',
+      reasoning_content: '先查天气',
+    })
+  })
+
   it('平台登记两个渠道：任一渠道的 Key 都能启动', () => {
     expect(bailianPlatform.createAdapters().map((item) => item.channels)).toEqual([
       ['bailian'],

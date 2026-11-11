@@ -566,6 +566,8 @@ export function createBailianAdapter(
             input: request.input as CapabilityInput<'text.chat'>,
             image: (ref) => inlineImage(ctx, ref),
             structured: 'json_object',
+            // 思考模型（qwen4-max-preview 等）的工具调用多轮要回传 reasoning_content
+            replayReasoning: true,
             streamError: (error) => withRetry(remoteError(200, { error }, ctx), 'POST'),
           })
         case 'image.generate':

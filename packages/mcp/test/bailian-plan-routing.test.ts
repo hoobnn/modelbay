@@ -50,6 +50,15 @@ function handlersWith(env: Record<string, string>) {
 const BOTH = { BAILIAN_API_KEY: 'api-key', BAILIAN_TOKEN_PLAN_API_KEY: 'plan-key' }
 
 describe('百炼 MCP 按渠道路由', () => {
+  it('按量 key 用别名 DASHSCOPE_API_KEY 时，不带模型仍走按量', async () => {
+    const { handlers, captured } = handlersWith({
+      DASHSCOPE_API_KEY: 'api-key',
+      BAILIAN_TOKEN_PLAN_API_KEY: 'plan-key',
+    })
+    await handlers.callTool('chat', { prompt: '你好' })
+    expect(captured[0]!.auth).toBe('Bearer api-key')
+  })
+
   it('只配套餐 key、不传模型：走 Token Plan 的默认对话模型', async () => {
     const { handlers, captured } = handlersWith({ BAILIAN_TOKEN_PLAN_API_KEY: 'plan-key' })
     const res = await handlers.callTool('chat', { prompt: '你好' })
@@ -62,6 +71,11 @@ describe('百炼 MCP 按渠道路由', () => {
     const preview = handlersWith(BOTH)
     await preview.handlers.callTool('chat', { prompt: '你好', model: 'qwen4-max-preview' })
     expect(preview.captured[0]!.url.startsWith(PLAN)).toBe(true)
+
+    // 官方别名同样按声明找渠道
+    const alias = handlersWith(BOTH)
+    await alias.handlers.callTool('chat', { prompt: '你好', model: 'qwen4.0-max-preview' })
+    expect(alias.captured[0]).toMatchObject({ auth: 'Bearer plan-key', model: 'qwen4-max-preview' })
 
     const prefixed = handlersWith(BOTH)
     await prefixed.handlers.callTool('chat', { prompt: '你好', model: 'bailian-plan:qwen3.8-max' })
