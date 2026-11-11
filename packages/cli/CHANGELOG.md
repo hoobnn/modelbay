@@ -1,5 +1,15 @@
 # @modelbay/cli
 
+## 0.4.0
+
+### Patch Changes
+
+- Updated dependencies [93440cd]
+- Updated dependencies [8d90620]
+- Updated dependencies [6cf4aa3]
+- Updated dependencies [fb7322b]
+  - modelbay@0.4.0
+
 ## 0.3.0
 
 ### Patch Changes
