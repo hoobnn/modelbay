@@ -109,6 +109,32 @@ describe('HappyHorse 1.1 视频生成', () => {
     ).rejects.toMatchObject({ code: 'invalid_input' })
   })
 
+  it('宿主给出素材宽高（ctx.files）时按 minEdge 校验参考图', async () => {
+    const ok = fakeContext([...upload(), task], { files: { width: 1024, height: 1024 } })
+    await expect(
+      adapter.submit(
+        {
+          capability: 'video.generate',
+          model: 'happyhorse-1.1-r2v',
+          input: { prompt: '@image1 跳舞', references: [image('a')] },
+        },
+        ok.ctx,
+      ),
+    ).resolves.toMatchObject({ state: 'pending' })
+    const small = fakeContext([], { files: { width: 300, height: 300 } })
+    await expect(
+      adapter.submit(
+        {
+          capability: 'video.generate',
+          model: 'happyhorse-1.1-r2v',
+          input: { prompt: '@image1 跳舞', references: [image('a')] },
+        },
+        small.ctx,
+      ),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(small.calls()).toHaveLength(0)
+  })
+
   it('万相 3.0 行为不变：-1 自适应时长、音频开关、图N 编号', async () => {
     const { ctx, body } = fakeContext([task])
     await adapter.submit(

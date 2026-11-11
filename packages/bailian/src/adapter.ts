@@ -472,7 +472,13 @@ async function generateVideo(
       .map((ref) => {
         const source = sources.get(ref.assetId)
         return {
-          sample: { mime: source?.mime, size: source?.data.length, duration: source?.duration },
+          sample: {
+            mime: source?.mime,
+            size: source?.data.length,
+            duration: source?.duration,
+            width: source?.width,
+            height: source?.height,
+          },
         }
       })
     const problems = mediaBatchProblems({
