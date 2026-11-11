@@ -63,13 +63,13 @@ Keys are supplied by the host and are never stored, logged or printed by the
 SDK. The environment variable names come from each platform's descriptor
 (`PLATFORMS[i].secrets`); any one group is enough:
 
-| Platform        | Variables                                                    |
-| --------------- | ------------------------------------------------------------ |
-| Volcengine Ark  | `ARK_API_KEY`, or `ARK_AGENT_PLAN_API_KEY`                   |
-| Alibaba Bailian | `BAILIAN_API_KEY` (alias `DASHSCOPE_API_KEY`)                |
-| MiniMax         | `MINIMAX_API_KEY`                                            |
-| Doubao Speech   | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN` |
-| OpenAI          | `OPENAI_API_KEY`, or `OPENAI_COMPATIBLE_API_KEY`             |
+| Platform        | Variables                                                                      |
+| --------------- | ------------------------------------------------------------------------------ |
+| Volcengine Ark  | `ARK_API_KEY`, or `ARK_AGENT_PLAN_API_KEY`                                     |
+| Alibaba Bailian | `BAILIAN_API_KEY` (alias `DASHSCOPE_API_KEY`), or `BAILIAN_TOKEN_PLAN_API_KEY` |
+| MiniMax         | `MINIMAX_API_KEY`                                                              |
+| Doubao Speech   | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN`                   |
+| OpenAI          | `OPENAI_API_KEY`, or `OPENAI_COMPATIBLE_API_KEY`                               |
 
 ## Platform-specific exports
 

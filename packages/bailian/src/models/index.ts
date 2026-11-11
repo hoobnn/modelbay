@@ -1,5 +1,6 @@
 import type { ModelDeclaration } from '@modelbay/core'
 import qwen38Max from './qwen3-8-max'
+import qwen4MaxPreview from './qwen4-max-preview'
 import qwen37Plus from './qwen3-7-plus'
 import qwen38Flash from './qwen3-8-flash'
 import qwenImage30Pro from './qwen-image-3-0-pro'
@@ -29,6 +30,7 @@ import zImageTurbo from './z-image-turbo'
 
 export {
   qwen38Max,
+  qwen4MaxPreview,
   qwen37Plus,
   qwen38Flash,
   qwenImage30Pro,
@@ -59,6 +61,7 @@ export {
 
 export const all: ModelDeclaration[] = [
   qwen38Max,
+  qwen4MaxPreview,
   qwen37Plus,
   qwen38Flash,
   qwenImage30Pro,

@@ -536,6 +536,11 @@ export function createBailianAdapter(
         )
       // 远端模型列表里的对话模型没有静态声明，放行；其余必须是声明过的百炼模型
       const resolved = resolveModel(models, model)
+      if (resolved && !resolved.declaration.channels.some((ref) => ref.channel === 'bailian'))
+        throw new ProviderError(
+          'invalid_input',
+          `${model} 只能通过百炼 Token Plan 渠道（bailian-plan）调用`,
+        )
       if (
         !resolved?.declaration.capabilities.includes(capability) &&
         !(request.remoteOnly && capability === 'text.chat')
@@ -561,6 +566,8 @@ export function createBailianAdapter(
             input: request.input as CapabilityInput<'text.chat'>,
             image: (ref) => inlineImage(ctx, ref),
             structured: 'json_object',
+            // 思考模型（qwen4-max-preview 等）的工具调用多轮要回传 reasoning_content
+            replayReasoning: true,
             streamError: (error) => withRetry(remoteError(200, { error }, ctx), 'POST'),
           })
         case 'image.generate':

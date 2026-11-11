@@ -255,12 +255,9 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
       if (byPrefix) return byPrefix
     }
     const fallback = defaultAdapter()
-    const declared = models.find(
-      (item) =>
-        item.id === model ||
-        item.canonicalId === model ||
-        item.channels.some((entry) => entry.id === model),
-    )
+    // 声明 ID、canonicalId、渠道 ID 和官方别名都认（resolveModel 同样处理）
+    const declared =
+      models.find((item) => item.id === model) ?? resolveModel(models, model)?.declaration
     if (!declared) return fallback
     const candidates = pool.filter((item) =>
       declared.channels.some((entry) => item.channels.includes(entry.channel)),

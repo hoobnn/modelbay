@@ -1,7 +1,7 @@
-/** MiniMax-H3-Image：文生图 / 图片编辑的请求形状、尺寸映射、逐张失败与错误码。 */
-import { describe, expect, it } from 'vite-plus/test'
+/** MiniMax-H3-Image：文生图 / 图片编辑的请求形状、尺寸映射、逐张失败与错误码，以及单独的 Prompt 增强。 */
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { minimaxAdapter } from '../src/index'
-import { hostContext, httpResponse } from './helpers'
+import { fakeContext, hostContext, httpResponse } from './helpers'
 
 // https://platform.minimax.cn/docs/api-reference/image-generation-h3-generations
 // https://platform.minimax.cn/docs/api-reference/image-generation-h3-edits
@@ -24,9 +24,82 @@ function submit(input: Record<string, unknown>, replies: unknown[] = [], model =
   return { f, result }
 }
 
+// 流式响应：等待期间的 keepalive 注释、按完成先后推送的逐张事件
+const sse = (events: Array<Record<string, unknown>>) =>
+  new Response(
+    [': keepalive', ...events.map((e) => `event: ${String(e.type)}\ndata: ${JSON.stringify(e)}`)]
+      .map((block) => `${block}\n\n`)
+      .join(''),
+    { headers: { 'content-type': 'text/event-stream' } },
+  )
+
 const url = (f: ReturnType<typeof hostContext>) => String(f.fetch.mock.calls[0]?.[0])
 
 describe('MiniMax-H3-Image', () => {
+  it('流式结果按 image_index 还原，逐张失败只记日志', async () => {
+    const { f, result } = submit({ count: 3, extra: { output_format: 'webp' } }, [
+      sse([
+        {
+          type: 'image_generation.partial_succeeded',
+          image_index: 1,
+          url: 'https://e.com/2.webp',
+          output_format: 'webp',
+        },
+        {
+          type: 'image_generation.partial_failed',
+          image_index: 2,
+          code: '1027',
+          message: 'unsafe',
+        },
+        {
+          type: 'image_generation.partial_succeeded',
+          image_index: 0,
+          url: 'https://e.com/1.webp',
+          output_format: 'webp',
+        },
+        { type: 'image_generation.completed', usage: { generated_images: 2 }, request_id: 'r' },
+      ]),
+    ])
+    const out = await result
+    expect(
+      out.state === 'succeeded' && out.outputs.map((o) => o.type === 'file' && [o.url, o.mime]),
+    ).toEqual([
+      ['https://e.com/1.webp', 'image/webp'],
+      ['https://e.com/2.webp', 'image/webp'],
+    ])
+    expect(f.ctx.log).toHaveBeenCalled()
+  })
+
+  it('流式 error 事件按其中的 HTTP 状态码与业务码归类；没有结束事件视为中断', async () => {
+    const failed = submit({}, [
+      sse([
+        {
+          type: 'image_generation.partial_failed',
+          image_index: 0,
+          code: '1027',
+          message: 'unsafe',
+        },
+        {
+          type: 'error',
+          error: { type: 'unprocessable_entity_error', message: 'unsafe (1027)', http_code: '422' },
+          usage: {},
+        },
+      ]),
+    ])
+    await expect(failed.result).rejects.toMatchObject({ code: 'content_policy' })
+
+    const cut = submit({}, [
+      sse([
+        { type: 'image_generation.partial_succeeded', image_index: 0, url: 'https://e.com/1.jpeg' },
+      ]),
+    ])
+    await expect(cut.result).rejects.toMatchObject({
+      code: 'unknown',
+      retryable: false,
+      outcome: 'unknown',
+    })
+  })
+
   it('文生图：画幅与分辨率映射成 aspect_ratio / area，固定 url 返回', async () => {
     const { f, result } = submit(
       { count: 2, resolution: '2K', extra: { aspectRatio: '16:9', output_format: 'png' } },
@@ -42,6 +115,7 @@ describe('MiniMax-H3-Image', () => {
       area: '2K',
       output_format: 'png',
       response_format: 'url',
+      stream: true,
     })
     expect(out.state === 'succeeded' && out.outputs).toEqual([
       { type: 'file', kind: 'image', mime: 'image/png', url: 'https://e.com/1.png' },
@@ -131,5 +205,69 @@ describe('MiniMax-H3-Image', () => {
       }),
     ])
     await expect(quota.result).rejects.toMatchObject({ code: 'quota' })
+  })
+})
+
+describe('MiniMax-H3-Image Prompt 增强（image-context-ir）', () => {
+  const native = (params: Record<string, unknown>, replies: unknown[] = []) => {
+    const f = fakeContext(replies as never, { mime: 'image/png' })
+    return { f, result: minimaxAdapter.native!('image-context-ir', params, f.ctx) }
+  }
+
+  it('文生图增强：默认模型取声明里标了 native 的 MiniMax-H3-Image，返回增强结果', async () => {
+    const { f, result } = native({ prompt: '一只猫', area: '2K' }, [
+      { revised_prompt: '一只橘猫……', aspect_ratio: '3:2', usage: { input_tokens: 10 } },
+    ])
+    expect(await result).toEqual({
+      revised_prompt: '一只橘猫……',
+      aspect_ratio: '3:2',
+      usage: { input_tokens: 10 },
+    })
+    const call = f.calls()[0]!
+    expect(call.url).toBe('https://api.minimax.cn/v1/h3_image_context_ir')
+    expect(call.body).toEqual({ model: 'MiniMax-H3-Image', prompt: '一只猫', area: '2K' })
+  })
+
+  it('参考图：远端地址原样传，素材 ID 读成 data URI', async () => {
+    const { f, result } = native(
+      { prompt: '换成狗', images: ['https://e.com/a.jpg', 'mm_file://1', 'local.png'] },
+      [{ revised_prompt: 'x' }],
+    )
+    await result
+    expect(f.calls()[0]!.body.images).toEqual([
+      { image_url: 'https://e.com/a.jpg' },
+      { image_url: 'mm_file://1' },
+      { image_url: 'data:image/png;base64,AQID' },
+    ])
+  })
+
+  it('Highspeed 不支持；宽x高 与画幅互斥', async () => {
+    await expect(
+      native({ prompt: 'x', model: 'MiniMax-H3-Image-Highspeed' }).result,
+    ).rejects.toThrow('不支持单独调用 Prompt 增强')
+    await expect(
+      native({ prompt: 'x', size: '2048x2048', aspect_ratio: '1:1' }).result,
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    // 面积档按声明的 resolutions 校验
+    const bad = native({ prompt: 'x', area: '8K' })
+    await expect(bad.result).rejects.toThrow('1K / 2K / 4K')
+    expect(bad.f.calls()).toHaveLength(0)
+  })
+
+  it('model 认 canonicalId 与渠道前缀；宿主只给 ctx.files 时本地图走 files.read', async () => {
+    for (const model of ['minimax/MiniMax-H3-Image', 'minimax:MiniMax-H3-Image']) {
+      const { f, result } = native({ prompt: 'x', model }, [{ revised_prompt: 'y' }])
+      await result
+      expect(f.calls()[0]!.body.model).toBe('MiniMax-H3-Image')
+    }
+    const host = hostContext([{ revised_prompt: 'y' }])
+    const read = vi.fn(async () => ({ data: new Uint8Array([1, 2, 3]), mime: 'image/webp' }))
+    await minimaxAdapter.native!(
+      'image-context-ir',
+      { prompt: 'x', images: ['local'] },
+      { ...host.ctx, assets: undefined, files: { read } },
+    )
+    expect(read).toHaveBeenCalledWith({ assetId: 'local', kind: 'image' })
+    expect(host.body().images).toEqual([{ image_url: 'data:image/webp;base64,AQID' }])
   })
 })

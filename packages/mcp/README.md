@@ -14,18 +14,23 @@ One command serves every platform that ships MCP tools; the platform is the firs
 npx -y @modelbay/mcp ark            # or: modelbay-mcp ark
 ```
 
-| Platform        | Argument        | Required keys (any one row)                                  |
-| --------------- | --------------- | ------------------------------------------------------------ |
-| Volcengine Ark  | `ark`           | `ARK_API_KEY`, or `ARK_AGENT_PLAN_API_KEY`                   |
-| MiniMax         | `minimax`       | `MINIMAX_API_KEY`                                            |
-| Alibaba Bailian | `bailian`       | `BAILIAN_API_KEY` (alias `DASHSCOPE_API_KEY`)                |
-| Doubao Speech   | `doubao-speech` | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN` |
-| OpenAI          | `openai`        | `OPENAI_API_KEY`                                             |
+| Platform        | Argument        | Required keys (any one row)                                                    |
+| --------------- | --------------- | ------------------------------------------------------------------------------ |
+| Volcengine Ark  | `ark`           | `ARK_API_KEY`, or `ARK_AGENT_PLAN_API_KEY`                                     |
+| MiniMax         | `minimax`       | `MINIMAX_API_KEY`                                                              |
+| Alibaba Bailian | `bailian`       | `BAILIAN_API_KEY` (alias `DASHSCOPE_API_KEY`), or `BAILIAN_TOKEN_PLAN_API_KEY` |
+| Doubao Speech   | `doubao-speech` | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN`                   |
+| OpenAI          | `openai`        | `OPENAI_API_KEY`                                                               |
 
 Ark has two billing channels. Prefix the model with `ark-plan:` to use the Agent Plan
 (`ARK_AGENT_PLAN_API_KEY`, `/api/plan/v3`) and `ark:` for pay-per-use (`ARK_API_KEY`). A model
 without a prefix goes to the channel it is declared in, preferring pay-per-use when both keys are
 set; with only the plan key configured, calls without a model use the plan.
+
+Bailian works the same way for text chat: `bailian-plan:` (or a model only offered in the Token
+Plan, such as `qwen4-max-preview`) uses `BAILIAN_TOKEN_PLAN_API_KEY` and the Token Plan endpoint.
+Token Plan keys are for interactive use inside coding and agent tools only, so plan models are
+marked `agentOnly`.
 
 The platform list, key names and aliases come from each platform package's `PlatformDescriptor`;
 running `modelbay-mcp` without an argument prints the available platforms. Keys are supplied by the
