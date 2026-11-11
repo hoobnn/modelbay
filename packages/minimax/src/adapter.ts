@@ -17,6 +17,7 @@ import {
 import { chat } from './chat'
 import { asJson, errorCode, requestJson } from './http'
 import { image } from './image'
+import { h3Image } from './image-h3'
 import { MINIMAX_NATIVE_OPERATIONS, nativeOperationSchemas, runMinimaxNative } from './native'
 import { fromHex, optionSource, pickKeys, required, taskId, usage } from './util'
 import { video } from './video'
@@ -92,7 +93,13 @@ export function createMinimaxAdapter(models: ModelDeclaration[]): PlatformAdapte
         case 'text.chat':
           return chat(request as AdapterRequest<'text.chat'>, model, spec, ctx)
         case 'image.generate':
-          return image(request as AdapterRequest<'image.generate'>, model, spec!, ctx)
+          // H3-Image 系列走 OpenAI 风格的 /v1/images/* 接口，参数形状和 image-01 不同
+          return (model.startsWith('MiniMax-H3-Image') ? h3Image : image)(
+            request as AdapterRequest<'image.generate'>,
+            model,
+            spec!,
+            ctx,
+          )
         case 'video.generate':
           return video(request as AdapterRequest<'video.generate'>, model, spec!, ctx)
         case 'audio.speech': {

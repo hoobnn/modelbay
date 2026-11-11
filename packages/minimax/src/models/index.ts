@@ -4,6 +4,8 @@ import minimaxM31Flash from './minimax-m3-1-flash'
 import minimaxM27 from './minimax-m2-7'
 import image01 from './image-01'
 import image01Live from './image-01-live'
+import minimaxH3Image from './minimax-h3-image'
+import minimaxH3ImageHighspeed from './minimax-h3-image-highspeed'
 import minimaxH3 from './minimax-h3'
 import minimaxH3Highspeed from './minimax-h3-highspeed'
 import minimaxH3Lite from './minimax-h3-lite'
@@ -19,6 +21,8 @@ export {
   minimaxM27,
   image01,
   image01Live,
+  minimaxH3Image,
+  minimaxH3ImageHighspeed,
   minimaxH3,
   minimaxH3Highspeed,
   minimaxH3Lite,
@@ -35,6 +39,8 @@ export const all: ModelDeclaration[] = [
   minimaxM27,
   image01,
   image01Live,
+  minimaxH3Image,
+  minimaxH3ImageHighspeed,
   minimaxH3,
   minimaxH3Highspeed,
   minimaxH3Lite,
