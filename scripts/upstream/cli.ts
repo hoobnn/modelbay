@@ -242,6 +242,7 @@ async function auditPlatform(
     ...(config.prefixes ? { prefixes: config.prefixes } : {}),
     ...(config.excludePrefixes ? { excludePrefixes: config.excludePrefixes } : {}),
     ...(config.unlisted ? { unlisted: config.unlisted } : {}),
+    ...(config.skipped ? { skipped: config.skipped } : {}),
   })
 
   const applied: string[] = []
