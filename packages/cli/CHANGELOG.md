@@ -1,5 +1,14 @@
 # @modelbay/cli
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [ef5e661]
+- Updated dependencies [4fa3d4b]
+- Updated dependencies [ef5e661]
+  - modelbay@0.5.0
+
 ## 0.4.0
 
 ### Patch Changes
