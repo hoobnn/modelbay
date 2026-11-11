@@ -24,6 +24,8 @@ export default {
       size: { minPixels: 655360, maxPixels: 20000000, minRatio: 1 / 3, maxRatio: 3, auto: true },
     },
     media: {
+      // 单张 ≤64 MB 是官方的单文件上限；另有请求体合计 ≤64 MiB（base64 后约为原文件的 4/3），
+      // 由提交时的编码后总量检查兜住，超过时官方建议改用公网 URL 或 mm_file://
       image: {
         mime: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
         maxMB: 64,
