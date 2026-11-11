@@ -1,5 +1,20 @@
 # modelbay
 
+## 0.4.0
+
+### Minor Changes
+
+- 93440cd: 百炼新增 Token Plan 渠道（`bailian-plan`，密钥 `BAILIAN_TOKEN_PLAN_API_KEY`，只接文本对话），接入仅限套餐的 `qwen4-max-preview`（别名 `qwen4.0-max-preview`，2026-11-25 预览结束下线），并给 qwen3.8-max / qwen3.8-flash / qwen3.7-plus 补上套餐渠道。套餐模型标为 agentOnly。
+
+  百炼对话有工具调用时，思考内容通过 `continuation.reasoningContent` 返回，下一轮同模型自动按 `reasoning_content` 回传。
+
+- 8d90620: MiniMax 新增原生操作 `image-context-ir`（MCP 工具 `h3_image_context_ir`）：单独调用 `MiniMax-H3-Image` 的 Prompt 增强，同步返回增强后的 prompt，不生成图片；可带 1–16 张参考图按图片编辑增强。只有声明里标了 `native: ['image-context-ir']` 的模型可用，Highspeed 不支持。
+- fb7322b: MiniMax 新增图片模型 `MiniMax-H3-Image` 和 `MiniMax-H3-Image-Highspeed`：没有参考图时文生图，带 1–16 张参考图时图片编辑；支持画幅 + 1K/2K/4K 面积档或自定义宽高（最大 2000 万像素）、输出格式与压缩质量、关闭提示词增强。MCP `generate_image` 新增 `images`（多张参考图）和 `resolution` 参数。MiniMax 的 OpenAI 风格错误按 message 末尾的业务码归类（如 1026 归为内容安全）。
+
+### Patch Changes
+
+- 6cf4aa3: MiniMax-H3-Image 文生图与图片编辑改用流式响应保活，避免 Node fetch 默认 300 秒收不到响应头就断开（服务端最长等 600 秒）。
+
 ## 0.3.0
 
 ### Minor Changes
