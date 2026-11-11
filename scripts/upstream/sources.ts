@@ -215,6 +215,11 @@ export const SOURCES: PlatformSources[] = [
       'qwen-audio-3.0-asr-flash',
       // 实时语音对话（WebSocket 双向流），不在支持的能力内
       'qwen-audio-3.1-realtime-flash',
+      // 只能用 Token Plan 套餐 Key 调用，套餐条款禁止用于自动化脚本和应用后端；
+      // 预览期至 2026-11-25 后下线（2026-11-11 核对：
+      // https://help.aliyun.com/zh/model-studio/qwen4-max-preview 、
+      // https://help.aliyun.com/zh/model-studio/token-plan-personal-overview）
+      'qwen4-max-preview',
     ],
   },
   {
