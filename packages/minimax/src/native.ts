@@ -2,9 +2,10 @@
  * MiniMax-only native operations and their parameter schemas (declared by the adapter).
  */
 import { ProviderError, toBase64 } from '@modelbay/core'
-import { selectDefaultModel, selectNativeModel } from '@modelbay/core'
+import { resolveModel, selectDefaultModel, selectNativeModel } from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration, RemoteModel } from '@modelbay/core'
 import { minimaxModelList, redact } from '@modelbay/shared'
+import { withFiles } from './files'
 import { required, taskId } from './util'
 import {
   apiKey,
@@ -461,13 +462,13 @@ export async function imageContextIr(
   params: Json,
   models: readonly ModelDeclaration[],
 ): Promise<Json> {
-  const requested = asString(params.model).replace(/^minimax:/, '')
+  const requested = asString(params.model)
+  // 渠道前缀、canonicalId、官方别名都按声明解析
+  const declared = requested ? resolveModel(models, requested)?.declaration : undefined
   const resolved = requested
-    ? models.find(
-        (model) =>
-          model.native?.includes('image-context-ir') &&
-          model.channels.some((ref) => ref.id === requested),
-      )
+    ? declared?.native?.includes('image-context-ir')
+      ? declared
+      : undefined
     : selectNativeModel(models, 'image-context-ir')?.declaration
   if (!resolved)
     throw new ProviderError(
@@ -487,6 +488,13 @@ export async function imageContextIr(
   const explicit = size !== undefined && size !== 'auto'
   if (explicit && (params.aspect_ratio !== undefined || params.area !== undefined))
     throw new ProviderError('invalid_input', 'size 为宽x高时不能再传 aspect_ratio 或 area')
+  const area = asString(params.area) || undefined
+  if (area && limits.resolutions && !limits.resolutions.includes(area))
+    throw new ProviderError(
+      'invalid_input',
+      `${resolved.title} 的 area 只支持 ${limits.resolutions.join(' / ')}`,
+    )
+  const files = withFiles(ctx).files
   const requirement = limits.media?.image
   let bytes = 0
   const images: Json[] = []
@@ -495,9 +503,9 @@ export async function imageContextIr(
       images.push({ image_url: source })
       continue
     }
-    if (!ctx.assets) throw new ProviderError('invalid_input', '读取本地参考图需要素材源')
-    const loaded = await ctx.assets.load(source)
-    const mime = loaded.mime.toLowerCase()
+    if (!files) throw new ProviderError('invalid_input', '读取本地参考图需要素材源')
+    const loaded = await files.read({ assetId: source, kind: 'image' })
+    const mime = (loaded.mime ?? '').toLowerCase()
     if (requirement?.mime && !requirement.mime.includes(mime))
       throw new ProviderError('invalid_input', `${resolved.title} 不支持 ${mime} 格式的参考图`)
     if (
@@ -521,7 +529,7 @@ export async function imageContextIr(
     ...(images.length ? { images } : {}),
     size,
     aspect_ratio: explicit ? undefined : params.aspect_ratio,
-    area: explicit ? undefined : params.area,
+    area: explicit ? undefined : area,
   })
   if (typeof data.revised_prompt !== 'string' || !data.revised_prompt)
     throw new ProviderError('unknown', 'MiniMax 响应缺少增强后的 prompt', { retryable: false })

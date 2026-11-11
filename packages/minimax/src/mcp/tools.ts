@@ -58,7 +58,7 @@ export const minimaxTools: ToolSpec[] = [
     // https://platform.minimax.cn/docs/api-reference/image-generation-h3-context-ir）
     description:
       '单独调用 MiniMax-H3-Image 的 Prompt 增强（官方 POST /v1/h3_image_context_ir），同步返回 revised_prompt，不生成图片；增强成本折算为输入 token 计费，失败不计费。\n' +
-      '不传 images 按文生图增强；images 传 1~16 张参考图（公网URL、mm_file://ID、data URI 或本地绝对路径）按图片编辑增强。仅 MiniMax-H3-Image 支持，Highspeed 不支持。\n' +
+      '不传 images 按文生图增强；images 传参考图（公网URL、mm_file://ID、data URI 或本地绝对路径）按图片编辑增强，张数上限同 generate_image 里该模型的参考图上限。仅 MiniMax-H3-Image 支持，Highspeed 不支持。\n' +
       'size（宽x高）与 aspect_ratio / area 二选一，只影响图片编辑增强；比例由增强决定时返回 aspect_ratio。分两步生成：把 revised_prompt 交给 generate_image，parameters 设 disable_prompt_enhanced=true 并带上 aspect_ratio。\n',
     capability: 'image.generate',
     inputSchema: {
@@ -73,10 +73,8 @@ export const minimaxTools: ToolSpec[] = [
         },
         size: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         aspect_ratio: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
-        area: {
-          anyOf: [{ type: 'string', enum: ['1K', '2K', '4K'] }, { type: 'null' }],
-          default: null,
-        },
+        // 面积档取值同 generate_image 的 resolution，由实现按声明校验
+        area: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
       },
       required: ['prompt'],
     },

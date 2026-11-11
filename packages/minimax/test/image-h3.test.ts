@@ -1,5 +1,5 @@
 /** MiniMax-H3-Image：文生图 / 图片编辑的请求形状、尺寸映射、逐张失败与错误码，以及单独的 Prompt 增强。 */
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { minimaxAdapter } from '../src/index'
 import { fakeContext, hostContext, httpResponse } from './helpers'
 
@@ -174,5 +174,26 @@ describe('MiniMax-H3-Image Prompt 增强（image-context-ir）', () => {
     await expect(
       native({ prompt: 'x', size: '2048x2048', aspect_ratio: '1:1' }).result,
     ).rejects.toMatchObject({ code: 'invalid_input' })
+    // 面积档按声明的 resolutions 校验
+    const bad = native({ prompt: 'x', area: '8K' })
+    await expect(bad.result).rejects.toThrow('1K / 2K / 4K')
+    expect(bad.f.calls()).toHaveLength(0)
+  })
+
+  it('model 认 canonicalId 与渠道前缀；宿主只给 ctx.files 时本地图走 files.read', async () => {
+    for (const model of ['minimax/MiniMax-H3-Image', 'minimax:MiniMax-H3-Image']) {
+      const { f, result } = native({ prompt: 'x', model }, [{ revised_prompt: 'y' }])
+      await result
+      expect(f.calls()[0]!.body.model).toBe('MiniMax-H3-Image')
+    }
+    const host = hostContext([{ revised_prompt: 'y' }])
+    const read = vi.fn(async () => ({ data: new Uint8Array([1, 2, 3]), mime: 'image/webp' }))
+    await minimaxAdapter.native!(
+      'image-context-ir',
+      { prompt: 'x', images: ['local'] },
+      { ...host.ctx, assets: undefined, files: { read } },
+    )
+    expect(read).toHaveBeenCalledWith({ assetId: 'local', kind: 'image' })
+    expect(host.body().images).toEqual([{ image_url: 'data:image/webp;base64,AQID' }])
   })
 })
