@@ -277,7 +277,13 @@ export async function requestJson(
       String(businessError.message ?? baseResp.status_msg ?? `HTTP ${res.status}`),
       [ctx.secret('MINIMAX_API_KEY')?.trim()],
     )
-    const normalized = errorCode(rawCode) === 'unknown' ? errorCode(res.status) : errorCode(rawCode)
+    // OpenAI 风格的错误（/v1/images/*）把 MiniMax 业务码写在 message 末尾的括号里，如「(1026)」
+    const trailing = /\((\d{4})\)\s*$/.exec(message)?.[1]
+    const normalized =
+      [rawCode, trailing, res.status]
+        .filter((code) => code !== undefined)
+        .map((code) => errorCode(code!))
+        .find((code) => code !== 'unknown') ?? 'unknown'
     throw withRetry(
       new ProviderError(normalized, `MiniMax：${message}`, {
         cause: { status: res.status, code: rawCode, message },

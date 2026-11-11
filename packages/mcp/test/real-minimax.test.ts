@@ -147,6 +147,40 @@ describe('MCP MiniMax 参数进上游请求', () => {
     })
   })
 
+  it('generate_image：MiniMax-H3-Image 的多张参考图、面积档与专属参数', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'mmx-'))
+    const a = join(dir, 'a.png')
+    const b = join(dir, 'b.png')
+    for (const file of [a, b])
+      writeFileSync(file, new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]))
+    const { handlers, captured } = setup(() =>
+      json({ data: [{ url: 'https://example.com/a.webp' }], output_format: 'webp' }),
+    )
+    await handlers.callTool('generate_image', {
+      prompt: '把图1的猫换成图2的狗',
+      model: 'MiniMax-H3-Image',
+      aspect_ratio: '3:1',
+      resolution: '2K',
+      prompt_optimizer: true,
+      images: [a, b],
+      parameters: { output_format: 'webp', output_compression: 80 },
+    })
+    const body = bodyOf(captured, '/v1/images/edits')!
+    expect(body).toMatchObject({
+      model: 'MiniMax-H3-Image',
+      aspect_ratio: '3:1',
+      area: '2K',
+      output_format: 'webp',
+      output_compression: 80,
+      response_format: 'url',
+    })
+    expect(body).not.toHaveProperty('prompt_optimizer')
+    expect(body.images).toHaveLength(2)
+    expect((body.images as Array<{ image_url: string }>)[0]!.image_url).toMatch(
+      /^data:image\/png;base64,/,
+    )
+  })
+
   it('generate_video：parameters 的 callback_url / aigc_watermark 与画幅时长', async () => {
     const { handlers, captured } = setup((url) =>
       url.includes('/v2/video_generation') ? json({ task_id: '123' }) : new Response('x'),

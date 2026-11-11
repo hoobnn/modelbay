@@ -300,20 +300,29 @@ export const minimaxTools: ToolSpec[] = [
     name: 'generate_image',
     // 历史工具名保留兼容，同时注册跨平台统一命名
     description:
-      'MiniMax文生图/人物参考图生图，按张计费。subject_reference为单人人像公网URL/data URI或本地JPG/PNG(<10MB)。\n' +
-      'parameters只支持seed、aigc_watermark和style（{style_type, style_weight}，仅image-01-live生效，style_type为漫画/元气/中世纪/水彩）。\n' +
+      'MiniMax文生图/参考图生图，按张计费。\n' +
+      'image-01系列：subject_reference为单人人像公网URL/data URI或本地JPG/PNG(<10MB)；parameters只支持seed、aigc_watermark和style（{style_type, style_weight}，仅image-01-live生效，style_type为漫画/元气/中世纪/水彩）。\n' +
+      'MiniMax-H3-Image系列：images传1~16张参考图时走图片编辑，否则文生图；resolution为面积档1K/2K/4K（默认4K）；parameters支持size（宽x高）、output_format、output_compression、disable_prompt_enhanced（仅文生图）、aigc_watermark。\n' +
       'local模式下载图片，url模式返回24小时链接；部分失败如实报告，recover_job只补交付。\n',
     capability: 'image.generate',
     // subject_reference 是单张人像：换成通用的 images，由 MCP 素材源读取后进适配器的人物参考
     // （POST /v1/image_generation，type=character，JPG/PNG <10MB，2026-11-06 核对：
     // https://platform.minimax.cn/docs/api-reference/image-generation-i2i）
-    mapArguments: ({ subject_reference, ...args }) => ({
+    // H3-Image 的多张参考图直接用 images
+    mapArguments: ({ subject_reference, images, ...args }) => ({
       ...args,
-      ...(typeof subject_reference === 'string' && subject_reference
-        ? { images: [subject_reference] }
-        : {}),
+      ...(Array.isArray(images) && images.length
+        ? { images }
+        : typeof subject_reference === 'string' && subject_reference
+          ? { images: [subject_reference] }
+          : {}),
     }),
-    modelParams: { aspect_ratio: 'aspectRatio', n: 'count', prompt: 'promptLength' },
+    modelParams: {
+      aspect_ratio: 'aspectRatio',
+      n: 'count',
+      prompt: 'promptLength',
+      resolution: 'resolution',
+    },
     inputSchema: {
       type: 'object',
       title: 'generate_imageArguments',
@@ -324,6 +333,11 @@ export const minimaxTools: ToolSpec[] = [
         n: { type: 'integer', default: 1 },
         prompt_optimizer: { type: 'boolean', default: false },
         subject_reference: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        images: {
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+          default: null,
+        },
+        resolution: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         output_directory: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
         parameters: {
           anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
