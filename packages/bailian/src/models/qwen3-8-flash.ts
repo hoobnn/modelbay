@@ -11,7 +11,19 @@ export default {
   // 官方直接给出上下文长度，不用最大输入加最大输出换算。
   contextWindow: 1000000,
   maxOutputTokens: 131072,
-  channels: [{ channel: 'bailian', id: 'qwen3.8-flash' }],
+  channels: [
+    { channel: 'bailian', id: 'qwen3.8-flash' },
+    {
+      channel: 'bailian-plan',
+      id: 'qwen3.8-flash',
+      // Token Plan 套餐文本模型只给 AI 编程 / 智能体工具交互式使用
+      agentOnly: true,
+      source: {
+        url: 'https://help.aliyun.com/zh/model-studio/token-plan-personal-overview',
+        checkedAt: '2026-11-11',
+      },
+    },
+  ],
   aliases: { official: [], short: [] },
   lifecycle: {
     status: 'active',

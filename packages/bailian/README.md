@@ -23,6 +23,13 @@ accepted as an alias so hosts using the upstream name keep working.
 supplied through `ctx.secret` as host-managed configuration. No key is stored, and
 no `console.*` is emitted.
 
+`createBailianPlanAdapter` (channel `bailian-plan`) handles `text.chat` for the Token Plan:
+it reads `BAILIAN_TOKEN_PLAN_API_KEY` and sends to
+`https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`. Models offered only in
+the plan (such as `qwen4-max-preview`) are rejected by the pay-as-you-go adapter. Plan models
+are declared `agentOnly`: the Token Plan terms limit them to interactive use inside coding and
+agent tools.
+
 ## Capabilities
 
 `submit` handles `text.chat`, `image.generate`, `audio.speech`, `video.generate` (async),
