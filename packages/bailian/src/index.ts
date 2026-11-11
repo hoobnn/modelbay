@@ -111,3 +111,4 @@ export {
   runBailianNative,
 } from './native'
 export { bailianPlatform } from './platform'
+export { createBailianPlanAdapter, PLAN_API_KEY, PLAN_BASE_URL, PLAN_CHANNEL } from './plan'

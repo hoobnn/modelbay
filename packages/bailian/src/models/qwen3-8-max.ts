@@ -12,7 +12,19 @@ export default {
   contextWindow: 1000000,
   maxOutputTokens: 131072,
   default: true,
-  channels: [{ channel: 'bailian', id: 'qwen3.8-max' }],
+  channels: [
+    { channel: 'bailian', id: 'qwen3.8-max' },
+    {
+      channel: 'bailian-plan',
+      id: 'qwen3.8-max',
+      // Token Plan 套餐文本模型只给 AI 编程 / 智能体工具交互式使用
+      agentOnly: true,
+      source: {
+        url: 'https://help.aliyun.com/zh/model-studio/token-plan-personal-overview',
+        checkedAt: '2026-11-11',
+      },
+    },
+  ],
   aliases: { official: [], short: ['max'] },
   lifecycle: {
     status: 'active',

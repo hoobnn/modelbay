@@ -536,6 +536,11 @@ export function createBailianAdapter(
         )
       // 远端模型列表里的对话模型没有静态声明，放行；其余必须是声明过的百炼模型
       const resolved = resolveModel(models, model)
+      if (resolved && !resolved.declaration.channels.some((ref) => ref.channel === 'bailian'))
+        throw new ProviderError(
+          'invalid_input',
+          `${model} 只能通过百炼 Token Plan 渠道（bailian-plan）调用`,
+        )
       if (
         !resolved?.declaration.capabilities.includes(capability) &&
         !(request.remoteOnly && capability === 'text.chat')
