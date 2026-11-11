@@ -255,7 +255,10 @@ export async function requestJson(
     { method, headers, ...(payload === undefined ? {} : { body: payload }) },
     messages,
   )
-  const parsed = await readJson(ctx, res, method, messages)
+  const stream = res.ok && /text\/event-stream/i.test(res.headers.get('content-type') ?? '')
+  const parsed = stream
+    ? imageStream(await readText(ctx, res, method, messages))
+    : await readJson(ctx, res, method, messages)
   if (parsed === null || !isJson(parsed)) {
     const code = res.ok ? 'unknown' : errorCode(res.status)
     throw withRetry(
@@ -265,6 +268,8 @@ export async function requestJson(
     )
   }
   const data = parsed
+  // 流里的 error 事件带着与非流式一致的 HTTP 状态码
+  const status = stream ? Number(asJson(data.error).http_code) || res.status : res.status
   const baseResp = asJson(data.base_resp)
   const statusCode = Number(baseResp.status_code ?? 0)
   const businessError = asJson(data.error)
@@ -272,25 +277,71 @@ export async function requestJson(
     const rawCode: string | number =
       typeof businessError.type === 'string' && businessError.type
         ? businessError.type
-        : statusCode || res.status
+        : statusCode || status
     const message = redact(
-      String(businessError.message ?? baseResp.status_msg ?? `HTTP ${res.status}`),
+      String(businessError.message ?? baseResp.status_msg ?? `HTTP ${status}`),
       [ctx.secret('MINIMAX_API_KEY')?.trim()],
     )
     // OpenAI 风格的错误（/v1/images/*）把 MiniMax 业务码写在 message 末尾的括号里，如「(1026)」
     const trailing = /\((\d{4})\)\s*$/.exec(message)?.[1]
     const normalized =
-      [rawCode, trailing, res.status]
+      [rawCode, trailing, status]
         .filter((code) => code !== undefined)
         .map((code) => errorCode(code!))
         .find((code) => code !== 'unknown') ?? 'unknown'
     throw withRetry(
       new ProviderError(normalized, `MiniMax：${message}`, {
-        cause: { status: res.status, code: rawCode, message },
+        cause: { status, code: rawCode, message },
       }),
       method,
-      res.status,
+      status,
     )
   }
   return data
+}
+
+/**
+ * H3 图片接口 `stream: true` 的 SSE 响应，还原成非流式的响应结构（data 按 image_index 排列）。
+ * 流式只为了每 15 秒的 `: keepalive`：服务端最长等 600 秒，而 Node fetch 默认 300 秒收不到响应头就断开。
+ * 流必须以 completed 或 error 结束，否则视为中断（已提交且计费状态未知，不能重试）。
+ * 2026-11-11 核对：https://platform.minimax.cn/docs/api-reference/image-generation-h3-streaming
+ */
+export function imageStream(text: string): Json {
+  const data: Json[] = []
+  const result: Json = { data }
+  let finished = false
+  for (const block of text.split(/\r?\n\r?\n/)) {
+    const payload = block
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trimStart())
+      .join('\n')
+    if (!payload) continue
+    let event: Json
+    try {
+      event = asJson(JSON.parse(payload))
+    } catch {
+      continue
+    }
+    const type = String(event.type ?? '')
+    const index = Number(event.image_index)
+    if (type.endsWith('.partial_succeeded') && Number.isInteger(index) && index >= 0) {
+      data[index] = { url: event.url, size: event.size, revised_prompt: event.revised_prompt }
+      if (event.output_format !== undefined) result.output_format = event.output_format
+    } else if (type.endsWith('.partial_failed') && Number.isInteger(index) && index >= 0) {
+      data[index] = { error: { code: event.code, message: event.message } }
+    } else if (type.endsWith('.completed') || type === 'error') {
+      finished = true
+      if (type === 'error') result.error = event.error ?? { message: '图片生成失败' }
+      result.usage = event.usage
+      result.request_id = event.request_id
+    }
+  }
+  if (!finished)
+    throw new ProviderError('unknown', 'MiniMax 图片结果流中断；生成可能已计费，请勿自动重试', {
+      retryable: false,
+      outcome: 'unknown',
+    })
+  result.data = data.filter(Boolean)
+  return result
 }

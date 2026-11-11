@@ -2,10 +2,11 @@
  * MiniMax-only native operations and their parameter schemas (declared by the adapter).
  */
 import { ProviderError, toBase64 } from '@modelbay/core'
-import { selectDefaultModel } from '@modelbay/core'
+import { resolveModel, selectDefaultModel, selectNativeModel } from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration, RemoteModel } from '@modelbay/core'
 import { minimaxModelList, redact } from '@modelbay/shared'
-import { taskId } from './util'
+import { withFiles } from './files'
+import { required, taskId } from './util'
 import {
   apiKey,
   asJson,
@@ -22,6 +23,7 @@ import {
 } from './http'
 
 export const CONTEXT_IR_PATH = '/v2/h3_context_ir'
+export const IMAGE_CONTEXT_IR_PATH = '/v1/h3_image_context_ir'
 /** 再生成目标分辨率：官方两种请求体里 resolution 必填，默认值 2K。 */
 const REGENERATION_RESOLUTION = '2K'
 export const RERENDER_PATH = '/v2/video_regeneration'
@@ -33,6 +35,7 @@ export const VIDEO_PATH = '/v2/video_generation'
 
 export const MINIMAX_NATIVE_OPERATIONS = [
   'context-ir',
+  'image-context-ir',
   'video-2k-rerender',
   'voice-clone',
   'voice-design',
@@ -52,6 +55,23 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
       duration: { type: 'integer', default: 5 },
       ratio: { type: 'string' },
       parameters: { type: 'object' },
+    },
+  },
+  'image-context-ir': {
+    type: 'object',
+    required: ['prompt'],
+    properties: {
+      prompt: { type: 'string' },
+      model: { type: 'string' },
+      images: {
+        type: 'array',
+        items: { type: 'string' },
+        description: '参考图：公网 URL、mm_file://ID、data URI 或素材 ID；传了按图片编辑增强',
+      },
+      size: { type: 'string' },
+      aspect_ratio: { type: 'string' },
+      // 取值同模型声明的 resolutions，由 imageContextIr 按声明校验
+      area: { type: 'string' },
     },
   },
   'video-2k-rerender': {
@@ -399,6 +419,8 @@ export async function runMinimaxNative(
   switch (op) {
     case 'context-ir':
       return submitNativeTask(ctx, 'context-ir', p)
+    case 'image-context-ir':
+      return imageContextIr(ctx, p, models)
     case 'video-2k-rerender':
       return submitNativeTask(ctx, 'video-2k-rerender', p)
     case 'voice-clone':
@@ -427,6 +449,96 @@ export async function runMinimaxNative(
     }
     default:
       throw new ProviderError('invalid_input', `未知的 MiniMax native 操作：${op}`)
+  }
+}
+
+const REMOTE_IMAGE = /^(https?:\/\/|mm_file:\/\/|data:image\/)/i
+
+/**
+ * H3-Image-Context-IR：同步返回增强后的 prompt，不生成图片。可用模型和上下限取自声明
+ * （`native: ['image-context-ir']`；参考图数量、素材要求、提示词上限同生成接口）。
+ */
+export async function imageContextIr(
+  ctx: AdapterContext,
+  params: Json,
+  models: readonly ModelDeclaration[],
+): Promise<Json> {
+  const requested = asString(params.model)
+  // 渠道前缀、canonicalId、官方别名都按声明解析
+  const declared = requested ? resolveModel(models, requested)?.declaration : undefined
+  const resolved = requested
+    ? declared?.native?.includes('image-context-ir')
+      ? declared
+      : undefined
+    : selectNativeModel(models, 'image-context-ir')?.declaration
+  if (!resolved)
+    throw new ProviderError(
+      'invalid_input',
+      requested ? `${requested} 不支持单独调用 Prompt 增强` : '没有可用的 Prompt 增强模型',
+    )
+  const limits = resolved.limits ?? {}
+  const prompt = asString(params.prompt)
+  required(prompt, limits.promptMaxLength ?? 32000, '图片提示词')
+  const sources = arr(params.images)
+    .map((item) => asString(item))
+    .filter(Boolean)
+  const maxImages = limits.references?.max ?? 16
+  if (sources.length > maxImages)
+    throw new ProviderError('invalid_input', `${resolved.title} 最多 ${maxImages} 张参考图`)
+  const size = asString(params.size).replace('*', 'x') || undefined
+  const explicit = size !== undefined && size !== 'auto'
+  if (explicit && (params.aspect_ratio !== undefined || params.area !== undefined))
+    throw new ProviderError('invalid_input', 'size 为宽x高时不能再传 aspect_ratio 或 area')
+  const area = asString(params.area) || undefined
+  if (area && limits.resolutions && !limits.resolutions.includes(area))
+    throw new ProviderError(
+      'invalid_input',
+      `${resolved.title} 的 area 只支持 ${limits.resolutions.join(' / ')}`,
+    )
+  const files = withFiles(ctx).files
+  const requirement = limits.media?.image
+  let bytes = 0
+  const images: Json[] = []
+  for (const source of sources) {
+    if (REMOTE_IMAGE.test(source)) {
+      images.push({ image_url: source })
+      continue
+    }
+    if (!files) throw new ProviderError('invalid_input', '读取本地参考图需要素材源')
+    const loaded = await files.read({ assetId: source, kind: 'image' })
+    const mime = (loaded.mime ?? '').toLowerCase()
+    if (requirement?.mime && !requirement.mime.includes(mime))
+      throw new ProviderError('invalid_input', `${resolved.title} 不支持 ${mime} 格式的参考图`)
+    if (
+      !loaded.data.length ||
+      (requirement?.maxMB && loaded.data.length > requirement.maxMB * 1024 * 1024)
+    )
+      throw new ProviderError('invalid_input', `参考图为空或超过 ${requirement?.maxMB} MB`)
+    const encoded = toBase64(loaded.data)
+    // 官方：请求体合计 ≤ 64 MiB（base64 后），与生成接口的编码后总量检查一致
+    bytes += encoded.length
+    if (bytes > 63 * 1024 * 1024)
+      throw new ProviderError(
+        'invalid_input',
+        '参考图编码后超过请求上限，请改用公网 URL 或 mm_file://',
+      )
+    images.push({ image_url: `data:${mime};base64,${encoded}` })
+  }
+  const data = await requestJson(ctx, IMAGE_CONTEXT_IR_PATH, {
+    model: resolved.channels[0]!.id,
+    prompt,
+    ...(images.length ? { images } : {}),
+    size,
+    aspect_ratio: explicit ? undefined : params.aspect_ratio,
+    area: explicit ? undefined : area,
+  })
+  if (typeof data.revised_prompt !== 'string' || !data.revised_prompt)
+    throw new ProviderError('unknown', 'MiniMax 响应缺少增强后的 prompt', { retryable: false })
+  return {
+    revised_prompt: data.revised_prompt,
+    ...(typeof data.aspect_ratio === 'string' ? { aspect_ratio: data.aspect_ratio } : {}),
+    ...(data.usage ? { usage: data.usage } : {}),
+    ...(data.request_id ? { request_id: data.request_id } : {}),
   }
 }
 

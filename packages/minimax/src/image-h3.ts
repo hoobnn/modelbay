@@ -122,6 +122,8 @@ export async function h3Image(
     aigc_watermark: options.aigc_watermark,
     ...(images ? {} : { disable_prompt_enhanced: options.disable_prompt_enhanced }),
     response_format: 'url',
+    // 流式只为保活（见 http.ts imageStream），结果仍按非流式结构处理
+    stream: true,
   })
 
   // data 始终 n 项：成功的有 url，失败的（含未过内容安全检查）只有 error；全部失败时官方返回 HTTP 错误
