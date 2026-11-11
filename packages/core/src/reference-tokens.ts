@@ -7,6 +7,7 @@ import type { PortValue } from './ports'
  * MiniMax 视频写「图片N / 视频N / 音频N」，
  * 方舟 Seedance 写「@图片N / @视频N / @音频N」，
  * 百炼万相 3.0 写「图N / 视频N / 音频N」（官方示例不带 @），
+ * 百炼 HappyHorse 参考生视频写「[Image N]」（只收参考图），
  * 其余视频写「@imageN」。
  * 编号从 1 开始，图片、视频、音频各自按实际送入模型的顺序排列。
  * 写法里不带「参考」二字：编辑、延长任务的官方要求是写「视频1」而不是「参考视频1」。
@@ -16,15 +17,18 @@ export type ReferenceLabelStyle =
   | 'minimax-video'
   | 'ark-video'
   | 'bailian-video'
+  | 'happyhorse-video'
   | 'video'
 export type ReferenceMediaKind = 'image' | 'video' | 'audio'
 
-/** 按节点能力与模型厂商决定编号写法；非参考模式不编号。 */
+/** 按节点能力与模型厂商决定编号写法；非参考模式不编号。同一平台写法因模型而异时传 model。 */
 export function referenceLabelStyle(
   capability: string | undefined,
   provider: string | undefined,
+  model?: string,
 ): ReferenceLabelStyle {
   if (capability === 'image.generate') return 'image'
+  if (provider === 'aliyun/bailian' && model?.startsWith('happyhorse-')) return 'happyhorse-video'
   if (provider === 'minimax/api') return 'minimax-video'
   if (provider === 'volc/ark' || provider === 'volc/ark-plan') return 'ark-video'
   if (provider === 'aliyun/bailian') return 'bailian-video'
@@ -37,6 +41,7 @@ export function referenceLabel(style: ReferenceLabelStyle, index: number): strin
   if (style === 'minimax-video') return `图片${index}`
   if (style === 'ark-video') return `@图片${index}`
   if (style === 'bailian-video') return `图${index}`
+  if (style === 'happyhorse-video') return `[Image ${index}]`
   return `@image${index}`
 }
 

@@ -98,6 +98,26 @@ describe('套餐渠道：模型名从声明派生', () => {
     }
   })
 
+  it('第三方文本模型：按量 ID 走套餐渠道时发套餐 ID', async () => {
+    for (const ref of ['deepseek-v4-1-flash-261017', 'deepseek-v4.1-flash']) {
+      const { ctx, body } = fakeContext(
+        [{ choices: [{ message: { role: 'assistant', content: 'ok' } }] }],
+        { secret: PLAN_SECRET },
+      )
+      await arkPlanAdapter
+        .submit(
+          {
+            capability: 'text.chat',
+            model: ref,
+            input: { messages: [{ role: 'user', content: 'hi' }] },
+          },
+          ctx,
+        )
+        .catch(() => undefined)
+      expect(body().model, ref).toBe('deepseek-v4.1-flash')
+    }
+  })
+
   it('声明里的 ark-plan ID 与对照表逐条一致', () => {
     const expected: Record<string, string> = {
       'doubao-seedream-5-0-pro-260628': 'doubao-seedream-5.0-pro',
@@ -106,6 +126,12 @@ describe('套餐渠道：模型名从声明派生', () => {
       'doubao-seedance-2-0-260128': 'doubao-seedance-2.0',
       'doubao-seedance-2-0-fast-260128': 'doubao-seedance-2.0-fast',
       'doubao-seedance-2-0-mini-260615': 'doubao-seedance-2.0-mini',
+      'deepseek-v4-1-flash-261017': 'deepseek-v4.1-flash',
+      'deepseek-v4-1-flash-economy-261017': 'deepseek-v4.1-flash-economy',
+      'deepseek-v4-flash-ga-260731': 'deepseek-v4-flash',
+      'deepseek-v4-pro-ga-260813': 'deepseek-v4-pro',
+      'glm-5-3-flash-260828': 'glm-5.3-flash',
+      'kimi-k3-1-pro-261024': 'kimi-k3.1-pro',
     }
     for (const [apiId, planId] of Object.entries(expected)) {
       const declaration = models.find((item) =>
