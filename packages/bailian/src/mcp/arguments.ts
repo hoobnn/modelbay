@@ -121,13 +121,29 @@ export const mapEmbedArguments = withModel
 export const mapRerankArguments = withModel
 
 /**
- * speech_to_text → native asr（Qwen3-ASR-Flash，OpenAI 兼容接口）。
+ * speech_to_text → native asr（Qwen3-ASR-Flash 走 OpenAI 兼容接口，Qwen-Audio-ASR 3.1 走原生接口）。
  * 来源：https://help.aliyun.com/zh/model-studio/asr-model（2026-11-06 核对）：
  * 输入可以是 URL / Base64；本地路径在这里换成素材引用，由 native 读成 Data URI。
  * itn 默认关闭（与工具说明一致）。
  */
 export function mapTranscribeArguments(args: Args): Args {
   return { ...withModel(args), audio: assetOrUrl(args.audio, 'audio'), itn: args.itn === true }
+}
+
+/**
+ * transcribe_file → native asr-filetrans：本地路径换成素材引用，由适配器上传成 oss:// 临时地址。
+ * 来源：https://help.aliyun.com/zh/model-studio/qwen-audio-asr-filetrans-http-api（2026-11-11 核对）。
+ */
+export function mapTranscribeFileArguments(args: Args): Args {
+  return { ...withModel(args), audio: assetOrUrl(args.audio, 'audio') }
+}
+
+/** generate_audio → native audio-generation：参考音频的本地路径换成素材引用，由适配器读成 Data URI。 */
+export function mapGenerateAudioArguments(args: Args): Args {
+  const out = withModel(args)
+  if (Array.isArray(args.references))
+    out.references = args.references.map((item) => assetOrUrl(item, 'audio'))
+  return out
 }
 
 /** clone_voice → native voice-clone：旧别名 url 并入 audio，本地路径换成素材引用。 */

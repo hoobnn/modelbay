@@ -44,11 +44,13 @@ const EXPECTED: Record<McpKey, Record<string, string | null | undefined>> = {
     chat: 'bailian:qwen3.8-max',
     edit_video: 'bailian:happyhorse-1.0-video-edit',
     embed: 'bailian:text-embedding-v4',
+    generate_audio: 'bailian:qwen-audio-3.1-tts-next',
     generate_image: 'bailian:qwen-image-3.0-pro',
     generate_video: 'bailian:wan3.0-video',
     rerank: 'bailian:qwen3.7-text-rerank',
     speech_to_text: 'bailian:qwen3-asr-flash',
     text_to_speech: null,
+    transcribe_file: 'bailian:qwen-audio-3.1-asr-flash-filetrans',
   },
   'doubao-speech': {
     generate_audio: 'doubao-speech:seed-audio-1.0',

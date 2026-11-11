@@ -68,12 +68,22 @@ function collectModelIds(model: ModelDeclaration): string[] {
   return ids
 }
 
-/** 声明里参与这项能力的模型（按声明顺序）。 */
+/**
+ * 声明里参与这项能力的模型（按声明顺序）。
+ *
+ * native 工具（重排序、文件转写、音频生成……）：有声明了该操作的专用模型时只列这些；
+ * 没有时排除标了其他 native 操作的模型（如 speech_to_text 不列文件转写模型）。
+ * 通用能力工具不筛：有的模型既能按能力调用，又带一个附加的 native 操作（如 MiniMax-H3-Image）。
+ */
 function modelsForCapability(
   models: readonly ModelDeclaration[],
   capability: string,
+  nativeOp?: string,
 ): ModelDeclaration[] {
-  return models.filter((model) => model.capabilities.includes(capability as never))
+  const scoped = models.filter((model) => model.capabilities.includes(capability as never))
+  if (!nativeOp) return scoped
+  const dedicated = scoped.filter((model) => model.native?.includes(nativeOp as never))
+  return dedicated.length ? dedicated : scoped.filter((model) => !model.native?.length)
 }
 
 export interface ModelParameterPart {
@@ -115,7 +125,7 @@ export function deriveModelParameterPart(
   const notices: string[] = []
   const details: string[] = []
   const optionProperties: Record<string, Record<string, unknown>> = {}
-  const scoped = modelsForCapability(models, capability)
+  const scoped = modelsForCapability(models, capability, nativeOp)
 
   for (const model of scoped) {
     for (const id of collectModelIds(model)) {
@@ -203,8 +213,9 @@ export function deriveParamProperties(
 export function deriveModelDetails(
   models: readonly ModelDeclaration[],
   capability: string,
+  nativeOp?: string,
 ): string {
-  const scoped = modelsForCapability(models, capability)
+  const scoped = modelsForCapability(models, capability, nativeOp)
   if (!scoped.length) return ''
   const lines = scoped.map((model) => {
     const limits = modelLimitsText(model)
@@ -246,8 +257,9 @@ export function deriveToolDescription(
   base: string,
   models: readonly ModelDeclaration[],
   capability: string,
+  nativeOp?: string,
 ): string {
-  const details = deriveModelDetails(models, capability)
+  const details = deriveModelDetails(models, capability, nativeOp)
   if (!details) return base
   return `${base}\n可用模型（由声明派生）：\n${details}\n`
 }
