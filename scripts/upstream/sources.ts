@@ -89,14 +89,8 @@ export const SOURCES: PlatformSources[] = [
       'doubao-seed-2-0-code-preview-260215',
       // 3D 生成：没有对应能力
       'doubao-seed3d-2-0-260328',
-      // 待定：第三方模型的按量版本。同款已作为套餐模型声明（agentOnly），按量渠道要不要开放待决定；
-      // 旧快照（deepseek-v4-1-flash-260910、deepseek-v4-pro-260425、glm-5-2-260617）决定后一并处理
-      'deepseek-v4-1-flash-261017',
-      'deepseek-v4-1-flash-economy-261017',
-      'deepseek-v4-pro-ga-260813',
-      'deepseek-v4-flash-ga-260731',
-      'glm-5-3-flash-260828',
-      'kimi-k3-1-pro-261024',
+      // 第三方模型的旧快照：deepseek-v4-1-flash-260910 已有更新的 261017；deepseek-v4-pro-260425 在第十批下线公告里
+      // （2026-11-24 下线，按量渠道已声明 deepseek-v4-pro-ga-260813）；glm-5-2-260617 已有 glm-5.3 系列
       'deepseek-v4-1-flash-260910',
       'deepseek-v4-pro-260425',
       'glm-5-2-260617',

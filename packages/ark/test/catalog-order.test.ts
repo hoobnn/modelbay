@@ -15,6 +15,12 @@ describe('方舟目录顺序', () => {
       'doubao-seed-2-1-lite-260915',
       'doubao-seed-2-1-turbo-260628',
       'doubao-seed-evolving',
+      'deepseek-v4-flash-ga-260731',
+      'deepseek-v4-pro-ga-260813',
+      'deepseek-v4-1-flash-261017',
+      'deepseek-v4-1-flash-economy-261017',
+      'glm-5-3-flash-260828',
+      'kimi-k3-1-pro-261024',
       'custom-chat',
     ])
   })
