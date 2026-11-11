@@ -119,7 +119,7 @@ function buildTool(
   const annotations = deriveAnnotations(meta.nature)
   // 工具说明里的模型清单与各模型上限由声明派生，改声明这段文字就跟着变。
   const note = deriveDefaultNote(entry, models, capability, channel, nativeOp)
-  const description = `${deriveToolDescription(entry.description, models, capability)}${
+  const description = `${deriveToolDescription(entry.description, models, capability, nativeOp)}${
     note ? `\n${note}\n` : ''
   }`
 

@@ -19,6 +19,7 @@
 
 - `submit`：按归一化能力调 `adapter.submit()`，能力取工具定义的 `capability`，没写就按通用工具名约定推断。
 - `native`：工具定义写了 `native: '<op>'`，调 `adapter.native(op, params)`。只有一家平台有的能力走这条。
+  native 工具的模型清单：有声明在 `native` 字段里写了这个操作的专用模型时只列它们；没有时排除标了其他 native 操作的模型（如百炼 `speech_to_text` 不列文件转写模型）。通用能力工具不按 `native` 筛，因为有的模型既能按能力调用，又带附加操作（如 MiniMax-H3-Image）。
 - `local`：MCP 自己回答，不联网（`get_tool_help`、`list_capabilities`、`list_jobs`、`list_voices` 等）。`get_job` / `recover_job` 例外，它们调 `adapter.poll()`。处理器实现在 `@modelbay/mcp`，工具名约定在 `src/tool-meta.ts`。
 
 `submit` 之前参数按这个顺序处理：
@@ -82,3 +83,5 @@
 `packages/mcp/test/baselines/<平台>.json` 是工具清单快照（2026-11-04 冻结，2026-11-06 删去适配器没有实现的工具和参数后为方舟 8、MiniMax 17、百炼 18、豆包语音 16，共 59 个）。`test/tools.test.ts` 打开全部工具组后逐个对照：快照里的工具名都在，`inputSchema` 的关键字段和 `required` 都保留，四个 hint 齐全，防止重构时工具或字段悄悄丢失。新增平台不需要快照。删工具或参数时同步改快照，并在 PR 里说明原因。
 
 2026-11-06 删掉的工具：方舟 `embed`（适配器不支持 `text.embed`）、百炼 `edit_video`（需要新的 native 操作）、MiniMax `query_video_generation`（由 `get_job` 代替）、豆包语音的实时会话四件套、`upgrade_voice` 和 `get_job` / `recover_job` / `list_jobs`（适配器没有对应实现或 `poll`）。
+
+2026-11-11 放宽的字段：百炼 `rerank.query` 从字符串放宽为字符串或 `{text|image}` 对象（qwen3-vl-rerank 多模态重排），原来的字符串调用不受影响。

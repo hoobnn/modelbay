@@ -47,6 +47,7 @@ import {
   withRetry,
   type Json,
 } from './http'
+import { parseTranscription } from './asr'
 import { liftMcpArguments, passthroughParameters } from './mcp/arguments'
 import { optionsProblem, optionKeys } from './options'
 import type { ImageEditPreparer, ImageProcessPreparer } from './image-edit'
@@ -80,6 +81,14 @@ const FILE_EXT: Record<string, string> = {
   'audio/wav': 'wav',
   'audio/x-wav': 'wav',
   'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/aac': 'aac',
+  'audio/flac': 'flac',
+  'audio/ogg': 'ogg',
+  'audio/opus': 'opus',
+  'audio/webm': 'webm',
   'video/mp4': 'mp4',
   'video/quicktime': 'mov',
 }
@@ -98,6 +107,66 @@ function fileOutput(kind: 'image' | 'video' | 'audio', url: unknown): ProviderOu
   }
 }
 
+/**
+ * 文件转写任务的结果：子任务各有 transcription_url（24 小时有效）。官方说明任意子任务成功即整体
+ * SUCCEEDED，所以逐个看 subtask_status；读回的 JSON 给出全文和带时间戳（秒）的句子。
+ */
+async function transcriptionResult(
+  subtasks: Json[],
+  data: Json,
+  ctx: AdapterContext,
+): Promise<PollResult> {
+  const done = subtasks.filter(
+    (task) => task.subtask_status === 'SUCCEEDED' && typeof task.transcription_url === 'string',
+  )
+  if (!done.length) {
+    const failed = asJson(subtasks[0])
+    const mapped = remoteError(200, failed, ctx)
+    return {
+      state: 'failed',
+      error: {
+        code: mapped.code,
+        message: failed.message ? mapped.message : '文件转写子任务失败',
+        retryable: mapped.retryable,
+      },
+    }
+  }
+  const texts: string[] = []
+  const segments: unknown[] = []
+  for (const task of done) {
+    const url = String(task.transcription_url)
+    if (!/^https:\/\//i.test(url)) throw new ProviderError('unknown', '转写结果地址不是 HTTPS')
+    let res: Response
+    try {
+      res = await ctx.fetch(url, { signal: ctx.signal })
+    } catch (cause) {
+      throw new ProviderError(
+        ctx.signal.aborted ? 'cancelled' : 'unavailable',
+        '读取转写结果失败',
+        {
+          cause,
+        },
+      )
+    }
+    if (!res.ok)
+      throw new ProviderError(
+        'unavailable',
+        `读取转写结果失败（HTTP ${res.status}），可稍后重新查询`,
+      )
+    const parsed = parseTranscription(asJson(await res.json()))
+    if (parsed.text) texts.push(parsed.text)
+    segments.push(...parsed.segments)
+  }
+  return {
+    state: 'succeeded',
+    outputs: [
+      { type: 'text', text: texts.join('\n') },
+      { type: 'json', value: { segments } },
+    ],
+    usage: parseUsage(data),
+  }
+}
+
 /** Upload an asset to the DashScope temporary OSS store; returns an `oss://` address. */
 export async function uploadAsset(
   ctx: AdapterContext,
@@ -111,7 +180,7 @@ export async function uploadAsset(
   const source = data ? undefined : (loaded ?? (await readAsset(ctx, ref)))
   const mime = (data ? ref.mime || 'image/png' : source!.mime || ref.mime || '').toLowerCase()
   const ext = FILE_EXT[mime]
-  if (!ext) throw new ProviderError('invalid_input', `万相参考素材格式不支持：${mime}`)
+  if (!ext) throw new ProviderError('invalid_input', `上传素材格式不支持：${mime}`)
   const maxBytes = mime.startsWith('image/')
     ? 20 * 1024 * 1024
     : mime.startsWith('audio/')
@@ -119,7 +188,10 @@ export async function uploadAsset(
       : 100 * 1024 * 1024
   const payload = data ?? source!.data
   if (!payload.length || payload.length > maxBytes)
-    throw new ProviderError('invalid_input', '万相参考素材为空或超过大小限制')
+    throw new ProviderError(
+      'invalid_input',
+      '上传素材为空或超过大小限制（图片 20MB、音频 15MB、视频 100MB）',
+    )
   const policy = asJson(
     (await requestJson(ctx, `/api/v1/uploads?action=getPolicy&model=${encodeURIComponent(model)}`))
       .data,
@@ -623,6 +695,16 @@ export function createBailianAdapter(
           const input = request.input as CapabilityInput<'audio.speech'>
           const tts = ttsModels(models)
           const known = tts.find((item) => item.id === model)
+          const dedicated = models.find(
+            (item) =>
+              item.native?.includes('audio-generation') &&
+              item.channels.some((ref) => ref.channel === 'bailian' && ref.id === model),
+          )
+          if (!known && dedicated)
+            throw new ProviderError(
+              'invalid_input',
+              `${model} 是音频生成模型，请用 native 操作 audio-generation（MCP 工具 generate_audio）`,
+            )
           if (known?.protocol === 'synthesizer') {
             const result = await synthesizeQwenAudioTts(
               ctx,
@@ -798,6 +880,10 @@ export function createBailianAdapter(
           remote: status === 'PENDING' ? 'queued' : 'running',
         }
       if (status === 'SUCCEEDED') {
+        const subtasks = arr(output.results)
+          .map(asJson)
+          .filter((result) => 'subtask_status' in result || 'transcription_url' in result)
+        if (subtasks.length) return transcriptionResult(subtasks, data, ctx)
         if (Array.isArray(output.results)) {
           const urls = arr(output.results)
             .map(asJson)
@@ -847,7 +933,7 @@ export function createBailianAdapter(
       params: Record<string, unknown>,
       ctx: AdapterContext,
     ): Promise<unknown> {
-      return runBailianNative(op, params, ctx, models)
+      return runBailianNative(op, params, ctx, models, uploadAsset)
     },
   }
   return defineAdapter(adapter)

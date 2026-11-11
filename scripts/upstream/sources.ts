@@ -208,11 +208,6 @@ export const SOURCES: PlatformSources[] = [
       'wan2.7-videoedit',
       'wan2.2-animate-move',
       'wan2.2-animate-mix',
-      // 待接入（新协议，另一个 PR 实现）：3.1 语音识别走 multimodal-generation 同步接口与 transcription 异步接口，
-      // tts-next 是 Audiogen 接口（text_prompt + 参考音频，没有音色 ID），现有适配器都不支持
-      'qwen-audio-3.1-asr-flash',
-      'qwen-audio-3.1-asr-flash-filetrans',
-      'qwen-audio-3.1-tts-next',
     ],
   },
   {

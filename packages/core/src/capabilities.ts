@@ -36,6 +36,8 @@ export const NATIVE_OPERATIONS = [
   'meeting-notes',
   'console-management',
   'hotword-table',
+  'asr-filetrans',
+  'audio-generation',
   'raw-request',
 ] as const
 export type NativeOperationName = (typeof NATIVE_OPERATIONS)[number]

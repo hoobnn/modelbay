@@ -12,10 +12,19 @@ import {
   mapDesignArguments,
   mapEditVideoArguments,
   mapEmbedArguments,
+  mapGenerateAudioArguments,
   mapPortraitArguments,
   mapRerankArguments,
   mapTranscribeArguments,
+  mapTranscribeFileArguments,
 } from './arguments'
+
+/** 多模态重排序的一项：只含一个 text / image / video 键。 */
+const RERANK_ITEM = {
+  type: 'object',
+  properties: { text: { type: 'string' }, image: { type: 'string' }, video: { type: 'string' } },
+  additionalProperties: false,
+}
 
 export const bailianTools: ToolSpec[] = [
   {
@@ -173,6 +182,43 @@ export const bailianTools: ToolSpec[] = [
     },
   },
   {
+    name: 'generate_audio',
+    native: 'audio-generation',
+    capability: 'audio.speech',
+    mapArguments: mapGenerateAudioArguments,
+    description:
+      '音频生成（qwen-audio-3.1-tts-next）：用自然语言描述整段音频，如多角色对话、播客、带情绪的旁白，同步返回音频。\n' +
+      '不是 text_to_speech 的模型：没有 voice 参数，音色写在 prompt 里，或用 references 给最多 3 段参考音频，在 prompt 里以 @voice1–@voice3 引用。\n' +
+      '- references：本地路径、公网 URL 或 Data URI；WAV / MP3 / OGG Opus，每段不超过 30 秒、10MB。不支持系统音色与复刻音色 ID。\n' +
+      '- format（wav/mp3/pcm）、sample_rate、channels、volume、rate、seed 等的取值与默认值见 get_tool_help；parameters 合并进官方 input 对象。\n' +
+      '- out_dir：给了就把音频下载到该目录；不给只返回 24 小时有效链接。\n' +
+      '播客场景最长 240 秒，其他场景 120 秒。按 token 计费。\n',
+    inputSchema: {
+      type: 'object',
+      title: 'generate_audioArguments',
+      properties: {
+        prompt: { type: 'string' },
+        references: {
+          anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+          default: null,
+        },
+        model: { type: 'string' },
+        format: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        sample_rate: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        channels: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        volume: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        rate: { anyOf: [{ type: 'number' }, { type: 'null' }], default: null },
+        seed: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        out_dir: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        parameters: {
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          default: null,
+        },
+      },
+      required: ['prompt'],
+    },
+  },
+  {
     name: 'generate_image',
     description:
       '百炼生成或编辑图片；中英文字渲染选 qwen，多图融合选 wan，图层拆分/透明背景用 volcengine-ark。' +
@@ -289,7 +335,7 @@ export const bailianTools: ToolSpec[] = [
     name: 'get_job',
     description:
       '查任务进度和结果，job_id 或 task_id 二选一（都给时须属于同一任务）。\n' +
-      '视频类任务（generate_video/edit_video/animate_portrait）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n' +
+      '异步任务（generate_video/edit_video/animate_portrait/transcribe_file）还在生成时查询百炼一次（wait 1–90 秒可轮询），\n' +
       '完成即下载到原输出目录；已结束的任务只读本地记录。只给 task_id 且本地没有记录时，新建本地记录再查询。\n' +
       '不会重新提交生成。返回 job_state、completed、files、usage；ok=false 表示查询或交付失败。\n',
     inputSchema: {
@@ -400,6 +446,8 @@ export const bailianTools: ToolSpec[] = [
     nature: 'query',
     description:
       '对候选文档按与query的相关性排序，返回原索引和relevance_score；top_n控制数量，return_documents返回原文。\n' +
+      'query与documents的每一项可以是文本，也可以是只含一个键的对象：{"text":…}、{"image":公网URL或Data URI}、documents里还可以{"video":公网URL}；' +
+      '图片、视频只有 qwen3-vl-rerank 支持，不上传本地文件。instruct自定义任务说明（建议英文），fps控制视频抽帧（0–1，仅 qwen3-vl-rerank）。\n' +
       '所有模型统一走原生text-rerank接口。分数用于本次请求内比较。按输入计费，模型及地域权限以服务端为准。\n',
     capability: 'text.embed',
     mapArguments: mapRerankArguments,
@@ -407,11 +455,13 @@ export const bailianTools: ToolSpec[] = [
       type: 'object',
       title: 'rerankArguments',
       properties: {
-        query: { type: 'string' },
-        documents: { type: 'array', items: { type: 'string' } },
+        query: { anyOf: [{ type: 'string' }, RERANK_ITEM] },
+        documents: { type: 'array', items: { anyOf: [{ type: 'string' }, RERANK_ITEM] } },
         model: { type: 'string' },
         top_n: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
         return_documents: { type: 'boolean', default: false },
+        instruct: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        fps: { anyOf: [{ type: 'number' }, { type: 'null' }], default: null },
       },
       required: ['query', 'documents'],
     },
@@ -419,14 +469,17 @@ export const bailianTools: ToolSpec[] = [
   {
     name: 'speech_to_text',
     description:
-      '用千问 ASR 把一段音频转成文字，同时返回识别出的语种和情绪。超过 10MB / 5 分钟、需要说话人分离或热词时用 doubao-speech 的 speech_to_text。\n' +
-      '\n- audio：本地绝对路径或 URL。本地文件支持 mp3、wav、m4a、aac、flac、ogg、opus、amr、webm，不超过 10MB，时长不超过 5 分钟。更长的音频先切段再分别识别。\n' +
+      '用千问 ASR 把一段音频转成文字（同步返回）。超过 10MB / 5 分钟的录音用 transcribe_file（文件转写，最长 12 小时）。\n' +
+      '\n- audio：本地绝对路径或 URL。本地文件支持 mp3、wav、m4a、aac、flac、ogg、opus、amr、webm，不超过 10MB，时长不超过 5 分钟。\n' +
+      '- model：qwen3-asr-flash 走 OpenAI 兼容接口，返回语种和情绪；qwen-audio-3.1-asr-flash 走原生接口，返回带时间戳的句子（sentences），' +
+      '自带文本润色。可选模型见下面的清单。\n' +
       '- context：背景文字，提高专有名词、人名、术语的识别准确率，如「这是一段关于 Kubernetes 和 Istio 的技术分享」。\n' +
       '- language：已知语种时指定（zh、en、ja、ko、yue 等），能提高准确率；不传自动识别。\n' +
-      '- itn：是否把口语数字转成阿拉伯数字（如「二零二六年」→「2026年」），默认不转。\n' +
-      '- parameters：官方请求体里本工具没单独列出的字段（OpenAI 兼容接口顶层），深度合并，不能覆盖 model/messages/stream。\n' +
-      '\nQwen3-ASR-Flash 的 OpenAI 兼容接口不返回时间戳；情感识别固定开启，无需额外开关。\n' +
-      '按音频时长计费。返回 ok、model、text、language、emotion、usage、error。\n',
+      '- itn：是否把口语数字转成阿拉伯数字（仅 qwen3-asr-flash），默认不转。\n' +
+      '- parameters：官方请求体里本工具没单独列出的字段。qwen3-asr-flash 合并到 OpenAI 兼容接口顶层，不能覆盖 model/messages/stream；' +
+      'qwen-audio-3.1-asr-flash 合并到官方 parameters（如 format、sample_rate、keep_dialect、speaker_diarization_enabled、vocabulary），' +
+      'format 不传时从文件类型推断。\n' +
+      '\n按音频时长计费。返回 ok、model、text、language、emotion、sentences、usage、error。\n',
     native: 'asr',
     mapArguments: mapTranscribeArguments,
     inputSchema: {
@@ -484,6 +537,36 @@ export const bailianTools: ToolSpec[] = [
         },
       },
       required: ['text'],
+    },
+  },
+  {
+    name: 'transcribe_file',
+    native: 'asr-filetrans',
+    capability: 'audio.transcribe',
+    mapArguments: mapTranscribeFileArguments,
+    description:
+      '录音文件转写（异步任务）：单个文件最长 12 小时、2GB，只提交任务，返回 job_id/task_id，之后用 get_job 查进度，' +
+      '完成时返回全文（text）和带时间戳的句子（json.segments，单位秒）。5 分钟以内的短音频用 speech_to_text 更快。\n' +
+      '- audio：公网 URL、oss:// 地址或本地路径；本地文件会先上传到百炼临时存储（48 小时有效，不超过 15MB），更大的文件请给公网 URL。\n' +
+      '- language：已知语种时指定（zh、en 等），写入 language_hints。\n' +
+      '- diarization：说话人分离（只对单声道音频生效），speaker_count 给参考人数（2–100，不保证）。\n' +
+      '- parameters：合并进官方 parameters 对象（如 keep_dialect、vocabulary、vocabulary_id、channel_id）。\n' +
+      '按 token 计费；channel_id 指定多个音轨时每个音轨单独计费。\n',
+    inputSchema: {
+      type: 'object',
+      title: 'transcribe_fileArguments',
+      properties: {
+        audio: { type: 'string' },
+        model: { type: 'string' },
+        language: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        diarization: { anyOf: [{ type: 'boolean' }, { type: 'null' }], default: null },
+        speaker_count: { anyOf: [{ type: 'integer' }, { type: 'null' }], default: null },
+        parameters: {
+          anyOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }],
+          default: null,
+        },
+      },
+      required: ['audio'],
     },
   },
 ]

@@ -28,6 +28,9 @@ import qwenAudio31TtsPlus from './qwen-audio-3-1-tts-plus'
 import qwen37TextRerank from './qwen3-7-text-rerank'
 import qwen3VlRerank from './qwen3-vl-rerank'
 import qwen3AsrFlash from './qwen3-asr-flash'
+import qwenAudio31AsrFlash from './qwen-audio-3-1-asr-flash'
+import qwenAudio31AsrFlashFiletrans from './qwen-audio-3-1-asr-flash-filetrans'
+import qwenAudio31TtsNext from './qwen-audio-3-1-tts-next'
 import qwen3VlEmbedding from './qwen3-vl-embedding'
 import textEmbeddingV4 from './text-embedding-v4'
 import qwen37TextEmbedding from './qwen3-7-text-embedding'
@@ -62,9 +65,12 @@ export {
   qwenAudio30TtsPlus,
   qwenAudio31TtsFlash,
   qwenAudio31TtsPlus,
+  qwenAudio31TtsNext,
   qwen37TextRerank,
   qwen3VlRerank,
   qwen3AsrFlash,
+  qwenAudio31AsrFlash,
+  qwenAudio31AsrFlashFiletrans,
   qwen3VlEmbedding,
   textEmbeddingV4,
   qwen37TextEmbedding,
@@ -100,9 +106,12 @@ export const all: ModelDeclaration[] = [
   qwenAudio30TtsPlus,
   qwenAudio31TtsFlash,
   qwenAudio31TtsPlus,
+  qwenAudio31TtsNext,
   qwen37TextRerank,
   qwen3VlRerank,
   qwen3AsrFlash,
+  qwenAudio31AsrFlash,
+  qwenAudio31AsrFlashFiletrans,
   qwen3VlEmbedding,
   textEmbeddingV4,
   qwen37TextEmbedding,

@@ -8,9 +8,16 @@
 import { ProviderError, selectDefaultModel, selectNativeModel, toModelInfo } from '@modelbay/core'
 import type { AdapterContext, AssetRef, ModelDeclaration } from '@modelbay/core'
 import { openAiModelList } from '@modelbay/shared'
+import { generateAudio, referenceSources } from './audio-generation'
 import { asJson, arr, bailianSettings, requestJson, type Json } from './http'
 import { optionKeys, optionsProblem } from './options'
-import { asrModels, buildAsrRequest, parseAsrResponse, resolveAudio } from './asr'
+import {
+  asrModels,
+  buildAsrRequest,
+  buildFiletransRequest,
+  parseAsrResponse,
+  resolveAudio,
+} from './asr'
 import {
   buildCloneRequest,
   buildDesignRequest,
@@ -43,6 +50,8 @@ export const BAILIAN_NATIVE_OPERATIONS = [
   'text-embed',
   'qwen-audio-tts',
   'asr',
+  'asr-filetrans',
+  'audio-generation',
   'voice-clone',
   'voice-design',
   'voice-list',
@@ -65,6 +74,7 @@ export function nativeOperationSchemas(
   const targets = voiceTargets(models)
   const asr = asrModels(models)
   const rerankModel = selectNativeModel(models, 'rerank', 'bailian')?.channel.id
+  const audioGen = selectNativeModel(models, 'audio-generation', 'bailian')
   const embedModel = selectDefaultModel(models, 'text.embed', 'bailian')?.channel.id
   return {
     listModels: { type: 'object', properties: {} },
@@ -73,10 +83,12 @@ export function nativeOperationSchemas(
       required: ['query', 'documents'],
       properties: {
         model: { type: 'string', ...(rerankModel ? { default: rerankModel } : {}) },
-        query: { type: 'string' },
-        documents: { type: 'array', items: { type: 'string' } },
+        query: { anyOf: [{ type: 'string' }, RERANK_ITEM] },
+        documents: { type: 'array', items: { anyOf: [{ type: 'string' }, RERANK_ITEM] } },
         top_n: { type: 'integer' },
         return_documents: { type: 'boolean' },
+        instruct: { type: 'string' },
+        fps: { type: 'number', minimum: 0, maximum: 1 },
       },
     },
     'text-embed': {
@@ -110,6 +122,49 @@ export function nativeOperationSchemas(
         context: { type: 'string' },
         language: { type: 'string' },
         itn: { type: 'boolean' },
+        parameters: { type: 'object' },
+      },
+    },
+    'asr-filetrans': {
+      type: 'object',
+      required: ['audio'],
+      properties: {
+        audio: {
+          type: 'string',
+          description: 'Public URL or oss:// address (Data URI not accepted)',
+        },
+        model: {
+          type: 'string',
+          ...(asr.filetrans.length ? { enum: asr.filetrans, default: asr.filetrans[0] } : {}),
+        },
+        language: { type: 'string' },
+        diarization: { type: 'boolean' },
+        speaker_count: { type: 'integer', minimum: 2, maximum: 100 },
+        parameters: { type: 'object' },
+      },
+    },
+    'audio-generation': {
+      type: 'object',
+      required: ['prompt'],
+      properties: {
+        prompt: {
+          type: 'string',
+          description:
+            'Natural-language description of the audio; cite references as @voice1–@voice3',
+          ...(audioGen?.declaration.limits?.promptMaxLength
+            ? { maxLength: audioGen.declaration.limits.promptMaxLength }
+            : {}),
+        },
+        references: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Reference voices: public URL or data URI',
+          ...(audioGen?.declaration.limits?.references
+            ? { maxItems: audioGen.declaration.limits.references.max }
+            : {}),
+        },
+        model: { type: 'string', ...(audioGen ? { default: audioGen.channel.id } : {}) },
+        ...((audioGen?.declaration.optionsSchema?.properties ?? {}) as Record<string, unknown>),
         parameters: { type: 'object' },
       },
     },
@@ -211,17 +266,49 @@ function asStringArray(value: unknown): string[] {
   return arr(value).filter((item): item is string => typeof item === 'string')
 }
 
-/** Text rerank: native `/services/rerank/text-rerank/text-rerank`. */
+/** 多模态重排序的一项：恰好一个 text / image / video 键（官方格式 `{"模态类型": "输入内容"}`）。 */
+const RERANK_ITEM = {
+  type: 'object',
+  minProperties: 1,
+  maxProperties: 1,
+  properties: { text: { type: 'string' }, image: { type: 'string' }, video: { type: 'string' } },
+  additionalProperties: false,
+}
+
+/** 字符串原样；对象只保留一个非空的 text / image / video（query 不收 video）。不合法返回 undefined。 */
+function rerankItem(value: unknown, allowVideo: boolean): string | Json | undefined {
+  if (typeof value === 'string') return value.trim() ? value : undefined
+  const item = asJson(value)
+  const keys = Object.keys(item)
+  const key = keys[0]
+  if (keys.length !== 1 || !key) return undefined
+  if (!['text', 'image', ...(allowVideo ? ['video'] : [])].includes(key)) return undefined
+  const content = item[key]
+  if (typeof content !== 'string' || !content.trim()) return undefined
+  if (key === 'video' && !PUBLIC_URL.test(content)) return undefined
+  return { [key]: content }
+}
+
+/**
+ * 重排序：native `/services/rerank/text-rerank/text-rerank`。
+ * qwen3-vl-rerank 的 query 可以是文本或 `{text|image}`，documents 可以混合文本与 `{text|image|video}`；
+ * 视频只收公网 URL，图片收 URL 或 Data URI。来源：https://help.aliyun.com/zh/model-studio/text-rerank-api（2026-11-11 核对）
+ */
 export async function rerank(
   params: Json,
   ctx: AdapterContext,
   models: readonly ModelDeclaration[],
 ): Promise<Json> {
-  const query = asString(params.query)
-  const documents = asStringArray(params.documents)
+  const query = rerankItem(params.query, false)
+  const documents = arr(params.documents).map((item) => rerankItem(item, true))
   const topN = params.top_n
+  if (documents.some((item) => item === undefined))
+    throw new ProviderError(
+      'invalid_input',
+      'documents 每项须为非空文本，或只含一个 text / image / video 键的对象（视频须为公网 URL）',
+    )
   if (
-    !query.trim() ||
+    query === undefined ||
     !documents.length ||
     (topN !== undefined &&
       (!Number.isInteger(topN) || (topN as number) < 1 || (topN as number) > documents.length))
@@ -230,12 +317,20 @@ export async function rerank(
       'invalid_input',
       '须提供 query 和非空的 documents，且 top_n 在 1 到 documents 数量之间',
     )
+  // 2026-11-11 实测：documents 里字符串与对象混用会被拒（list[str] 与 list[item] 二选一），
+  // 所以只要有对象就把字符串统一包成 {text}。
+  const multimodal = documents.some((item) => typeof item !== 'string')
+  const docs = multimodal
+    ? documents.map((item) => (typeof item === 'string' ? { text: item } : item))
+    : documents
   const parameters: Json = { return_documents: params.return_documents === true }
   if (topN !== undefined) parameters.top_n = topN
+  if (typeof params.instruct === 'string' && params.instruct) parameters.instruct = params.instruct
+  if (typeof params.fps === 'number') parameters.fps = params.fps
   const body: Json = {
     model:
       asString(params.model) || selectNativeModel(models, 'rerank', 'bailian')?.channel.id || '',
-    input: { query, documents },
+    input: { query, documents: docs },
     parameters,
   }
   const data = await requestJson(ctx, RERANK_PATH, body)
@@ -389,6 +484,50 @@ export async function editVideo(
   return { job_id: taskId, task_id: taskId, request_id: data.request_id }
 }
 
+/** 上传素材引用、换成 oss:// 地址（由适配器注入，避免 native 反向依赖 adapter）。 */
+export type UploadAsset = (ctx: AdapterContext, ref: AssetRef, model: string) => Promise<string>
+
+/** 录音文件转写：提交异步任务，返回任务 ID；结果由 poll 读 transcription_url。 */
+export async function asrFiletrans(
+  params: Json,
+  ctx: AdapterContext,
+  models: readonly ModelDeclaration[],
+  upload?: UploadAsset,
+): Promise<Json> {
+  const available = asrModels(models)
+  const model = asString(params.model) || available.filetrans[0] || ''
+  const source = audioSource(params.audio)
+  let fileUrl: string
+  if (typeof source === 'string') {
+    if (source.startsWith('data:'))
+      throw new ProviderError('invalid_input', '文件转写不接受 Data URI，请传公网 URL 或本地文件')
+    fileUrl = source
+  } else {
+    if (!upload) throw new ProviderError('invalid_input', '当前宿主不支持上传本地音频')
+    fileUrl = await upload(ctx, source, model)
+  }
+  const speakerCount = params.speaker_count
+  const { path, body } = buildFiletransRequest(
+    {
+      fileUrl,
+      model: model || undefined,
+      language: asString(params.language) || undefined,
+      diarization: typeof params.diarization === 'boolean' ? params.diarization : undefined,
+      speakerCount: typeof speakerCount === 'number' ? speakerCount : undefined,
+      parameters: asRecord(params.parameters),
+    },
+    available,
+  )
+  const data = await requestJson(ctx, path, body, {
+    asyncTask: true,
+    oss: fileUrl.startsWith('oss://'),
+  })
+  const taskId = asJson(data.output).task_id
+  if (typeof taskId !== 'string' || !taskId)
+    throw new ProviderError('unknown', '文件转写任务缺少 task_id；请勿重新提交任务')
+  return { job_id: taskId, task_id: taskId, request_id: data.request_id }
+}
+
 /**
  * 远端模型列表：DashScope 兼容模式 `/compatible-mode/v1/models`。
  * 业务空间域名的列表接口未经官方确证，暂不支持。
@@ -411,6 +550,7 @@ export async function runBailianNative(
   params: Record<string, unknown>,
   ctx: AdapterContext,
   models: readonly ModelDeclaration[],
+  upload?: UploadAsset,
 ): Promise<unknown> {
   const p = asJson(params)
   const tts = ttsModels(models)
@@ -459,6 +599,26 @@ export async function runBailianNative(
         asrModels(models),
       )
       return parseAsrResponse(await requestJson(ctx, path, body))
+    }
+    case 'asr-filetrans':
+      return asrFiletrans(p, ctx, models, upload)
+    case 'audio-generation': {
+      const reserved = ['prompt', 'references', 'model', 'parameters']
+      return generateAudio(
+        {
+          prompt: asString(p.prompt),
+          references: referenceSources(p.references),
+          model: asString(p.model) || undefined,
+          options: Object.fromEntries(
+            Object.entries(p).filter(
+              ([key, value]) => !reserved.includes(key) && value !== undefined,
+            ),
+          ),
+          parameters: asRecord(p.parameters),
+        },
+        ctx,
+        models,
+      )
     }
     case 'voice-clone': {
       const audio = await cloneAudio(audioSource(p.audio), ctx)
