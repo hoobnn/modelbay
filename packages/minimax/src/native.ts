@@ -70,7 +70,8 @@ export const nativeOperationSchemas: Record<string, Record<string, unknown>> = {
       },
       size: { type: 'string' },
       aspect_ratio: { type: 'string' },
-      area: { type: 'string', enum: ['1K', '2K', '4K'] },
+      // 取值同模型声明的 resolutions，由 imageContextIr 按声明校验
+      area: { type: 'string' },
     },
   },
   'video-2k-rerender': {
