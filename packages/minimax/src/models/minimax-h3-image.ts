@@ -8,6 +8,9 @@ export default {
   id: 'MiniMax-H3-Image',
   title: 'MiniMax-H3-Image',
   capabilities: ['image.generate'],
+  // 单独调用 Prompt 增强 POST /v1/h3_image_context_ir，仅本模型支持，Highspeed 传入返回 400
+  // （2026-11-11 核对：https://platform.minimax.cn/docs/api-reference/image-generation-h3-context-ir）
+  native: ['image-context-ir'],
   description:
     '文生图与图片编辑（1–16 张参考图），按宽高比 + 面积档或直接按宽高出图，最大 2000 万像素',
   limits: {
