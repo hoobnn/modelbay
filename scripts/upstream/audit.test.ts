@@ -34,6 +34,13 @@ function run(snapshots: Snapshot[], declared: DeclaredModel[], extra: Partial<Au
 }
 
 describe('markdown', () => {
+  it('组件标签的 title 属性保留下来（百炼总览页的卡片）', () => {
+    const card =
+      '<Card title="qwen4-max-preview" icon="https://x/y.svg" href="/zh/model-studio/token-plan">'
+    expect(tokens(card)).toEqual(['qwen4-max-preview'])
+    expect(plainText('<span id="a1" /> 文本')).toBe('文本')
+  })
+
   it('表格行带表头和标题路径，转义的竖线留在单元格里', () => {
     const rows = parseRows(
       [

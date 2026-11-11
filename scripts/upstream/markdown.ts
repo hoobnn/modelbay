@@ -37,19 +37,23 @@ export function normalizeSnapshot(markdown: string): string {
   )
 }
 
-/** 去掉 Markdown 语法，只留可读文本：反斜杠转义、链接地址、HTML 标签、强调符号。 */
+/** 去掉 Markdown 语法，只留可读文本：反斜杠转义、链接地址、HTML 标签（保留 title 属性）、强调符号。 */
 export function plainText(markdown: string): string {
-  return markdown
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/https?:\/\/\S+/g, ' ')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1')
-    .replace(/\*\*|__|`/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    markdown
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, ' ')
+      .replace(/<br\s*\/?>/gi, ' ')
+      // 卡片等组件把模型名写在 title 属性里（如百炼总览页的 <Card title="qwen4-max-preview">），先取出来再删标签
+      .replace(/<[A-Za-z][^>]*?\stitle="([^"]*)"[^>]*>/g, ' $1 ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1')
+      .replace(/\*\*|__|`/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 const TABLE_SEPARATOR = /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*\\?$/
