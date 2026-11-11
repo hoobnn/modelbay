@@ -50,10 +50,11 @@ const PROMPT_STYLES = {
   ark: 'ark-video',
   minimax: 'minimax-video',
   bailian: 'bailian-video',
+  happyhorse: 'happyhorse-video',
 } as const
 
 /** 平台仅接收当前实际素材的编号，原提示词仍保留在画布上；写法与 referenceMediaLabel 同源。 */
-export function videoReferencePrompt(prompt: string, platform: 'ark' | 'minimax' | 'bailian') {
+export function videoReferencePrompt(prompt: string, platform: keyof typeof PROMPT_STYLES) {
   const style = PROMPT_STYLES[platform]
   let text = prompt
   for (const token of videoReferenceTokens(prompt).reverse())
@@ -76,6 +77,7 @@ function videoLabelStyle(modelId: string): ReferenceLabelStyle {
   if (modelId.startsWith('MiniMax-H3')) return 'minimax-video'
   if (modelId.startsWith('doubao-seedance-')) return 'ark-video'
   if (modelId.startsWith('wan3.0-video')) return 'bailian-video'
+  if (modelId.startsWith('happyhorse-')) return 'happyhorse-video'
   return 'video'
 }
 

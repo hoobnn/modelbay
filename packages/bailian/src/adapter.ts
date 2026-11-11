@@ -365,6 +365,18 @@ async function generateImage(
 }
 
 /** 视频：时长 / 分辨率 / 画幅 / 素材数量与总时长在上传之前按声明检查。 */
+const VIDEO_MODE_TEXT = {
+  text: '文生视频',
+  image: '首帧生视频',
+  frames: '首尾帧生视频',
+  reference: '参考生视频',
+} as const
+
+/** 提示词里参考素材的编号写法：HappyHorse 写「[Image N]」，万相写「图N」。 */
+function videoPromptStyle(model: string): 'bailian' | 'happyhorse' {
+  return model.startsWith('happyhorse-') ? 'happyhorse' : 'bailian'
+}
+
 async function generateVideo(
   request: AdapterRequest,
   ctx: AdapterContext,
@@ -379,36 +391,64 @@ async function generateVideo(
     )
   const spec = toModelInfo(resolved.declaration, resolved.channel)
   const limits = spec.limits ?? {}
-  if (!input.prompt.trim() && !input.firstFrame && !input.references?.length)
+  const title = spec.title
+  const references = input.references ?? []
+  if (!input.prompt.trim() && !input.firstFrame && !references.length)
     throw new ProviderError('invalid_input', '视频需要提示词或参考素材')
   if (input.lastFrame && !input.firstFrame)
     throw new ProviderError('invalid_input', '尾帧须与首帧一起填写')
-  if ((input.firstFrame || input.lastFrame) && input.references?.length)
+  if ((input.firstFrame || input.lastFrame) && references.length)
     throw new ProviderError('invalid_input', '首尾帧不能与参考素材混用')
+  const mode = input.lastFrame
+    ? 'frames'
+    : input.firstFrame
+      ? 'image'
+      : references.length
+        ? 'reference'
+        : 'text'
+  if (limits.videoModes && !limits.videoModes.includes(mode))
+    throw new ProviderError('invalid_input', `${title} 不支持${VIDEO_MODE_TEXT[mode]}`)
   if (
     (input.firstFrame && input.firstFrame.kind !== 'image') ||
     (input.lastFrame && input.lastFrame.kind !== 'image')
   )
     throw new ProviderError('invalid_input', '首尾帧须为图片资产')
+  // -1 表示由模型决定时长，只有声明了 adaptive_duration 的模型支持
+  const adaptiveDuration = optionKeys(spec.optionsSchema).includes('adaptive_duration')
+  const duration = limits.duration || undefined
   if (
     input.duration !== undefined &&
-    input.duration !== -1 &&
-    (!Number.isInteger(input.duration) || input.duration < 2 || input.duration > 30)
+    !(adaptiveDuration && input.duration === -1) &&
+    (!Number.isInteger(input.duration) ||
+      (duration && (input.duration < duration.min || input.duration > duration.max)))
   )
-    throw new ProviderError('invalid_input', '万相视频时长须为 -1 或 2–30 秒整数')
+    throw new ProviderError(
+      'invalid_input',
+      `${title} 时长须为${adaptiveDuration ? ' -1 或' : ''} ${duration?.min}–${duration?.max} 秒整数`,
+    )
+  // 参考图数量取声明的 references，视频 / 音频取 referenceMedia；没声明 referenceMedia 表示只收图片
   for (const [kind, max] of [
-    ['image', 10],
-    ['audio', 5],
-    ['video', 5],
+    ['image', limits.references?.max],
+    ['audio', limits.referenceMedia?.audio ?? 0],
+    ['video', limits.referenceMedia?.video ?? 0],
   ] as const) {
-    if ((input.references ?? []).filter((ref) => ref.kind === kind).length > max)
-      throw new ProviderError('invalid_input', `万相 ${kind} 参考数量超过 ${max}`)
+    const count = references.filter((ref) => ref.kind === kind).length
+    if (max !== undefined && count > max)
+      throw new ProviderError(
+        'invalid_input',
+        max === 0 ? `${title} 不支持 ${kind} 参考` : `${title} 的 ${kind} 参考最多 ${max} 个`,
+      )
   }
   const resolution = input.resolution ?? limits.defaultResolution ?? '720P'
-  const ratio = input.aspectRatio === 'auto' ? 'adaptive' : (input.aspectRatio ?? '16:9')
+  // 没声明画幅的模型（如 HappyHorse 图生视频）由首帧决定宽高比，不发 ratio
+  const ratio = !limits.aspectRatios
+    ? undefined
+    : input.aspectRatio === 'auto'
+      ? 'adaptive'
+      : (input.aspectRatio ?? '16:9')
   if (limits.resolutions && !limits.resolutions.includes(resolution))
     throw new ProviderError('invalid_input', '万相不支持该视频分辨率')
-  if (ratio !== 'adaptive' && limits.aspectRatios && !limits.aspectRatios.includes(ratio))
+  if (ratio && ratio !== 'adaptive' && !limits.aspectRatios!.includes(ratio))
     throw new ProviderError('invalid_input', '万相不支持该视频画幅')
   if (optionsProblem(spec.optionsSchema, input.extra ?? {}))
     throw new ProviderError('invalid_input', '万相视频专属参数无效')
@@ -421,7 +461,7 @@ async function generateVideo(
   ) as Json
   const { adaptive_duration: adaptive, ...extra } = picked
   const sources = new Map<string, LoadedFile>()
-  for (const ref of input.references ?? []) {
+  for (const ref of references) {
     if (ref.kind !== 'image' && ref.kind !== 'audio' && ref.kind !== 'video')
       throw new ProviderError('invalid_input', '视频参考素材须为图片、音频或视频')
     sources.set(ref.assetId, await readAsset(ctx, ref))
@@ -468,7 +508,7 @@ async function generateVideo(
     {
       model,
       input: {
-        prompt: videoReferencePrompt(input.prompt, 'bailian'),
+        prompt: videoReferencePrompt(input.prompt, videoPromptStyle(model)),
         ...(media.length ? { media } : {}),
       },
       parameters: {
@@ -476,8 +516,9 @@ async function generateVideo(
         ...passthroughParameters(input),
         ...extra,
         resolution,
-        ratio,
-        audio: input.audio ?? true,
+        ...(ratio ? { ratio } : {}),
+        // 声明 audio: false 的模型没有音频开关，不发这个字段
+        ...(limits.audio === false ? {} : { audio: input.audio ?? true }),
         ...(adaptive === true
           ? { duration: -1 }
           : input.duration !== undefined
