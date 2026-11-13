@@ -1,7 +1,7 @@
 {
   "name": "modelbay",
-  "version": "0.5.0",
-  "description": "One TypeScript SDK for Volcengine Ark (Doubao, Seedream, Seedance), Alibaba Bailian / DashScope (Qwen, Wan), MiniMax, Doubao Speech and OpenAI: chat, image, video, speech and music with one API",
+  "version": "0.5.1",
+  "description": "One TypeScript SDK for Volcengine Ark (Doubao, Seedream, Seedance), Alibaba Bailian / DashScope (Qwen, Wan), MiniMax, Doubao Speech, OpenAI and DeepSeek: chat, image, video, speech and music with one API",
   "keywords": [
     "sdk",
     "ai-sdk",
@@ -21,7 +21,8 @@
     "image-generation",
     "video-generation",
     "text-to-speech",
-    "typescript"
+    "typescript",
+    "deepseek"
   ],
   "license": "MIT",
   "repository": {
@@ -82,6 +83,10 @@
     "./openai/node": {
       "types": "./dist/openai/node.d.mts",
       "default": "./dist/openai/node.mjs"
+    },
+    "./deepseek": {
+      "types": "./dist/deepseek.d.mts",
+      "default": "./dist/deepseek.mjs"
     }
   },
   "scripts": {
@@ -113,7 +118,8 @@
     "sharp": "^0.35.5",
     "typescript": "^7.0.2",
     "ws": "^8.22.1",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@modelbay/deepseek": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@volcengine/tos-sdk": {

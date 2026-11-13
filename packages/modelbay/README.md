@@ -1,7 +1,7 @@
 # modelbay
 
 The single install point for the [Modelbay](https://github.com/hoobnn/modelbay#readme) SDK. It bundles
-the runtime-agnostic core API and the five platform adapters, holds the platform
+the runtime-agnostic core API and the six platform adapters, holds the platform
 registry, and adds `createModelbay()` which wires everything together.
 
 MIT licensed.
@@ -43,16 +43,16 @@ environment is set up.
 
 ## API
 
-| Export                                                | Description                                                   |
-| ----------------------------------------------------- | ------------------------------------------------------------- |
-| `createModelbay(options)`                             | Build a `Modelbay` with a registered model registry           |
-| `defaultAdapters(platforms?)`                         | Runtime-agnostic adapters of every registered platform        |
-| `PLATFORMS`, `findPlatform(key)`                      | Platform registry (`PlatformDescriptor` per platform)         |
-| `Modelbay.generate(request)`                          | Submit + poll; returns `JobOutcome` (URLs or bytes)           |
-| `Modelbay.registry`                                   | `ModelRegistry` (`all`, `resolve`, `defaultFor`, `list`, ...) |
-| `Modelbay.capabilities()`                             | Deduplicated normalized capabilities                          |
-| `Modelbay.doctor()`                                   | Key configuration report with missing names; never values     |
-| `ark`, `bailian`, `minimax`, `doubaoSpeech`, `openai` | Namespace re-exports of the platform packages                 |
+| Export                                                            | Description                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| `createModelbay(options)`                                         | Build a `Modelbay` with a registered model registry           |
+| `defaultAdapters(platforms?)`                                     | Runtime-agnostic adapters of every registered platform        |
+| `PLATFORMS`, `findPlatform(key)`                                  | Platform registry (`PlatformDescriptor` per platform)         |
+| `Modelbay.generate(request)`                                      | Submit + poll; returns `JobOutcome` (URLs or bytes)           |
+| `Modelbay.registry`                                               | `ModelRegistry` (`all`, `resolve`, `defaultFor`, `list`, ...) |
+| `Modelbay.capabilities()`                                         | Deduplicated normalized capabilities                          |
+| `Modelbay.doctor()`                                               | Key configuration report with missing names; never values     |
+| `ark`, `bailian`, `minimax`, `doubaoSpeech`, `openai`, `deepseek` | Namespace re-exports of the platform packages                 |
 
 Everything exported by `@modelbay/core` is re-exported here as well, so a
 consumer needs only the single `modelbay` dependency.
@@ -70,6 +70,7 @@ SDK. The environment variable names come from each platform's descriptor
 | MiniMax         | `MINIMAX_API_KEY`                                                              |
 | Doubao Speech   | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN`                   |
 | OpenAI          | `OPENAI_API_KEY`, or `OPENAI_COMPATIBLE_API_KEY`                               |
+| DeepSeek        | `DEEPSEEK_API_KEY`                                                             |
 
 ## Platform-specific exports
 
@@ -82,9 +83,9 @@ import { uploadReferenceVideo } from 'modelbay/ark/node'
 ```
 
 Subpaths: `modelbay/ark`, `modelbay/bailian`, `modelbay/minimax`,
-`modelbay/doubao-speech`, `modelbay/openai`, and `/node` for `ark`, `bailian`,
-`doubao-speech`, `openai`. The root entry also exposes each platform as a
-namespace (`ark`, `bailian`, `minimax`, `doubaoSpeech`, `openai`).
+`modelbay/doubao-speech`, `modelbay/openai`, `modelbay/deepseek`, and `/node` for
+`ark`, `bailian`, `doubao-speech`, `openai`. The root entry also exposes each platform as a
+namespace (`ark`, `bailian`, `minimax`, `doubaoSpeech`, `openai`, `deepseek`).
 
 ## Node-only capabilities
 
@@ -108,3 +109,6 @@ const mb = createModelbay({ adapters: await nodeAdapters() })
   `ModelbayHooks`.
 - `fetch` can be injected through `createModelbay({ fetch })`, which makes the
   whole path testable with recorded fixtures and no network.
+
+DeepSeek requires `DEEPSEEK_API_KEY` (optional `DEEPSEEK_BASE_URL`); see
+[DeepSeek](../deepseek/README.md) for normalized chat and standalone application APIs.

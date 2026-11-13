@@ -249,3 +249,5 @@ export function createModelbay(options: ModelbayOptions = {}): Modelbay {
 
   return { registry, adapters, capabilities, generate, doctor }
 }
+
+export * as deepseek from '@modelbay/deepseek'

@@ -5,7 +5,7 @@
 [![npm](https://img.shields.io/npm/v/modelbay)](https://www.npmjs.com/package/modelbay)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Modelbay is an open-source (MIT) TypeScript SDK, MCP server and CLI that give you one interface to Chinese and global AI model platforms: Volcengine Ark (Doubao, Seedream, Seedance), Alibaba Cloud Bailian / DashScope (Qwen, Wan), MiniMax, Doubao Speech and OpenAI. It covers chat, image, video, speech and music generation, and handles async job polling for you.
+Modelbay is an open-source (MIT) TypeScript SDK, MCP server and CLI that give you one interface to Chinese and global AI model platforms: Volcengine Ark (Doubao, Seedream, Seedance), Alibaba Cloud Bailian / DashScope (Qwen, Wan), MiniMax, Doubao Speech, OpenAI and DeepSeek. It covers chat, image, video, speech and music generation, and handles async job polling for you.
 
 Install the SDK with `npm i modelbay zod`, or add an MCP server to Claude Code, Codex, Cursor or Claude Desktop with `npx -y @modelbay/mcp ark`. Packages are on npm as [`modelbay`](https://www.npmjs.com/package/modelbay), `@modelbay/mcp` and `@modelbay/cli`. Design decisions live in [`docs/decisions/`](docs/decisions/).
 
@@ -26,9 +26,9 @@ Three packages are published to npm:
 
 Platform-specific exports live on subpaths of `modelbay`: `modelbay/ark`,
 `modelbay/bailian`, `modelbay/minimax`, `modelbay/doubao-speech`,
-`modelbay/openai`, plus `modelbay/<platform>/node` for Node-only helpers.
+`modelbay/openai`, `modelbay/deepseek`, plus `modelbay/<platform>/node` for Node-only helpers.
 
-Inside the repo, `@modelbay/core`, `@modelbay/shared` and the five platform
+Inside the repo, `@modelbay/core`, `@modelbay/shared` and the six platform
 packages stay separate private workspace packages that keep the layering honest;
 `modelbay` bundles them at build time. All packages are ESM-only, MIT licensed,
 and share one version number (changesets fixed group).
@@ -72,11 +72,11 @@ modelbay generate --capability image.generate --prompt "a cat" --model ark:douba
 
 ## FAQ
 
-**What is Modelbay?** A TypeScript SDK, MCP server and CLI for Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech and OpenAI. One implementation serves all three entry points, driven by a single set of model declarations.
+**What is Modelbay?** A TypeScript SDK, MCP server and CLI for Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech, OpenAI and DeepSeek. One implementation serves all three entry points, driven by a single set of model declarations.
 
-**How do I use it in Claude Code, Codex, Cursor or Claude Desktop?** Add an MCP server that runs `npx -y @modelbay/mcp <platform>` (`ark`, `minimax`, `bailian`, `doubao-speech` or `openai`) and pass the platform key through the server's environment, for example `ARK_API_KEY`. Each platform is a separate server. See [`packages/mcp/README.md`](packages/mcp/README.md).
+**How do I use it in Claude Code, Codex, Cursor or Claude Desktop?** Add an MCP server that runs `npx -y @modelbay/mcp <platform>` (`ark`, `minimax`, `bailian`, `doubao-speech`, `openai` or `deepseek`) and pass the platform key through the server's environment, for example `ARK_API_KEY`. Each platform is a separate server. See [`packages/mcp/README.md`](packages/mcp/README.md).
 
-**Which platforms and capabilities are supported?** Ark, Bailian, MiniMax, Doubao Speech and OpenAI; chat, image generation and editing, video generation, speech, music, voice cloning and design, and transcription, depending on the platform. Run `modelbay models` or `modelbay capabilities` for the current list, or see the [goals](docs/goals.md).
+**Which platforms and capabilities are supported?** Ark, Bailian, MiniMax, Doubao Speech, OpenAI and DeepSeek; chat, image generation and editing, video generation, speech, music, voice cloning and design, and transcription, depending on the platform. Run `modelbay models` or `modelbay capabilities` for the current list, or see the [goals](docs/goals.md).
 
 **Is it free? Which license?** Free and open source under the MIT license. Model usage is billed by each platform on your own account.
 
@@ -100,3 +100,6 @@ declarations in both directions, tracks gaps in an issue, and opens a draft PR
 for lifecycle patches ([`docs/upstream.md`](docs/upstream.md), in Chinese).
 
 MIT © ikuyu
+
+DeepSeek application APIs (search, fetch, files, OCR, ASR and TTS) are available
+through [`modelbay/deepseek`](packages/deepseek/README.md) and `modelbay-mcp deepseek`.

@@ -47,6 +47,18 @@ no key or signature is logged. Tests replay a recorded chunked audio stream and
 assert both the plan endpoint and the error path, so the reuse is verified
 rather than falling back to a stub.
 
+## Seedream 5.5
+
+`ark:doubao-seedream-5-5-261028` supports single-image generation and editing
+with up to ten reference images, native RGBA output, and layer decomposition.
+Use `image.generate` with `extra.background: 'transparent'` for an RGBA image
+(PNG is the model default; JPEG with a transparent background is rejected).
+Use `image.process` with `operation: 'cutout'` and optional
+`extra.layer_decomposition_options: { max_images: 100, text_recognition: true }`
+for up to 99 layers plus the base image. OCR data is preserved in the JSON layer
+metadata. `extra.size` may select the decomposition resolution, including `auto`.
+The model is available on the pay-as-you-go channel; no plan alias is assumed.
+
 ## Text chat: platform field passthrough
 
 Chat uses the OpenAI-compatible `/chat/completions` endpoint (non-streaming).

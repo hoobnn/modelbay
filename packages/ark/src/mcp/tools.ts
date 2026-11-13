@@ -162,7 +162,7 @@ export const arkTools: ToolSpec[] = [
     description:
       'Seedream 生成或编辑图片，海报文字渲染可改用 ali-bailian 的 qwen。' +
       'images为本地路径或URL。宽高比写入prompt。size取档位（如2K）或宽x高像素，具体可选值随模型。fast=true使用快速提示词优化（部分模型不支持）。按成功张数计费。' +
-      '返回job_id、job_state、files、artifacts、usage；recover_job只补交付。parameters仅支持watermark、output_format、size、optimize_prompt_options，其余字段会报错。\n',
+      '返回job_id、job_state、files、artifacts、usage；recover_job只补交付。parameters仅支持watermark、output_format、background、size、optimize_prompt_options，其余字段会报错。\n',
     capability: 'image.generate',
     // size（档位或 WxH 像素）/ output_format / watermark / optimize_prompt_options 都是 /images/generations 的顶层字段；
     // fast=true 对应 optimize_prompt_options.mode = 'fast'（可选 standard / fast）。
@@ -173,7 +173,7 @@ export const arkTools: ToolSpec[] = [
       const pixels = typeof size === 'string' && /^\d+x\d+$/.test(size)
       return intoExtra(
         { ...rest, ...(typeof size === 'string' && !pixels ? { resolution: size } : {}) },
-        ['output_format', 'watermark'],
+        ['output_format', 'watermark', 'background', 'layer_decomposition_options'],
         {
           ...(pixels ? { size } : {}),
           ...(fast === true ? { optimize_prompt_options: { mode: 'fast' } } : {}),

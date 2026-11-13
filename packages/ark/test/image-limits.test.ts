@@ -274,3 +274,109 @@ describe('上限跟着声明走', () => {
     expect(body().sequential_image_generation_options).toEqual({ max_images: 7 })
   })
 })
+
+describe('Seedream 5.5：原生透明图与图层拆分', () => {
+  const model = 'ark:doubao-seedream-5-5-261028'
+
+  it('透明图参数传入官方字段，默认输出按 PNG 解释', async () => {
+    const { ctx, body } = ctxWithAssets()
+    const result = await createArkAdapter(models).submit(
+      {
+        capability: 'image.generate',
+        model,
+        input: { prompt: '透明背景图标', extra: { background: 'transparent' } },
+      },
+      ctx,
+    )
+    expect(body()).toMatchObject({ model: 'doubao-seedream-5-5-261028', background: 'transparent' })
+    expect(body()).not.toHaveProperty('sequential_image_generation')
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      outputs: [{ type: 'file', mime: 'image/png' }],
+    })
+  })
+
+  it('JPEG 透明图在请求前拒绝', async () => {
+    const { ctx, fetch } = ctxWithAssets()
+    await expect(
+      createArkAdapter(models).submit(
+        {
+          capability: 'image.generate',
+          model,
+          input: { prompt: '图标', extra: { background: 'transparent', output_format: 'jpeg' } },
+        },
+        ctx,
+      ),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('拆分设置透传，99 号图层与富文本 OCR 保留', async () => {
+    const textRecognition = { text: '标题', font_size: 20 }
+    const { ctx, body } = fakeContext(
+      [
+        {
+          data: [
+            { z_index: 0 },
+            { z_index: 99, b64_json: 'AQID', text_recognition: textRecognition },
+          ],
+        },
+      ],
+      {
+        secret: { ARK_API_KEY: 'test-secret' },
+        assets: { load: async () => ({ data: new Uint8Array([1, 2, 3]), mime: 'image/png' }) },
+      },
+    )
+    const result = await createArkAdapter(models).submit(
+      {
+        capability: 'image.process',
+        model,
+        input: {
+          image: ref,
+          operation: 'cutout',
+          extra: {
+            size: 'auto',
+            layer_decomposition_options: { max_images: 100, text_recognition: true },
+          },
+        },
+      },
+      ctx,
+    )
+    expect(body()).toMatchObject({
+      layer_decomposition: true,
+      size: 'auto',
+      layer_decomposition_options: { max_images: 100, text_recognition: true },
+    })
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      outputs: [
+        { type: 'file', mime: 'image/png' },
+        {
+          type: 'json',
+          value: { layers: [{ z_index: 0 }, { z_index: 99, text_recognition: textRecognition }] },
+        },
+      ],
+    })
+  })
+
+  it('拆分数量超出声明上限时不联网', async () => {
+    const { ctx, fetch } = ctxWithAssets()
+    await expect(
+      createArkAdapter(models).submit(
+        {
+          capability: 'image.process',
+          model,
+          input: {
+            image: ref,
+            operation: 'cutout',
+            extra: {
+              layer_decomposition_options: { max_images: 101 },
+            },
+          },
+        },
+        ctx,
+      ),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})

@@ -41,6 +41,23 @@ export interface PlatformSources {
 
 export const SOURCES: PlatformSources[] = [
   {
+    key: 'deepseek',
+    pages: [
+      {
+        url: 'https://api-docs.deepseek.com/quick_start/pricing/',
+        role: 'list',
+        channel: 'deepseek',
+      },
+      // 没有独立下线公告页；updates 混合发布、价格与旧型号迁移信息，不能按整页下线公告抽取。
+      // 当前型号与旧型号兼容/退休状态以 pricing 页为准。
+    ],
+    skipped: [
+      // 2026-11-13：官方说明旧模型已经退休，仅兼容路由至 deepseek-flash。
+      'deepseek-v4-flash',
+      'deepseek-v4-flash-vision-exp',
+    ],
+  },
+  {
     key: 'ark',
     pages: [
       {
@@ -284,6 +301,7 @@ export const OFFICIAL_HOST_SUFFIXES = [
   'minimaxi.com',
   'minimax.io',
   'openai.com',
+  'deepseek.com',
   'bytedance.com',
 ]
 

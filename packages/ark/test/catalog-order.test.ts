@@ -27,6 +27,7 @@ describe('方舟目录顺序', () => {
 
   it('按量图片与视频模型的顺序固定', () => {
     expect(idsIn('ark', 'image.generate')).toEqual([
+      'doubao-seedream-5-5-261028',
       'doubao-seedream-5-0-pro-260628',
       'doubao-seedream-5-0-flash-260915',
       'doubao-seedream-5-0-260128',

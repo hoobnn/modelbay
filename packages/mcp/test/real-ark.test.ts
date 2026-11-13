@@ -232,6 +232,34 @@ describe('MCP 方舟工具经真实适配器', () => {
     })
   })
 
+  it.each([{ background: 'transparent' }, { parameters: { background: 'transparent' } }])(
+    'generate_image：Seedream 5.5 的透明通道参数进入请求体 %j',
+    async (options) => {
+      const { handlers, captured } = handlersWith(imageJson)
+      await handlers.callTool('generate_image', {
+        model: 'ark:doubao-seedream-5-5-261028',
+        prompt: '透明图标',
+        ...options,
+      })
+      expect(captured[0]!.body).toMatchObject({
+        model: 'doubao-seedream-5-5-261028',
+        background: 'transparent',
+      })
+    },
+  )
+
+  it('generate_image：仅用于 cutout 的图层配置明确报错', async () => {
+    const { handlers, captured } = handlersWith(imageJson)
+    await expect(
+      handlers.callTool('generate_image', {
+        model: 'ark:doubao-seedream-5-5-261028',
+        prompt: '图标',
+        layer_decomposition_options: { max_images: 100 },
+      }),
+    ).rejects.toThrow(/layer_decomposition_options/)
+    expect(captured).toHaveLength(0)
+  })
+
   it('generate_image：宽x高像素原样作为 size', async () => {
     const { handlers, captured } = handlersWith(imageJson)
     await handlers.callTool('generate_image', {

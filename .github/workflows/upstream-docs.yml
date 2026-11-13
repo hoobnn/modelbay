@@ -19,7 +19,7 @@ on:
         description: Platform to audit
         type: choice
         default: all
-        options: [all, ark, bailian, minimax, doubao-speech, openai]
+        options: [all, ark, bailian, minimax, doubao-speech, openai, deepseek]
   schedule:
     - cron: "23 2 * * *"
 
@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        platform: ${{ fromJSON(inputs.platform && inputs.platform != 'all' && format('["{0}"]', inputs.platform) || '["ark","bailian","minimax","doubao-speech","openai"]') }}
+        platform: ${{ fromJSON(inputs.platform && inputs.platform != 'all' && format('["{0}"]', inputs.platform) || '["ark","bailian","minimax","doubao-speech","openai","deepseek"]') }}
     env:
       HUSKY: "0"
       REPORT: .upstream-docs/${{ matrix.platform }}/report.md
