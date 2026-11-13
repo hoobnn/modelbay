@@ -7,6 +7,7 @@ import { arkPlatform } from '@modelbay/ark'
 import { bailianPlatform } from '@modelbay/bailian'
 import { doubaoSpeechPlatform } from '@modelbay/doubao-speech'
 import { minimaxPlatform } from '@modelbay/minimax'
+import { deepseekPlatform } from '@modelbay/deepseek'
 import { openaiPlatform } from '@modelbay/openai'
 
 export const PLATFORMS: readonly PlatformDescriptor[] = [
@@ -15,6 +16,7 @@ export const PLATFORMS: readonly PlatformDescriptor[] = [
   bailianPlatform,
   doubaoSpeechPlatform,
   openaiPlatform,
+  deepseekPlatform,
 ]
 
 /** 按平台键查描述对象。 */

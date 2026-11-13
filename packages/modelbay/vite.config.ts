@@ -11,6 +11,7 @@ export default definePackageConfig(import.meta.url, {
     minimax: 'src/platform/minimax.ts',
     'doubao-speech': 'src/platform/doubao-speech.ts',
     'doubao-speech/node': 'src/platform/doubao-speech-node.ts',
+    deepseek: 'src/platform/deepseek.ts',
     openai: 'src/platform/openai.ts',
     'openai/node': 'src/platform/openai-node.ts',
   },

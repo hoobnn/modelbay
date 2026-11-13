@@ -21,6 +21,7 @@ npx -y @modelbay/mcp ark            # or: modelbay-mcp ark
 | Alibaba Bailian | `bailian`       | `BAILIAN_API_KEY` (alias `DASHSCOPE_API_KEY`), or `BAILIAN_TOKEN_PLAN_API_KEY` |
 | Doubao Speech   | `doubao-speech` | `DOUBAO_API_KEY`, or `DOUBAO_APP_ID` + `DOUBAO_ACCESS_TOKEN`                   |
 | OpenAI          | `openai`        | `OPENAI_API_KEY`                                                               |
+| DeepSeek        | `deepseek`      | `DEEPSEEK_API_KEY`                                                             |
 
 Ark has two billing channels. Prefix the model with `ark-plan:` to use the Agent Plan
 (`ARK_AGENT_PLAN_API_KEY`, `/api/plan/v3`) and `ark:` for pay-per-use (`ARK_API_KEY`). A model
