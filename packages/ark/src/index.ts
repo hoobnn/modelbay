@@ -14,6 +14,7 @@
  * take them from the `@modelbay/ark/node` subpath (`nodeOptions` bundles all three),
  * so the root entry never pulls in the object-storage SDK, `ws` or `node:crypto`.
  */
+import { validateOptions } from './options'
 import {
   ProviderError,
   defineAdapter,
@@ -44,7 +45,7 @@ import {
   type TaskOptions,
 } from './media'
 import { synthesizePlanSpeech } from './speech'
-import { request } from './http'
+import { asJson, request } from './http'
 import type { ArkAdapterOptions } from './reference'
 
 export type {
@@ -244,6 +245,7 @@ async function submit(
     })
   }
   if (req.capability === 'image.generate') {
+    validateOptions(declaration, asJson(req.input.extra))
     const body = await imageBody(
       model,
       req.input as CapabilityInput<'image.generate'>,
@@ -253,10 +255,13 @@ async function submit(
     )
     return parseImageResponse(await post('/images/generations', body), {
       key,
-      outputFormat: body.output_format,
+      outputFormat:
+        body.output_format ??
+        asJson(asJson(declaration?.optionsSchema?.properties).output_format).default,
     })
   }
   if (req.capability === 'image.process') {
+    validateOptions(declaration, asJson(req.input.extra))
     const body = await cutoutBody(
       model,
       req.input as CapabilityInput<'image.process'>,

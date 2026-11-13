@@ -102,12 +102,15 @@ export async function imageBody(
       'size',
       'watermark',
       'output_format',
+      'background',
       'optimize_prompt_options',
     ]),
     model,
     prompt: input.prompt,
     response_format: 'b64_json',
   }
+  if (body.background === 'transparent' && body.output_format === 'jpeg')
+    invalid('透明图片必须使用 PNG 输出格式')
   const aspectRatio = body.aspectRatio
   delete body.aspectRatio
   // 未选分辨率时使用模型默认档位；固定画幅与显式选择走同一尺寸换算。
@@ -227,6 +230,7 @@ export async function cutoutBody(
   )
   if (problems.length) invalid(problems[0]!)
   return {
+    ...extraParams(input.extra, ['size', 'layer_decomposition_options']),
     model,
     image: `data:${source.mime};base64,${toBase64(source.data)}`,
     prompt: input.prompt ?? '',
@@ -243,13 +247,7 @@ export function parseCutoutResponse(data: Json): SubmitResult {
   const indices = new Set<number>()
   for (const layer of layers) {
     const index = layer.z_index
-    if (
-      typeof index !== 'number' ||
-      !Number.isInteger(index) ||
-      index < 0 ||
-      index > 16 ||
-      indices.has(index)
-    )
+    if (typeof index !== 'number' || !Number.isInteger(index) || index < 0 || indices.has(index))
       throw new ProviderError('unknown', '图层顺序信息无效；不会自动重提')
     indices.add(index)
     if (layer.bounding_box !== undefined) {
@@ -287,11 +285,12 @@ export function parseCutoutResponse(data: Json): SubmitResult {
   outputs.push({
     type: 'json',
     value: {
-      layers: layers.map(({ z_index, bounding_box, name, description }) => ({
+      layers: layers.map(({ z_index, bounding_box, name, description, text_recognition }) => ({
         z_index,
         bounding_box,
         name,
         description,
+        ...(text_recognition === undefined ? {} : { text_recognition }),
       })),
     },
   })

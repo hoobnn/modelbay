@@ -1,4 +1,5 @@
 import type { ModelDeclaration } from '@modelbay/core'
+import doubaoSeedream55261028 from './doubao-seedream-5-5-261028'
 import doubaoSeedream50Pro260628 from './doubao-seedream-5-0-pro-260628'
 import doubaoSeedream50Flash260915 from './doubao-seedream-5-0-flash-260915'
 import doubaoSeedance25260628 from './doubao-seedance-2-5-260628'
@@ -32,6 +33,7 @@ import doubaoSeedream50260128 from './doubao-seedream-5-0-260128'
 import doubaoEmbeddingVision from './doubao-embedding-vision'
 
 export {
+  doubaoSeedream55261028,
   doubaoSeedream50Pro260628,
   doubaoSeedream50Flash260915,
   doubaoSeedance25260628,
@@ -88,6 +90,7 @@ export const all: ModelDeclaration[] = [
   kimiK28Preview,
   kimiK3,
   kimiK31Pro,
+  doubaoSeedream55261028,
   doubaoSeedream50Pro260628,
   doubaoSeedream50Flash260915,
   doubaoSeedream50260128,
