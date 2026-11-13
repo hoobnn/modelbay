@@ -1,5 +1,15 @@
 # @modelbay/mcp
 
+## 0.5.1
+
+### Patch Changes
+
+- 83f3a09: 接入 DeepSeek 官方模型及对话、搜索、网页读取、文件解析、OCR 和语音服务，并加入 SDK、MCP、CLI 平台注册及上游文档对账。
+- 28b34d6: 接入火山方舟 Seedream 5.5，支持原生 RGBA 图片生成、最多 99 个图层拆分及富文本 OCR 元数据，修正默认 PNG 输出识别，并同步 SDK、MCP 和 CLI 模型目录。
+- Updated dependencies [83f3a09]
+- Updated dependencies [28b34d6]
+  - modelbay@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes

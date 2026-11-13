@@ -1,6 +1,6 @@
 {
   "name": "@modelbay/mcp",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "MCP server for Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech and OpenAI: image, video, speech, music and chat tools for Claude Code, Codex, Cursor and Claude Desktop",
   "keywords": [
     "mcp",
