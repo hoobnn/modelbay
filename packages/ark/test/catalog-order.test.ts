@@ -35,6 +35,7 @@ describe('方舟目录顺序', () => {
     ])
     expect(idsIn('ark', 'video.generate')).toEqual([
       'doubao-seedance-2-5-260628',
+      'doubao-seedance-2-5-flash-261115',
       'doubao-seedance-2-0-260128',
       'doubao-seedance-2-0-fast-260128',
       'doubao-seedance-2-0-mini-260615',
