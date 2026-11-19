@@ -13,6 +13,8 @@ export default {
   // 取上限 524288，2026-11-07 核对原文。
   contextWindow: 1000000,
   maxOutputTokens: 524288,
+  // 默认选型依据（2026-11-19）：https://platform.minimax.cn/docs/guides/text-generation
+  default: true,
   channels: [{ channel: 'minimax', id: 'MiniMax-M3.1-Flash' }],
   aliases: { official: [], short: [] },
   lifecycle: {

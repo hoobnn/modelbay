@@ -53,6 +53,9 @@ export default {
       truncation: { title: '上下文截断', type: 'string', enum: ['auto', 'disabled'] },
     },
   },
+  // 默认选型依据（2026-11-19）：https://developers.openai.com/api/docs/guides/reasoning
+  // 原文「Start with gpt-6.2-astra for most reasoning workloads.」
+  default: true,
   channels: [{ channel: 'openai', id: 'gpt-6.2-astra' }],
   aliases: { official: [], short: [] },
   lifecycle: {

@@ -67,7 +67,7 @@ describe('方舟目录顺序', () => {
     const defaults = (channel: string, capability: never) =>
       selectDefaultModel(allModels, capability, channel)?.channel.id
     expect(defaults('ark', 'text.chat' as never)).toBe('doubao-seed-2-1-pro-260915')
-    expect(defaults('ark', 'image.generate' as never)).toBe('doubao-seedream-5-0-pro-260628')
+    expect(defaults('ark', 'image.generate' as never)).toBe('doubao-seedream-5-5-261028')
     expect(defaults('ark', 'video.generate' as never)).toBe('doubao-seedance-2-5-260628')
   })
 })

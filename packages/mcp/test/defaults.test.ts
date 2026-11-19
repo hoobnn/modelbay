@@ -3,7 +3,7 @@
  *
  * 预期表与工具清单快照（`test/baselines/*.json`）里各工具 `model` 字段的 `default` 一致：
  * - 方舟 chat 的 `pro` → `doubao-seed-2-1-pro-260915`（按量渠道，不是套餐渠道）；
- * - 百炼 chat 的 `max` → `qwen3.8-max`，生图的 `qwen` → `qwen-image-3.0-pro`，
+ * - 百炼按量 chat 默认 `qwen4-max`，生图默认 `qwen-image-3.0-pro`，
  *   视频的 `wan` → `wan3.0-video`；
  * - MiniMax 音乐模型全部归档（retired），音乐生成工具不再提供。
  */
@@ -29,19 +29,19 @@ const EXPECTED: Record<McpKey, Record<string, string | null | undefined>> = {
   ark: {
     chat: 'ark:doubao-seed-2-1-pro-260915',
     embed: undefined,
-    generate_image: 'ark:doubao-seedream-5-0-pro-260628',
+    generate_image: 'ark:doubao-seedream-5-5-261028',
     generate_video: 'ark:doubao-seedance-2-5-260628',
   },
   minimax: {
     generate_video: 'minimax:MiniMax-H3',
     list_video_tasks: null,
     text_to_speech: 'minimax:speech-2.8-hd',
-    generate_image: 'minimax:image-01',
+    generate_image: 'minimax:MiniMax-H3-Image',
     h3_image_context_ir: 'minimax:MiniMax-H3-Image',
     clone_voice: 'minimax:speech-2.8-hd',
   },
   bailian: {
-    chat: 'bailian:qwen3.8-max',
+    chat: 'bailian:qwen4-max',
     edit_video: 'bailian:happyhorse-1.0-video-edit',
     embed: 'bailian:text-embedding-v4',
     generate_audio: 'bailian:qwen-audio-3.1-tts-next',

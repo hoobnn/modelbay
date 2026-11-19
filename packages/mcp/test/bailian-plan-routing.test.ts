@@ -56,7 +56,7 @@ describe('百炼 MCP 按渠道路由', () => {
       BAILIAN_TOKEN_PLAN_API_KEY: 'plan-key',
     })
     await handlers.callTool('chat', { prompt: '你好' })
-    expect(captured[0]!.auth).toBe('Bearer api-key')
+    expect(captured[0]).toMatchObject({ auth: 'Bearer api-key', model: 'qwen4-max' })
   })
 
   it('只配套餐 key、不传模型：走 Token Plan 的默认对话模型', async () => {

@@ -54,7 +54,6 @@ export default {
       truncation: { title: '上下文截断', type: 'string', enum: ['auto', 'disabled'] },
     },
   },
-  default: true,
   channels: [{ channel: 'openai', id: 'gpt-6.1-sol' }],
   aliases: { official: [], short: [] },
   lifecycle: {

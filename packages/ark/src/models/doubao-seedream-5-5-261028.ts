@@ -71,6 +71,8 @@ export default {
       },
     },
   },
+  // 默认选型依据（2026-11-19）：https://docs.volcengine.com/docs/ark/model-list?lang=zh
+  default: true,
   channels: [
     { channel: 'ark', id: 'doubao-seedream-5-5-261028' },
     {

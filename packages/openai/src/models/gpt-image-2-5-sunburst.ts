@@ -62,7 +62,6 @@ export default {
       },
     },
   },
-  default: true,
   channels: [{ channel: 'openai', id: 'gpt-image-2.5-sunburst' }],
   aliases: { official: ['gpt-image-2.5-sunburst-2026-09-08'], short: [] },
   lifecycle: {

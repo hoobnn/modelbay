@@ -23,7 +23,6 @@ export default {
       aigc_watermark: { title: '水印', type: 'boolean' },
     },
   },
-  default: true,
   channels: [{ channel: 'minimax', id: 'image-01' }],
   aliases: { official: [], short: [] },
   lifecycle: {

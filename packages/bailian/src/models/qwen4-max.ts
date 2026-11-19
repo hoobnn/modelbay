@@ -10,7 +10,8 @@ export default {
   // 最大输出长度为 262,144（默认开启的思考模式），非思考模式下为 131,072。
   contextWindow: 1000000,
   maxOutputTokens: 262144,
-  channels: [{ channel: 'bailian', id: 'qwen4-max' }],
+  // 默认选型依据（2026-11-19）：https://help.aliyun.com/zh/model-studio/text-generation-model
+  channels: [{ channel: 'bailian', id: 'qwen4-max', default: true }],
   aliases: { official: [], short: [] },
   lifecycle: {
     status: 'active',

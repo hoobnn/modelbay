@@ -107,7 +107,16 @@ describe('方舟套餐渠道的 ID', () => {
     // 声明的 default 是模型级标记；MCP 的默认从按量渠道（primaryChannel）里选。
     const image = selectDefaultModel(all, 'image.generate', 'ark')
     expect(image?.channel.channel).toBe('ark')
-    expect(image?.declaration.canonicalId).toBe('volc/doubao-seedream-5-0-pro-260628')
+    expect(image?.declaration.canonicalId).toBe('volc/doubao-seedream-5-5-261028')
+    expect(selectDefaultModel(all, 'image.process', 'ark')?.channel.id).toBe(
+      'doubao-seedream-5-5-261028',
+    )
+    expect(selectDefaultModel(all, 'image.generate', 'ark-plan')?.channel.id).toBe(
+      'doubao-seedream-5.5',
+    )
+    expect(selectDefaultModel(all, 'image.process', 'ark-plan')?.channel.id).toBe(
+      'doubao-seedream-5.5',
+    )
     const video = selectDefaultModel(all, 'video.generate', 'ark')
     expect(video?.channel.channel).toBe('ark')
     expect(video?.declaration.canonicalId).toBe('volc/doubao-seedance-2-5-260628')

@@ -126,7 +126,7 @@ describe('prepareImageEditRequest：Node 端准备编辑请求', () => {
       image: { assetId: 'source', kind: 'image' },
       mask: { assetId: 'mask', kind: 'image' },
     })
-    expect(body.model).toBe('gpt-image-2.5-sunburst')
+    expect(body.model).toBe('gpt-image-2.6-sunburst')
     expect(body.prompt).toBe('改天空')
     expect(body.n).toBe(1)
     expect(body.output_format).toBe('png')

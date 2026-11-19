@@ -13,7 +13,6 @@ export default {
   // 取上限 524288，2026-11-07 核对原文。
   contextWindow: 1000000,
   maxOutputTokens: 524288,
-  default: true,
   channels: [{ channel: 'minimax', id: 'MiniMax-M3' }],
   aliases: { official: [], short: [] },
   lifecycle: {
