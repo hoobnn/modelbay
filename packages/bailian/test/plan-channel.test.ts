@@ -58,6 +58,26 @@ describe('百炼 Token Plan 渠道', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('qwen4-max 走按量端点，不与套餐预览模型互换', async () => {
+    const { ctx, calls } = fakeContext([DONE.clone()], {
+      secrets: { BAILIAN_API_KEY: 'api-key', [PLAN_API_KEY]: 'plan-key' },
+    })
+    await expect(bailianAdapter.submit(chat('qwen4-max'), ctx)).resolves.toMatchObject({
+      state: 'succeeded',
+    })
+    expect(calls()[0]).toMatchObject({
+      url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+      body: { model: 'qwen4-max' },
+    })
+    expect(new Headers(calls()[0]?.headers).get('authorization')).toBe('Bearer api-key')
+
+    const keyed = fakeContext([], { secrets: { [PLAN_API_KEY]: 'plan-key' } })
+    await expect(plan.submit(chat('qwen4-max'), keyed.ctx)).rejects.toMatchObject({
+      code: 'invalid_input',
+    })
+    expect(keyed.fetch).not.toHaveBeenCalled()
+  })
+
   it('工具调用多轮：思考内容放进 continuation，下一轮按 reasoning_content 回传', async () => {
     const first = sse(
       [
