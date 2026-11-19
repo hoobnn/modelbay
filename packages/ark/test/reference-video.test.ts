@@ -27,6 +27,38 @@ function urlOf(item: Record<string, unknown> | undefined, key: string): string {
   return holder?.url ?? ''
 }
 
+describe('Seedance 2.5 Flash', () => {
+  const adapter = createArkAdapter(models)
+  const model = 'doubao-seedance-2-5-flash-261115'
+  const secret = { ARK_API_KEY: 'test-secret' }
+  const request = { capability: 'video.generate' as const, model }
+
+  it('使用 Flash ID，默认 720p，支持 30 秒 MOV', async () => {
+    const { ctx, body } = fakeContext([jsonResponse({ id: 'accepted' })], { secret })
+    await expect(
+      adapter.submit(
+        { ...request, input: { prompt: '运镜', duration: 30, extra: { output_format: 'mov' } } },
+        ctx,
+      ),
+    ).resolves.toMatchObject({ state: 'pending', remoteId: 'accepted' })
+    expect(body()).toMatchObject({ model, resolution: '720p', duration: 30, output_format: 'mov' })
+  })
+
+  it('发送前拒绝 1080p、样片模式和超过 10 张参考图', async () => {
+    const { ctx, fetch } = fakeContext([], { secret })
+    for (const input of [
+      { prompt: '运镜', resolution: '1080p' },
+      { prompt: '运镜', resolution: '480p', extra: { draft: true } },
+      { prompt: '运镜', references: Array.from({ length: 11 }, () => image) },
+    ]) {
+      await expect(adapter.submit({ ...request, input }, ctx)).rejects.toMatchObject({
+        code: 'invalid_input',
+      })
+    }
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})
+
 describe('方舟参考视频：注入后走通', () => {
   it('视频参考先上传再进 video_url，图片与音频按类别分流', async () => {
     const uploaded: Array<{ data: Uint8Array; mime: string }> = []

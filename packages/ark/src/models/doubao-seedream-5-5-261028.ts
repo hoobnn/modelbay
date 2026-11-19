@@ -71,7 +71,18 @@ export default {
       },
     },
   },
-  channels: [{ channel: 'ark', id: 'doubao-seedream-5-5-261028' }],
+  channels: [
+    { channel: 'ark', id: 'doubao-seedream-5-5-261028' },
+    {
+      channel: 'ark-plan',
+      // 套餐概览页「支持模型及 Harness」表：图片生成 doubao-seedream-5.5，Small 以上套餐均支持
+      id: 'doubao-seedream-5.5',
+      source: {
+        url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
+        checkedAt: '2026-11-19',
+      },
+    },
+  ],
   aliases: { official: [], short: ['seedream-5.5'] },
   lifecycle: {
     status: 'active',

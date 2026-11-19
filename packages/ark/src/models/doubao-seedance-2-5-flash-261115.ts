@@ -1,0 +1,139 @@
+import type { ModelDeclaration } from '@modelbay/core'
+
+// 输出规格和素材上限：https://ark.volcengine.com/region:cn-beijing/docs/seedance-2-5（2026-11-18 核对）
+export default {
+  canonicalId: 'volc/doubao-seedance-2-5-flash-261115',
+  id: 'doubao-seedance-2-5-flash-261115',
+  title: 'Seedance 2.5 Flash',
+  capabilities: ['video.generate'],
+  limits: {
+    aspectRatios: ['auto', '21:9', '16:9', '4:3', '1:1', '3:4', '9:16'],
+    resolutions: ['480p', '720p'],
+    defaultResolution: '720p',
+    duration: { min: 4, max: 30 },
+    seed: false,
+    outputFormats: ['mp4', 'mov'],
+    references: { max: 10 },
+    referenceMedia: { video: 5, audio: 5, audioOnly: true },
+    optionalVideoPrompt: true,
+    videoModes: ['text', 'image', 'frames', 'reference'],
+    media: {
+      frame: {
+        mime: [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/bmp',
+          'image/tiff',
+          'image/gif',
+          'image/heic',
+          'image/heif',
+        ],
+        maxMB: 30,
+        maxMBExclusive: true,
+      },
+      image: {
+        mime: [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/bmp',
+          'image/tiff',
+          'image/gif',
+          'image/heic',
+          'image/heif',
+        ],
+        maxMB: 30,
+        maxMBExclusive: true,
+        minEdge: 300,
+        maxEdge: 6000,
+        minRatio: 0.4,
+        maxRatio: 2.5,
+      },
+      video: {
+        mime: ['video/mp4', 'video/quicktime'],
+        maxMB: 200,
+        minEdge: 300,
+        maxEdge: 6000,
+        minRatio: 0.4,
+        maxRatio: 2.5,
+        minPixels: 407696,
+        maxPixels: 8295044,
+        minDuration: 2,
+        maxDuration: 30,
+        totalDurationMax: 30,
+        videoCodecs: ['h264', 'hevc'],
+        minFrameRate: 24,
+        maxFrameRate: 60,
+        audioCodecs: ['aac', 'mp3'],
+        pcmAudioMimes: ['video/quicktime'],
+      },
+      audio: {
+        mime: ['audio/wav', 'audio/x-wav', 'audio/mpeg', 'audio/mp3'],
+        maxMB: 15,
+        minDuration: 2,
+        maxDuration: 30,
+        totalDurationMax: 30,
+      },
+      videoTasks: { edit: { minDuration: 4 } },
+    },
+  },
+  optionsSchema: {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    properties: {
+      adaptive_duration: {
+        title: '自动时长',
+        description: '由模型决定输出时长；编辑任务自动保持原视频时长',
+        type: 'boolean',
+      },
+      return_last_frame: {
+        title: '返回尾帧',
+        description: '输出最后一帧图片，可连到下一个镜头的首帧',
+        type: 'boolean',
+      },
+      watermark: { title: '水印', type: 'boolean' },
+      output_format: {
+        title: '输出格式',
+        labels: { mp4: 'MP4', mov: 'MOV' },
+        type: 'string',
+        enum: ['mp4', 'mov'],
+      },
+      omni_reference_task_type: {
+        title: '参考任务',
+        labels: {
+          auto: '自动判断',
+          reference: '生成新视频',
+          edit: '编辑参考视频',
+          extend: '延长参考视频',
+        },
+        type: 'string',
+        enum: ['auto', 'reference', 'edit', 'extend'],
+      },
+    },
+  },
+  channels: [
+    { channel: 'ark', id: 'doubao-seedance-2-5-flash-261115' },
+    {
+      channel: 'ark-plan',
+      // 套餐概览页「支持模型及 Harness」表：视频生成 doubao-seedance-2.5-flash，仅 Large / Max 套餐
+      id: 'doubao-seedance-2.5-flash',
+      source: {
+        url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
+        checkedAt: '2026-11-19',
+      },
+    },
+  ],
+  aliases: { official: [], short: [] },
+  lifecycle: {
+    status: 'active',
+    source: {
+      url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
+      checkedAt: '2026-11-18',
+    },
+  },
+  source: {
+    url: 'https://ark.volcengine.com/region:cn-beijing/docs/seedance-2-5',
+    checkedAt: '2026-11-18',
+  },
+} satisfies ModelDeclaration

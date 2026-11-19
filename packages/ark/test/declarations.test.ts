@@ -67,7 +67,7 @@ describe('方舟套餐渠道的 ID', () => {
   // 套餐概览页（2026-11-05 核对）上的写法：点号 / 短横线照抄；
   // Seedream Pro 以套餐模型目录接口为准（接口返回点号写法）。
   const OVERVIEW = 'agent-plan-personal-plan-overview'
-  const PLAN_IDS: Record<string, { id: string; source: string }> = {
+  const PLAN_IDS: Record<string, { id: string; source: string; checkedAt?: string }> = {
     'volc/doubao-seedream-5-0-pro-260628': {
       id: 'doubao-seedream-5.0-pro',
       source: 'list-ark-agent-plan-model-api',
@@ -77,6 +77,17 @@ describe('方舟套餐渠道的 ID', () => {
     'volc/doubao-seedance-2-0-fast-260128': { id: 'doubao-seedance-2.0-fast', source: OVERVIEW },
     'volc/doubao-seedance-2-0-mini-260615': { id: 'doubao-seedance-2.0-mini', source: OVERVIEW },
     'volc/doubao-seedance-2-5-260628': { id: 'doubao-seedance-2.5', source: OVERVIEW },
+    // 2026-11-19 套餐概览页新增
+    'volc/doubao-seedream-5-5-261028': {
+      id: 'doubao-seedream-5.5',
+      source: OVERVIEW,
+      checkedAt: '2026-11-19',
+    },
+    'volc/doubao-seedance-2-5-flash-261115': {
+      id: 'doubao-seedance-2.5-flash',
+      source: OVERVIEW,
+      checkedAt: '2026-11-19',
+    },
     'volc/doubao-embedding-vision': { id: 'doubao-embedding-vision', source: OVERVIEW },
     'volc/doubao-seed-evolving': { id: 'doubao-seed-evolving', source: OVERVIEW },
   }
@@ -88,7 +99,7 @@ describe('方舟套餐渠道的 ID', () => {
       const channel = found?.channels.find((item) => item.channel === 'ark-plan')
       expect(channel?.id, canonicalId).toBe(expected.id)
       expect(channel?.source?.url, canonicalId).toContain(expected.source)
-      expect(channel?.source?.checkedAt, canonicalId).toBe('2026-11-05')
+      expect(channel?.source?.checkedAt, canonicalId).toBe(expected.checkedAt ?? '2026-11-05')
     }
   })
 
