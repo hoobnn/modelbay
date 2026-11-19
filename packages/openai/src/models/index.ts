@@ -1,4 +1,6 @@
 import type { ModelDeclaration } from '@modelbay/core'
+import gpt62Astra from './gpt-6-2-astra'
+import gpt62Sol from './gpt-6-2-sol'
 import gpt61Sol from './gpt-6-1-sol'
 import gpt6Astra from './gpt-6-astra'
 import gpt61Terra from './gpt-6-1-terra'
@@ -10,6 +12,8 @@ import gptImage26Sunburst from './gpt-image-2-6-sunburst'
 import gptImage26Flare from './gpt-image-2-6-flare'
 
 export {
+  gpt62Astra,
+  gpt62Sol,
   gpt61Sol,
   gpt6Astra,
   gpt61Terra,
@@ -21,6 +25,8 @@ export {
 }
 
 export const all: ModelDeclaration[] = [
+  gpt62Astra,
+  gpt62Sol,
   gpt61Sol,
   gpt6Astra,
   gpt61Terra,
