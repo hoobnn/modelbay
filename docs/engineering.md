@@ -73,7 +73,7 @@ test/
 ### 声明
 
 - 格式见 [0003](decisions/0003-capabilities-and-model-declarations.md)，写法见 [扩展指南](extending.md#新增或修改一个模型)。
-- 模型参数、上下限、默认值、生命周期只写在声明里。适配器、MCP、CLI 都不能写默认模型，由 core 的 `selectDefaultModel()` 只从 `active` 模型里选。
+- 模型参数、上下限、默认值、生命周期只写在声明里。适配器、MCP、CLI 都不能写默认模型，由 core 的 `selectDefaultModel()` 只从 `active` 模型里选（渠道级默认优先于声明级默认，见 0006）。
 - TS 声明是唯一来源，不导出 JSON。上游文档对账直接从注册表读声明。
 
 ### 错误和日志

@@ -54,7 +54,6 @@ export default {
       },
     },
   },
-  default: true,
   channels: [
     { channel: 'ark', id: 'doubao-seedream-5-0-pro-260628' },
     {

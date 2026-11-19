@@ -64,6 +64,13 @@ export interface ChannelRef {
   maxOutputTokens?: number
   /** 这个渠道不支持 `optionsSchema` 里的这些参数：派生出的模型信息里不展示。 */
   omitOptions?: string[]
+  /**
+   * 在这个渠道里，该模型是它所有能力的默认模型（渠道级默认）。
+   *
+   * 同一能力在不同渠道需要不同默认时用它，例如按量渠道和套餐渠道上架的型号不同。
+   * 渠道级默认优先于声明级的 `default: true`；规则见决策记录 0006。
+   */
+  default?: true
 }
 
 /** 官方别名（同模型的多个官方 ID）与简称（pro / flash / wan） */
@@ -84,9 +91,9 @@ export interface ModelDeclaration extends Omit<
   lifecycle: Lifecycle
   source: ModelSource
   /**
-   * 该模型是这项能力的默认模型。
-   * 只有 `active` 的模型能带这个标记；`selectDefaultModel()` 优先选它，
-   * 没标记时按声明顺序取第一个 active 的。
+   * 声明级默认：在它的所有渠道里，该模型都是它所有能力的默认模型。
+   * 只有 `active` 的模型能带这个标记；某个渠道另有渠道级默认（`ChannelRef.default`）时，
+   * 以渠道级为准。没有任何默认标记就没有默认模型，不按声明顺序兜底。
    * 这样「谁是默认」写在声明数据里，适配器和消费方都不用自己写死。
    */
   default?: true
@@ -151,8 +158,15 @@ export function validateDeclaration(model: ModelDeclaration): string[] {
   if (model.lifecycle?.status === 'superseded' && !model.lifecycle.by) {
     problems.push('superseded 需要记录 by')
   }
-  if (model.default === true && model.lifecycle?.status !== 'active') {
+  const channelDefaults = model.channels.filter((channel) => channel.default === true)
+  if (
+    (model.default === true || channelDefaults.length > 0) &&
+    model.lifecycle?.status !== 'active'
+  ) {
     problems.push('非 active 模型不能当默认模型')
+  }
+  if (model.default === true && channelDefaults.length > 0) {
+    problems.push('已有声明级 default，渠道上的 default 是重复标记')
   }
   for (const channel of model.channels) {
     if (!channel.channel || !channel.id) problems.push('渠道缺少 channel 或 id')
@@ -229,7 +243,14 @@ export function customModel(ref: string, capability: NormalizedCapability): { cu
 }
 
 /**
- * 选默认模型：只认声明里显式标了 `default: true` 的 active 模型。
+ * 选默认模型：只认显式标了默认的 active 模型。
+ *
+ * 优先级（决策记录 0006）：
+ * 1. 渠道级默认：渠道条目上写了 `default: true`；
+ * 2. 声明级默认：声明上写了 `default: true`，作用于它的所有渠道。
+ *
+ * 传了 `channel` 时按上面的顺序在该渠道里选。没传时先选声明级默认，
+ * 没有再取声明顺序里第一个渠道级默认；平台有多个渠道时调用方应传渠道。
  *
  * 没有标记就没有默认——调用方必须显式传模型，工具说明里给出原因（生命周期提示）。
  * 绝不用「声明顺序第一个 active」兜底：那是隐式约定，会随声明增删而漂移，
@@ -240,17 +261,26 @@ export function selectDefaultModel(
   capability: NormalizedCapability,
   channel?: string,
 ): ResolvedModel | null {
-  const candidates = declarations.filter(
-    (declaration) =>
-      declaration.default === true &&
-      canBeDefault(declaration) &&
-      declaration.capabilities.includes(capability),
+  const eligible = declarations.filter(
+    (declaration) => canBeDefault(declaration) && declaration.capabilities.includes(capability),
   )
-  for (const declaration of candidates) {
-    const found = declaration.channels.find((item) => !channel || item.channel === channel)
-    if (found) return { declaration, channel: found }
+  const matches = (item: ChannelRef) => !channel || item.channel === channel
+  const channelLevel = (): ResolvedModel | null => {
+    for (const declaration of eligible) {
+      const found = declaration.channels.find((item) => item.default === true && matches(item))
+      if (found) return { declaration, channel: found }
+    }
+    return null
   }
-  return null
+  const declarationLevel = (): ResolvedModel | null => {
+    for (const declaration of eligible) {
+      if (declaration.default !== true) continue
+      const found = declaration.channels.find(matches)
+      if (found) return { declaration, channel: found }
+    }
+    return null
+  }
+  return channel ? (channelLevel() ?? declarationLevel()) : (declarationLevel() ?? channelLevel())
 }
 
 /**
@@ -275,24 +305,28 @@ export function selectNativeModel(
 }
 
 /**
- * 同一渠道同一能力最多只能有一个默认模型。
+ * 同一渠道同一能力：渠道级默认最多一个，声明级默认也最多一个。
  *
+ * 渠道级默认压过声明级默认是设计内的优先关系，不算冲突。
  * 返回冲突的「渠道:能力」列表；声明自检与单测都用它。
  */
 export function defaultConflicts(declarations: readonly ModelDeclaration[]): string[] {
   const seen = new Map<string, string>()
   const conflicts: string[] = []
   for (const declaration of declarations) {
-    if (declaration.default !== true) continue
     for (const channel of declaration.channels) {
+      const level =
+        channel.default === true ? '渠道级' : declaration.default === true ? '声明级' : null
+      if (!level) continue
       for (const capability of declaration.capabilities) {
         const key = `${channel.channel}:${capability}`
-        const owner = seen.get(key)
+        const slot = `${level}:${key}`
+        const owner = seen.get(slot)
         if (owner && owner !== declaration.canonicalId) {
-          const label = `${key}（${owner} 与 ${declaration.canonicalId}）`
+          const label = `${key}（${level}默认：${owner} 与 ${declaration.canonicalId}）`
           if (!conflicts.includes(label)) conflicts.push(label)
         } else {
-          seen.set(key, declaration.canonicalId)
+          seen.set(slot, declaration.canonicalId)
         }
       }
     }

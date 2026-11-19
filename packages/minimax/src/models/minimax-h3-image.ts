@@ -70,6 +70,8 @@ export default {
       aigc_watermark: { title: '水印', type: 'boolean' },
     },
   },
+  // 默认选型依据（2026-11-19）：https://platform.minimax.cn/docs/api-reference/image-generation-h3-generations
+  default: true,
   channels: [{ channel: 'minimax', id: 'MiniMax-H3-Image' }],
   aliases: { official: [], short: [] },
   lifecycle: {

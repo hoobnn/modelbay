@@ -84,6 +84,8 @@ export default {
       },
     },
   },
+  // 默认选型依据（2026-11-19）：https://developers.openai.com/api/docs/guides/image-generation
+  default: true,
   channels: [{ channel: 'openai', id: 'gpt-image-2.6-sunburst' }],
   aliases: { official: [], short: [] },
   lifecycle: {

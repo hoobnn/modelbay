@@ -10,6 +10,10 @@
    对话模型还要填 `contextWindow` / `maxOutputTokens`（官方公布了才填），在字段上方的注释里写官方页面链接、原文用词和核对日期，换算规则见 0003。
 4. 不用写测试：`packages/modelbay/test/declarations.test.ts` 会自动检查所有声明，包括有没有登记进 `all`、是否纯数据、来源和日期、生命周期、默认冲突、别名冲突、`optionsSchema`。只有改了请求构造或路由时，才在平台包的 `test/` 里补夹具测试。
 
+5. 要当默认模型的，标 `default: true`，只能标在 `active` 模型上：
+   - 所有渠道都用它当默认，就写在声明上；
+   - 只在部分渠道当默认（例如新型号只上了按量渠道），就写在对应的渠道条目上：`{ channel: 'bailian', id: 'qwen4-max', default: true }`。渠道级默认优先于声明级默认，规则见 [0006](decisions/0006-channel-level-default-models.md)。换默认后不要留下没有默认的渠道。
+
 模型下线、改名或换默认，都只改声明，不改代码。
 
 ## 新增一个平台
