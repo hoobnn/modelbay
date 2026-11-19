@@ -17,3 +17,4 @@
 | [0003](0003-capabilities-and-model-declarations.md) | 能力划分与模型声明格式                  | 已接受 |
 | [0004](0004-platform-descriptors-and-registry.md)   | 平台自描述与单一注册表；声明不导出 JSON | 已接受 |
 | [0005](0005-three-published-packages.md)            | 对外只发三个包，内部分包只做代码边界    | 已接受 |
+| [0006](0006-channel-level-default-models.md)        | 默认模型可以按渠道分别声明              | 已接受 |

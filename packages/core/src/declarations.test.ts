@@ -246,6 +246,92 @@ describe('customModel / selectDefaultModel', () => {
   })
 })
 
+describe('渠道级默认（0006）', () => {
+  // 按量渠道上新型号，套餐渠道还是上一代：两个渠道的默认分开写
+  const latest = patch({
+    canonicalId: 'qwen/qwen4-max',
+    channels: [{ channel: 'bailian', id: 'qwen4-max', default: true }],
+  })
+  const previous = patch({
+    canonicalId: 'qwen/qwen3.8-max',
+    channels: [
+      { channel: 'bailian', id: 'qwen3.8-max' },
+      { channel: 'bailian-plan', id: 'qwen3.8-max', default: true },
+    ],
+  })
+  const legacy = patch({
+    canonicalId: 'qwen/legacy',
+    default: true,
+    channels: [
+      { channel: 'bailian', id: 'legacy' },
+      { channel: 'bailian-plan', id: 'legacy' },
+    ],
+  })
+
+  it('传了渠道时只在该渠道选，渠道级默认各管各的', () => {
+    const list = [latest, previous]
+    expect(selectDefaultModel(list, 'audio.speech', 'bailian')).toMatchObject({
+      declaration: { canonicalId: 'qwen/qwen4-max' },
+      channel: { channel: 'bailian', id: 'qwen4-max' },
+    })
+    expect(selectDefaultModel(list, 'audio.speech', 'bailian-plan')).toMatchObject({
+      declaration: { canonicalId: 'qwen/qwen3.8-max' },
+      channel: { channel: 'bailian-plan' },
+    })
+    expect(defaultConflicts(list)).toEqual([])
+  })
+
+  it('渠道级默认优先于声明级默认，没有渠道级时退回声明级', () => {
+    const list = [legacy, latest]
+    expect(selectDefaultModel(list, 'audio.speech', 'bailian')?.declaration.canonicalId).toBe(
+      'qwen/qwen4-max',
+    )
+    expect(selectDefaultModel(list, 'audio.speech', 'bailian-plan')?.declaration.canonicalId).toBe(
+      'qwen/legacy',
+    )
+    expect(defaultConflicts(list)).toEqual([])
+  })
+
+  it('不传渠道时先取声明级默认，没有再取第一个渠道级默认', () => {
+    expect(selectDefaultModel([latest, legacy], 'audio.speech')?.declaration.canonicalId).toBe(
+      'qwen/legacy',
+    )
+    expect(selectDefaultModel([latest, previous], 'audio.speech')?.channel).toMatchObject({
+      channel: 'bailian',
+      id: 'qwen4-max',
+    })
+  })
+
+  it('非 active 模型的渠道级默认不生效，自检会报出来', () => {
+    const sunsetting = patch({
+      canonicalId: 'qwen/preview',
+      channels: [{ channel: 'bailian-plan', id: 'preview', default: true }],
+      lifecycle: { status: 'sunsetting', source },
+    })
+    expect(selectDefaultModel([sunsetting], 'audio.speech', 'bailian-plan')).toBeNull()
+    expect(validateDeclaration(sunsetting)).toContain('非 active 模型不能当默认模型')
+  })
+
+  it('同一声明不能既有声明级又有渠道级 default', () => {
+    const both = patch({
+      default: true,
+      channels: [{ channel: 'bailian', id: 'x', default: true }],
+    })
+    expect(validateDeclaration(both)).toContain('已有声明级 default，渠道上的 default 是重复标记')
+    expect(validateDeclaration(latest)).toEqual([])
+  })
+
+  it('同一渠道同一能力有两个渠道级默认时报冲突', () => {
+    const another = patch({
+      canonicalId: 'qwen/another',
+      channels: [{ channel: 'bailian', id: 'another', default: true }],
+    })
+    expect(defaultConflicts([latest, another])).toEqual([
+      'bailian:audio.speech（渠道级默认：qwen/qwen4-max 与 qwen/another）',
+    ])
+  })
+})
+
 describe('toModelInfo', () => {
   const rich = (): ModelDeclaration => ({
     ...base(),
