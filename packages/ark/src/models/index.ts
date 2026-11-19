@@ -3,6 +3,7 @@ import doubaoSeedream55261028 from './doubao-seedream-5-5-261028'
 import doubaoSeedream50Pro260628 from './doubao-seedream-5-0-pro-260628'
 import doubaoSeedream50Flash260915 from './doubao-seedream-5-0-flash-260915'
 import doubaoSeedance25260628 from './doubao-seedance-2-5-260628'
+import doubaoSeedance25Flash261115 from './doubao-seedance-2-5-flash-261115'
 import doubaoSeedance20260128 from './doubao-seedance-2-0-260128'
 import doubaoSeedance20Fast260128 from './doubao-seedance-2-0-fast-260128'
 import doubaoSeedance20Mini260615 from './doubao-seedance-2-0-mini-260615'
@@ -37,6 +38,7 @@ export {
   doubaoSeedream50Pro260628,
   doubaoSeedream50Flash260915,
   doubaoSeedance25260628,
+  doubaoSeedance25Flash261115,
   doubaoSeedance20260128,
   doubaoSeedance20Fast260128,
   doubaoSeedance20Mini260615,
@@ -95,6 +97,7 @@ export const all: ModelDeclaration[] = [
   doubaoSeedream50Flash260915,
   doubaoSeedream50260128,
   doubaoSeedance25260628,
+  doubaoSeedance25Flash261115,
   doubaoSeedance20260128,
   doubaoSeedance20Fast260128,
   doubaoSeedance20Mini260615,
