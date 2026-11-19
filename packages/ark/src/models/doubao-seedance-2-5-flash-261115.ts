@@ -112,7 +112,18 @@ export default {
       },
     },
   },
-  channels: [{ channel: 'ark', id: 'doubao-seedance-2-5-flash-261115' }],
+  channels: [
+    { channel: 'ark', id: 'doubao-seedance-2-5-flash-261115' },
+    {
+      channel: 'ark-plan',
+      // 套餐概览页「支持模型及 Harness」表：视频生成 doubao-seedance-2.5-flash，仅 Large / Max 套餐
+      id: 'doubao-seedance-2.5-flash',
+      source: {
+        url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
+        checkedAt: '2026-11-19',
+      },
+    },
+  ],
   aliases: { official: [], short: [] },
   lifecycle: {
     status: 'active',
