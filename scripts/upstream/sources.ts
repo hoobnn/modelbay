@@ -276,6 +276,7 @@ export const SOURCES: PlatformSources[] = [
       // 实时 / 音频对话，不在支持的能力内
       'gpt-audio-1.5',
       'gpt-live-1',
+      'gpt-live-1.1',
       'gpt-realtime-1.5',
       'gpt-realtime-2',
       'gpt-realtime-2.1',
