@@ -14,6 +14,7 @@ import {
 import { patchLifecycle } from './declarations'
 import { dates, normalizeSnapshot, parseRows, plainText, tokens } from './markdown'
 import { needsAttention, renderReport } from './report'
+import { SOURCES } from './sources'
 
 const TODAY = '2026-11-05'
 
@@ -512,18 +513,38 @@ describe('官方目录页写「产品名 + 版本」', () => {
     expect(run([list], [declared])).toEqual([])
   })
 
-  it('目录页出现的新产品名报成未声明', () => {
+  it('目录页出现的新产品名报成未声明（用平台真实配置，不手填前缀）', () => {
     const list: Snapshot = {
       url: 'https://x/list',
       role: 'list',
       channel: 'c',
-      markdown: ['## 语音合成', '| 模型名称 | TTS 3.0 |', '| --- | --- |', '| 适用音色 | x |'].join(
-        '\n',
-      ),
+      markdown: [
+        '## 语音合成',
+        '| 模型名称 | TTS 3.0 | TTS 2.0 |',
+        '| --- | --- | --- |',
+        '| 适用音色 | x | y |',
+      ].join('\n'),
     }
-    const gaps = run([list], [], { prefixes: ['tts'] })
+    const config = SOURCES.find((item) => item.key === 'doubao-speech')
+    const declared = model('seed-tts-2.0', { channels: [{ channel: 'c', id: 'seed-tts-2.0' }] })
+    const gaps = run([list], [declared], {
+      ...(config?.prefixes ? { prefixes: config.prefixes } : {}),
+    })
     expect(gaps).toHaveLength(1)
     expect(gaps[0]).toMatchObject({ kind: 'undeclared', id: 'tts-3.0' })
+  })
+
+  it('普通 ID 不做词干匹配：qwen4-max 已声明时，新出现的 qwen5-max 仍然报出', () => {
+    const list: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: '## 文本生成\n\n- qwen4-max\n- qwen5-max',
+    }
+    const declared = model('qwen4-max', { channels: [{ channel: 'c', id: 'qwen4-max' }] })
+    const gaps = run([list], [declared])
+    expect(gaps).toHaveLength(1)
+    expect(gaps[0]).toMatchObject({ kind: 'undeclared', id: 'qwen5-max' })
   })
 })
 

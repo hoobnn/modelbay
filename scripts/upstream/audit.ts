@@ -380,14 +380,21 @@ export function audit(input: AuditInput): Gap[] {
   }
 
   // 2. 列表页：每个渠道的已列出名字、未声明的候选 ID
-  const listedByChannel = new Map<string, { names: Set<string>; pages: string[] }>()
+  const listedByChannel = new Map<
+    string,
+    { names: Set<string>; products: Set<string>; pages: string[] }
+  >()
   const currentNames = new Set<string>()
   const legacyHits = new Map<string, { model: DeclaredModel; id: string; evidence: Evidence }>()
   const candidates = new Map<string, UndeclaredGap>()
   for (const { snapshot, rows } of parsed) {
     if (snapshot.role !== 'list' || !snapshot.channel) continue
     const channel = snapshot.channel
-    const listed = listedByChannel.get(channel) ?? { names: new Set<string>(), pages: [] }
+    const listed = listedByChannel.get(channel) ?? {
+      names: new Set<string>(),
+      products: new Set<string>(),
+      pages: [],
+    }
     listed.pages.push(snapshot.url)
     for (const row of rows) {
       const legacy =
@@ -423,7 +430,6 @@ export function audit(input: AuditInput): Gap[] {
           byName.has(name) ||
           skipped.has(name) ||
           candidates.has(key) ||
-          declaredStems.has(stem(name)) ||
           !isCandidateId(token, prefixes, lowercaseOnly, digitless)
         ) {
           continue
@@ -444,13 +450,14 @@ export function audit(input: AuditInput): Gap[] {
         const name = lower(token)
         if (!legacy) currentNames.add(`${channel}\n${name}`)
         listed.names.add(name)
+        listed.products.add(name)
         const key = `${channel}\n${name}`
         if (
           legacy ||
           byName.has(name) ||
           skipped.has(name) ||
           candidates.has(key) ||
-          declaredStems.has(stem(name)) ||
+          declaredStems.has(name) ||
           !isCandidateId(token, prefixes, lowercaseOnly, digitless)
         ) {
           continue
@@ -489,11 +496,11 @@ export function audit(input: AuditInput): Gap[] {
       if (!listed || unlisted.has(lower(ref.id))) continue
       const names = [ref.id, ...model.aliases].map(lower)
       // 官方目录页写「产品名 + 版本」（TTS 2.0）而 API ID 是 seed-tts-2.0 时，
-      // 词干相同就当它列着
+      // 词干只和表头里的产品名比，不拿普通 ID 的后半段去撞（qwen4-max 与 qwen5-max 不是同一个）
       const stems = names.map(stem)
       const found =
         names.some((name) => listed.names.has(name) || ownNames.has(name)) ||
-        stems.some((item) => listed.names.has(item) || ownNames.has(item))
+        stems.some((item) => listed.products.has(item))
       if (found) continue
       gaps.push({
         kind: 'unlisted',

@@ -306,6 +306,9 @@ export const SOURCES: PlatformSources[] = [
         channel: 'doubao-speech',
       },
     ],
+    // 官方目录页只写产品名（「TTS 3.0」「ICL 2.0」），候选 ID 从表头合成（tts-3.0），
+    // 声明里的前缀是 `seed`，推不出 `tts` / `icl`，要在这里写明。
+    prefixes: ['tts', 'icl'],
     unlisted: [
       // 1.0 代际：官方模型目录页与 TTS 接口页当前都只列 2.0 代际的资源 ID
       // （seed-tts-2.0 / seed-icl-2.0），1.0 只留给历史音色继续合成，
