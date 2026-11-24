@@ -237,6 +237,8 @@ export function incomplete(message: string): ProviderError {
 
 export interface PostOptions {
   resource?: string
+  /** 默认 `HOST`；TTS 3.0 走 `voice.cn-beijing.volces.com` */
+  host?: string
   asr?: boolean
   extraHeaders?: Record<string, string>
   idempotencyKey?: string
@@ -283,7 +285,7 @@ export async function postRaw(
     try {
       response = await send(
         ctx,
-        `${HOST}${path}`,
+        `${opts.host ?? HOST}${path}`,
         { method: 'POST', headers: requestHeaders, body: JSON.stringify(body) },
         messages,
       )
@@ -305,7 +307,12 @@ export async function postRaw(
       let detail: Json = {}
       try {
         const parsed = asJson(JSON.parse(raw))
-        detail = isJson(parsed.header) ? parsed.header : parsed
+        // TTS 3.0 的错误正文是 {"event":"error","error":{code,message}}
+        detail = isJson(parsed.header)
+          ? parsed.header
+          : isJson(parsed.error)
+            ? parsed.error
+            : parsed
       } catch {
         // Response headers may still carry the error when the body is not JSON.
       }

@@ -219,6 +219,93 @@ export function buildSpeechRequest(
   }
 }
 
+/**
+ * 豆包语音合成 3.0：新域名、新路径，音色 ID 放在路径里，鉴权只认 `X-Api-Key`，请求体是扁平字段，
+ * 响应是 JSONL 事件流（ready / audio / alignment / final / error）。
+ * 来源：https://docs.volcengine.com/docs/doubao-voice/seed-tts-3-0-http-streaming（2026-11-24 核对）。
+ */
+export const TTS3_HOST = 'https://voice.cn-beijing.volces.com'
+export const TTS3_MODEL = 'doubao-seed-tts-3.0'
+/** 3.0 音色与 2.0 不通用（2.0 资源配 3.0 音色返回 resource ID is mismatched），没指定 3.0 音色时用团子 3.0。 */
+export const TTS3_DEFAULT_VOICE = 'multi_female_tuanzi_v3_uranus_bigtts'
+
+/** Build the TTS 3.0 request (path carries the voice ID). */
+export function buildSpeech3Request(
+  input: CapabilityInput<'audio.speech'>,
+  settings: SpeechSettings,
+): { path: string; body: Json } {
+  const content = text(input.text, '合成文本', 10000)
+  // 宿主默认音色是 2.0 预置音色时换成 3.0 默认音色；复刻音色和 3.0 音色原样传
+  const voice =
+    input.voice ??
+    (TTS_VOICES.some((preset) => preset.id === settings.voice)
+      ? TTS3_DEFAULT_VOICE
+      : settings.voice)
+  const instruction =
+    input.instruction ?? (input as { instructions?: string | null }).instructions ?? undefined
+  const speed = input.speed ?? settings.speed
+  if (!Number.isFinite(speed) || speed < 0.5 || speed > 2)
+    throw new ProviderError('invalid_input', '语速须在 0.5 至 2 之间')
+  const extras = input as SpeechExtras
+  const pitch = integer(extras.pitch, 'pitch')
+  if (pitch !== undefined && (pitch < -12 || pitch > 12))
+    throw new ProviderError('invalid_input', 'pitch 须在 -12 至 12 之间')
+  const body: Json = {
+    text: content,
+    model_id: TTS3_MODEL,
+    ...(typeof extras.language === 'string' && extras.language
+      ? { language_code: extras.language }
+      : {}),
+    output_format: {
+      format: settings.format === 'wav' ? 'pcm' : settings.format,
+      sample_rate: Number(settings.sampleRate),
+    },
+    voice_settings: {
+      speed,
+      ...(pitch === undefined ? {} : { pitch }),
+      ...(instruction ? { instructions: [instruction] } : {}),
+    },
+  }
+  return {
+    path: `/api/v3/text-to-speech/${encodeURIComponent(text(voice, '音色 ID'))}/streaming`,
+    body,
+  }
+}
+
+/** Decode the TTS 3.0 JSONL event stream into audio bytes. */
+export function decodeSpeech3Stream(
+  raw: string,
+  ctx: AdapterContext,
+  settings: SpeechSettings,
+): Uint8Array {
+  const chunks: Uint8Array[] = []
+  let ended = false
+  for (const packet of events(raw)) {
+    if (packet.event === 'error') {
+      const error = asJson(packet.error)
+      throw failure(200, error.code, error.message, ctx)
+    }
+    if (packet.event === 'final') ended = true
+    if (packet.event !== 'audio') continue
+    const data = packet.audio
+    if (
+      typeof data !== 'string' ||
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)
+    )
+      throw incomplete('豆包语音返回无效 Base64 音频')
+    if (data) chunks.push(fromBase64(data))
+  }
+  if (!ended) throw incomplete('豆包语音未返回合成完成标记')
+  const merged = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0))
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.length
+  }
+  if (!merged.length) throw incomplete('豆包语音未返回内嵌音频')
+  return settings.format === 'wav' ? pcmWav(merged, Number(settings.sampleRate)) : merged
+}
+
 /** Decode concatenated base64 audio chunks from a chunked HTTP response. */
 export function decodeAudioStream(
   raw: string,
@@ -298,9 +385,21 @@ export async function synthesizeSpeech(
     ...(input.speed === undefined ? {} : { speed: input.speed }),
   })
   checkSampleRate(model, Number(settings.sampleRate))
-  const { path, resource, body } = buildSpeechRequest(model, input, settings, plan)
-  const response = await postRaw(ctx, path, body, { resource })
-  const data = response.decode((raw) => decodeAudioStream(raw, 'data', ctx, settings, true))
+  let data: Uint8Array
+  if (model === TTS3_MODEL && !plan) {
+    if (!readSecret(ctx, 'DOUBAO_API_KEY') && !readSecret(ctx, 'VOLC_SPEECH_API_KEY'))
+      throw new ProviderError(
+        'auth',
+        '豆包语音合成 3.0 只支持 API Key：请配置 VOLC_SPEECH_API_KEY（或 DOUBAO_API_KEY）',
+      )
+    const { path, body } = buildSpeech3Request(input, settings)
+    const response = await postRaw(ctx, path, body, { host: TTS3_HOST })
+    data = response.decode((raw) => decodeSpeech3Stream(raw, ctx, settings))
+  } else {
+    const { path, resource, body } = buildSpeechRequest(model, input, settings, plan)
+    const response = await postRaw(ctx, path, body, { resource })
+    data = response.decode((raw) => decodeAudioStream(raw, 'data', ctx, settings, true))
+  }
   const output: ProviderOutput = {
     type: 'file',
     kind: 'audio',
