@@ -6,6 +6,8 @@ import {
   guessCapability,
   isCandidateId,
   linkIds,
+  productVersionId,
+  stem,
   type LifecycleGap,
   type Snapshot,
 } from './audit'
@@ -345,6 +347,14 @@ describe('列表对账', () => {
     expect(isCandidateId('other-1', prefixes)).toBe(false)
   })
 
+  it('厂商前缀写法（百炼的「厂商/模型」）也算候选 ID', () => {
+    const prefixes = new Set(['kimi'])
+    expect(isCandidateId('kimi/kimi-k3', prefixes)).toBe(true)
+    // 前缀按开头纯字母段取，所以 hyper3d 要用 hyper 匹配
+    expect(isCandidateId('hyper3d-gen2-260112', new Set(['hyper']))).toBe(true)
+    expect(isCandidateId('hyper3d-gen2-260112', new Set(['hyper3d']))).toBe(false)
+  })
+
   it('能力先看行本身，再看小节标题', () => {
     const [row] = parseRows(
       '## 向量与重排\n| 模型 | 说明 |\n| --- | --- |\n| qwen3-rerank | 文本重排 |',
@@ -440,5 +450,104 @@ describe('补丁与报告', () => {
     })
     expect(undeclared).toContain('```ts\nexport default {}\n```')
     expect(undeclared).toContain('未声明的 ID（1 个）')
+  })
+})
+
+// ── 审计盲区补齐（2026-11-14） ──────────
+
+describe('候选 ID 的数字规则', () => {
+  it('默认要求带版本号，平台配置的 digitless 前缀放行', () => {
+    const prefixes = new Set(['gpt'])
+    expect(isCandidateId('gpt-6-astra', prefixes)).toBe(true)
+    expect(isCandidateId('gpt-transcribe', prefixes)).toBe(false)
+    expect(isCandidateId('gpt-transcribe', prefixes, false, new Set(['gpt']))).toBe(true)
+  })
+
+  it('不带数字且没放行前缀的记号不算候选', () => {
+    expect(isCandidateId('text-generation-model', new Set(['text']))).toBe(false)
+    expect(
+      isCandidateId('text-generation-model', new Set(['text']), false, new Set(['text'])),
+    ).toBe(true)
+  })
+
+  it('审计里按 digitless 前缀把无版本号的模型报成未声明', () => {
+    const list: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: '- [gpt-transcribe](/api/docs/models/gpt-transcribe.md)',
+    }
+    const without = run([list], [])
+    expect(without).toHaveLength(0)
+    const with_ = run([list], [], { prefixes: ['gpt'], digitless: ['gpt'] })
+    expect(with_).toHaveLength(1)
+    expect(with_[0]).toMatchObject({ kind: 'undeclared', id: 'gpt-transcribe' })
+  })
+})
+
+describe('官方目录页写「产品名 + 版本」', () => {
+  it('表头列名合成候选 ID', () => {
+    expect(productVersionId('TTS 2.0')).toBe('tts-2.0')
+    expect(productVersionId('Seed Audio 1.0')).toBe('seed-audio-1.0')
+    expect(productVersionId('O2.0版本')).toBe('o-2.0')
+    expect(productVersionId('全双工版本')).toBeUndefined()
+    expect(productVersionId('模型名称')).toBeUndefined()
+  })
+
+  it('词干相同就当同一个模型（官方写产品名，声明写 API ID）', () => {
+    expect(stem('seed-tts-2.0')).toBe('tts-2.0')
+    expect(stem('tts-2.0')).toBe('2.0')
+  })
+
+  it('目录页只给产品名时，已声明的模型不报缺失也不报未声明', () => {
+    const list: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: ['## 语音合成', '| 模型名称 | TTS 2.0 |', '| --- | --- |', '| 适用音色 | x |'].join(
+        '\n',
+      ),
+    }
+    const declared = model('seed-tts-2.0', { channels: [{ channel: 'c', id: 'seed-tts-2.0' }] })
+    expect(run([list], [declared])).toEqual([])
+  })
+
+  it('目录页出现的新产品名报成未声明', () => {
+    const list: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: ['## 语音合成', '| 模型名称 | TTS 3.0 |', '| --- | --- |', '| 适用音色 | x |'].join(
+        '\n',
+      ),
+    }
+    const gaps = run([list], [], { prefixes: ['tts'] })
+    expect(gaps).toHaveLength(1)
+    expect(gaps[0]).toMatchObject({ kind: 'undeclared', id: 'tts-3.0' })
+  })
+})
+
+describe('来源页抓取失败时不误报缺失', () => {
+  const list: Snapshot = {
+    url: 'https://x/list',
+    role: 'list',
+    channel: 'c',
+    markdown: '## 其他\n\n- m-9',
+  }
+  const declared = model('m-1', {
+    channels: [{ channel: 'c', id: 'm-1' }],
+    sources: ['https://x/ref'],
+  })
+  it('来源页抓到了就正常判缺失', () => {
+    // 来源页里写明了 m-1，算已列出
+    const hit: Snapshot = { url: 'https://x/ref', role: 'reference', markdown: '- m-1' }
+    expect(run([list, hit], [declared]).some((gap) => gap.kind === 'unlisted')).toBe(false)
+    // 来源页里没有 m-1，报缺失
+    const miss: Snapshot = { url: 'https://x/ref', role: 'reference', markdown: '- m-9' }
+    expect(run([list, miss], [declared]).some((gap) => gap.kind === 'unlisted')).toBe(true)
+  })
+  it('来源页抓取失败就不报这一类差距', () => {
+    const gaps = run([list], [declared], { failedUrls: ['https://x/ref'] })
+    expect(gaps.some((gap) => gap.kind === 'unlisted')).toBe(false)
   })
 })

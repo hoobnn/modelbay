@@ -241,6 +241,10 @@ async function auditPlatform(
     declared,
     ...(config.prefixes ? { prefixes: config.prefixes } : {}),
     ...(config.excludePrefixes ? { excludePrefixes: config.excludePrefixes } : {}),
+    ...(config.digitless ? { digitless: config.digitless } : {}),
+    ...(pages.some((page) => page.error)
+      ? { failedUrls: pages.filter((page) => page.error).map((page) => page.url) }
+      : {}),
     ...(config.unlisted ? { unlisted: config.unlisted } : {}),
     ...(config.skipped ? { skipped: config.skipped } : {}),
   })

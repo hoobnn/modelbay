@@ -93,6 +93,17 @@ export interface AuditInput {
   /** 额外的候选前缀与排除前缀，见 sources.ts。 */
   prefixes?: string[]
   excludePrefixes?: string[]
+  /**
+   * 模型 ID 不带版本号（数字）的前缀。默认候选规则要求 ID 带数字，免得把文档路径
+   * 当成模型；有些平台的模型 ID 就是不带数字的（OpenAI 的 `gpt-transcribe`），
+   * 在这里按前缀放行。
+   */
+  digitless?: string[]
+  /**
+   * 抓取失败的页面。某条声明的来源页在里面时，「官方列表和来源页里都找不到」
+   * 判断不了，不报这一类差距（免得限流造成误报）。
+   */
+  failedUrls?: string[]
   /** 本来就不在官方列表和来源页里的渠道内 ID。 */
   unlisted?: string[]
   /** 官方列表页上有、决定不接的渠道内 ID。 */
@@ -152,7 +163,11 @@ function scopeDates(rows: Row[], row: Row): string[] {
   return []
 }
 
-/** 候选模型 ID 的前缀：已声明 ID 的首个字母段，加上配置里的额外前缀。 */
+/**
+ * 候选模型 ID 的前缀：已声明 ID 的首个字母段，加上配置里的额外前缀。
+ *
+ * 前缀只取开头那段连续字母，所以带数字的系列要写 `hyper` 而不是 `hyper3d`。
+ */
 export function candidatePrefixes(input: AuditInput): Set<string> {
   const prefixes = new Set<string>(input.prefixes?.map(lower) ?? [])
   for (const model of input.declared) {
@@ -167,18 +182,59 @@ export function candidatePrefixes(input: AuditInput): Set<string> {
 
 const FILE_LIKE = /\.(md|png|jpe?g|gif|svg|html?|json|ya?ml|py|js|ts|mp[34]|wav|zip)$/i
 
-/** 记号像不像模型 ID：含数字和连接符、前缀在候选前缀里、不是文件名或纯日期。 */
+/**
+ * 记号像不像模型 ID：含字母和连接符、前缀在候选前缀里、不是文件名。
+ *
+ * 默认要求带版本号（数字），免得把文档路径、栏目名当成模型；
+ * 有些平台的模型 ID 不带数字（OpenAI 的 `gpt-transcribe`），由平台配置的
+ * `digitless` 前缀单独放行。
+ */
 export function isCandidateId(
   token: string,
   prefixes: Set<string>,
   lowercaseOnly = false,
+  digitless: Set<string> = new Set(),
 ): boolean {
   if (token.length < 4 || token.length > 80) return false
   if (lowercaseOnly && token !== lower(token)) return false
-  if (!/[a-z]/i.test(token) || !/\d/.test(token) || !/[-.]/.test(token)) return false
-  if (FILE_LIKE.test(token) || token.includes('/')) return false
+  if (!/[a-z]/i.test(token) || !/[-.]/.test(token)) return false
+  if (FILE_LIKE.test(token)) return false
   const word = /^[a-z]+/.exec(lower(token))?.[0]
-  return word !== undefined && prefixes.has(word)
+  if (word === undefined || !prefixes.has(word)) return false
+  if (!/\d/.test(token) && !digitless.has(word)) return false
+  return true
+}
+
+/**
+ * 「产品名 + 版本号」形态：官方目录页常用它代替 API 模型 ID
+ * （豆包语音的「TTS 2.0」「Seed Audio 1.0」，表格列头里就是这些）。
+ */
+const PRODUCT_VERSION = /^(.+?)\s*v?(\d+(?:\.\d+)*)\s*(?:版本)?$/i
+
+/** 产品名 + 版本号 → 一个像模型 ID 的候选（小写、空格转连字符）。 */
+export function productVersionId(cell: string): string | undefined {
+  const match = PRODUCT_VERSION.exec(cell.trim())
+  if (!match) return undefined
+  const product = match[1]!.trim()
+  // 产品名里至少要有一个字母，纯数字的是版本号本身
+  if (!/[A-Za-z]/.test(product)) return undefined
+  const name = product
+    .toLowerCase()
+    .replace(/[\s_/]+/g, '-')
+    .replace(/[^a-z0-9.-]+/g, '')
+  if (!name) return undefined
+  return `${name}-${match[2]!.toLowerCase()}`
+}
+
+/**
+ * 模型 ID 的词干：去掉开头那段厂商前缀。
+ *
+ * 官方目录页写「TTS 2.0」，API ID 写 `seed-tts-2.0`，两者只差这一段，
+ * 词干相同就当同一个模型。
+ */
+export function stem(name: string): string {
+  const parts = name.split('-')
+  return parts.length > 1 ? parts.slice(1).join('-') : name
 }
 
 const CAPABILITY_HINTS: [RegExp, string][] = [
@@ -250,12 +306,22 @@ export function audit(input: AuditInput): Gap[] {
   )
   const unlisted = new Set((input.unlisted ?? []).map(lower))
   const skipped = new Set((input.skipped ?? []).map(lower))
+  const digitless = new Set((input.digitless ?? []).map(lower))
+  const failedUrls = new Set(input.failedUrls ?? [])
 
   // 已声明的名字 → 模型（渠道内 ID 和别名都算）
   const byName = new Map<string, DeclaredModel>()
   for (const model of input.declared) {
     for (const name of [...model.channels.map((ref) => ref.id), ...model.aliases]) {
       byName.set(lower(name), model)
+    }
+  }
+
+  // 已声明模型的词干：官方目录页写「产品名 + 版本」时，与 API ID 只差厂商前缀那一段
+  const declaredStems = new Set<string>()
+  for (const model of input.declared) {
+    for (const ref of model.channels) {
+      for (const name of [ref.id, ...model.aliases]) declaredStems.add(stem(lower(name)))
     }
   }
 
@@ -357,7 +423,35 @@ export function audit(input: AuditInput): Gap[] {
           byName.has(name) ||
           skipped.has(name) ||
           candidates.has(key) ||
-          !isCandidateId(token, prefixes, lowercaseOnly)
+          declaredStems.has(stem(name)) ||
+          !isCandidateId(token, prefixes, lowercaseOnly, digitless)
+        ) {
+          continue
+        }
+        const capability = guessCapability(row)
+        candidates.set(key, {
+          kind: 'undeclared',
+          channel,
+          id: token,
+          ...(capability ? { capability } : {}),
+          evidence: { url: snapshot.url, section: sectionOf(row), quote: quoteOf(row), dates: [] },
+        })
+      }
+      // 表头列名里的「产品名 + 版本号」也是模型候选（豆包语音的目录页只给产品名）
+      for (const cell of row.header) {
+        const token = productVersionId(cell)
+        if (!token) continue
+        const name = lower(token)
+        if (!legacy) currentNames.add(`${channel}\n${name}`)
+        listed.names.add(name)
+        const key = `${channel}\n${name}`
+        if (
+          legacy ||
+          byName.has(name) ||
+          skipped.has(name) ||
+          candidates.has(key) ||
+          declaredStems.has(stem(name)) ||
+          !isCandidateId(token, prefixes, lowercaseOnly, digitless)
         ) {
           continue
         }
@@ -387,12 +481,20 @@ export function audit(input: AuditInput): Gap[] {
 
   for (const model of input.declared) {
     if (model.status === 'retired') continue
+    // 来源页没抓到时判断不了它在不在官方文档里，别当成缺失
+    if (model.sources.some((url) => failedUrls.has(url))) continue
     const ownNames = new Set(model.sources.flatMap((url) => [...(namesByUrl.get(url) ?? [])]))
     for (const ref of model.channels) {
       const listed = listedByChannel.get(ref.channel)
       if (!listed || unlisted.has(lower(ref.id))) continue
       const names = [ref.id, ...model.aliases].map(lower)
-      if (names.some((name) => listed.names.has(name) || ownNames.has(name))) continue
+      // 官方目录页写「产品名 + 版本」（TTS 2.0）而 API ID 是 seed-tts-2.0 时，
+      // 词干相同就当它列着
+      const stems = names.map(stem)
+      const found =
+        names.some((name) => listed.names.has(name) || ownNames.has(name)) ||
+        stems.some((item) => listed.names.has(item) || ownNames.has(item))
+      if (found) continue
       gaps.push({
         kind: 'unlisted',
         canonicalId: model.canonicalId,
