@@ -495,23 +495,26 @@ export const bailianTools: ToolSpec[] = [
   {
     name: 'text_to_speech',
     description:
-      '用百炼非实时 TTS 把文字合成语音，返回音频文件的 24 小时有效链接。按模型名自动选择协议。\n' +
+      '用百炼非实时 TTS 把文字合成语音。多数模型返回音频文件的 24 小时有效链接；' +
+      'MiniMax 语音模型返回的是音频本身（内容块里的 audio 块，或 out_dir 下的文件）。按模型名自动选择协议。\n' +
       '中文系统音色、方言、SRT 字幕、超长文本也可用 doubao-speech 的 text_to_speech。\n' +
       '\n- model（别名或完整 ID）：不传用默认模型 qwen-audio-3.1-tts-flash；用复刻/设计生成的自定义音色时，' +
       '须同时传生成该音色的 target_model，音色只能用于该模型。其余情况见下面的模型清单。\n' +
       '- text：要朗读的文字。CosyVoice 与 Qwen-Audio-TTS 一次合成一段，不超过 250 字符，更长的文本需自己分段多次调用；' +
-      'qwen3-tts-flash 不超过 600 字符。\n' +
+      'qwen3-tts-flash 不超过 600 字符；MiniMax 语音模型一次最多 9999 字符。\n' +
       '- voice：系统音色或自定义音色 ID；各模型可选的系统音色见官方音色列表，不能跨模型混用。' +
-      'CosyVoice 与 Qwen-Audio-TTS 必须指定 voice，没有默认音色。\n' +
+      'CosyVoice 与 Qwen-Audio-TTS 必须指定 voice，没有默认音色。MiniMax 语音模型必须指定 voice（音色 ID 如 male-qn-qingse）。\n' +
       '- instructions：语气/情感/方言指令（官方字段 instruction），如「用温柔的语气，语速稍慢」「请讲上海话。」。\n' +
       '  仅 Qwen-Audio-TTS 与 CosyVoice 3 / 3.5 系列（cosyvoice-v3-flash、v3.5-flash、v3.5-plus）支持，' +
       'cosyvoice-v2、cosyvoice-v3-plus 与 qwen3-tts-flash 传了会直接报错；CosyVoice 不超过 100 字符（汉字按 2 计），' +
-      'Qwen-Audio-TTS 官方未公布同一上限，交服务端校验。\n' +
+      'Qwen-Audio-TTS 官方未公布同一上限，交服务端校验。MiniMax 语音模型不支持，用 parameters.emotion 传情绪。\n' +
       '- language：仅对 qwen3-tts-flash 生效，写 Chinese、English、Japanese 等，不传自动识别；' +
-      'CosyVoice / Qwen-Audio-TTS 请把语种代码放进 parameters.language_hints（如 ["zh"]）。\n' +
+      'CosyVoice / Qwen-Audio-TTS 请把语种代码放进 parameters.language_hints（如 ["zh"]）；' +
+      'MiniMax 语音模型映射到 language_boost，写 Chinese、English 这类官方语种名。\n' +
       '- out_dir：给了就把音频下载到该目录；不给只返回24小时有效链接。\n' +
       '- parameters：合并进官方 input 对象（如 Qwen-Audio-TTS/CosyVoice 的 rate、pitch、volume、seed、hot_fix、language_hints），' +
-      '不能覆盖 text/voice/model；不会写入官方顶层 parameters。\n' +
+      '不能覆盖 text/voice/model；不会写入官方顶层 parameters。MiniMax 语音模型的 speed / vol / pitch / emotion 会归到' +
+      'voice_setting，audio_setting、language_boost、pronunciation_dict 原样带过去。\n' +
       '\n按字符计费。返回 job_state、files、usage。\n',
     capability: 'audio.speech',
     inputSchema: {

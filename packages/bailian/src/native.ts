@@ -620,6 +620,12 @@ export async function runBailianNative(
         language: asString(p.language) || undefined,
         parameters: asRecord(p.parameters),
       }
+      // MiniMax 返回 hex 音频而不是链接，这个原生操作只解析链接，提交前就拒绝，免得白付费
+      if (tts.find((item) => item.id === model)?.protocol === 'minimax')
+        throw new ProviderError(
+          'invalid_input',
+          `${model} 返回的是音频本身而不是链接，不能用 qwen-audio-tts 原生操作，请用 text_to_speech`,
+        )
       const problem = checkTts(model, opts, tts, 'url')
       if (problem) throw new ProviderError('invalid_input', problem)
       const { path, body } = ttsRequest(model, opts, text, tts)

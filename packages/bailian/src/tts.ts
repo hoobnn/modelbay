@@ -1,20 +1,32 @@
 /**
- * Qwen-Audio-TTS / CosyVoice / Qwen3-TTS 语音合成。所有调用都走 `ctx.fetch`，没有 WebSocket。
+ * Qwen-Audio-TTS / CosyVoice / Qwen3-TTS / MiniMax 语音合成。所有调用都走 `ctx.fetch`，没有 WebSocket。
  *
  * 模型数据一律从 `src/models/` 的声明读：
- * - 用哪个接口（协议）由声明里的渠道 endpoint 决定；
+ * - 用哪个接口（协议）由声明里的渠道 endpoint 与 protocol 决定；
  * - 支持不支持自然语言指令、指令能写多长、能复刻/设计哪些语种，都写在声明的 limits 里；
  * - 「谁是默认模型」「默认音色是什么」也在声明里，代码不维护型号清单。
  */
-import { ProviderError, redact, selectDefaultModel, type ProviderUsage } from '@modelbay/core'
+import {
+  ProviderError,
+  redact,
+  selectDefaultModel,
+  type ProviderOutput,
+  type ProviderUsage,
+} from '@modelbay/core'
 import type { AdapterContext, ModelDeclaration } from '@modelbay/core'
 import { asJson, arr, requestJson, type Json } from './http'
 
 export const SYNTH_PATH = '/api/v1/services/audio/tts/SpeechSynthesizer'
 export const QWEN_TTS_PATH = '/api/v1/services/aigc/multimodal-generation/generation'
 
-/** 声明里的模型 ID → 该模型的协议。SpeechSynthesizer 走 input，多模态生成走 parameters。 */
-export type TtsProtocol = 'synthesizer' | 'multimodal'
+/**
+ * 声明里的模型 ID → 该模型的协议。
+ *
+ * - `synthesizer`：SpeechSynthesizer 接口，请求体走 `input`；
+ * - `multimodal`：多模态生成接口，请求体走 `input` + 顶层 `parameters`；
+ * - `minimax`：同一条多模态生成接口，但请求体用 `input.voice_setting`，返回的音频是 hex。
+ */
+export type TtsProtocol = 'synthesizer' | 'multimodal' | 'minimax'
 
 /** 一个 TTS 模型的声明视图：协议、别名、指令支持、默认音色。 */
 export interface TtsModel {
@@ -41,6 +53,20 @@ const TTS_ENDPOINTS: Record<string, TtsProtocol> = {
   [QWEN_TTS_PATH]: 'multimodal',
 }
 
+/** 声明里 `protocol` 字段的可选值（core 只当字符串承载，取值由百炼解释）。 */
+const TTS_PROTOCOLS = new Set<TtsProtocol>(['synthesizer', 'multimodal', 'minimax'])
+
+/**
+ * 这个渠道用哪种协议：声明里写了 `protocol` 就用它，否则按接口路径判断。
+ *
+ * MiniMax 与 CosyVoice / Qwen3-TTS 走同一条多模态生成接口，请求体形状不同，
+ * 所以要靠声明里的 `protocol` 区分。
+ */
+function protocolFor(endpoint: string | undefined, declared: string | undefined) {
+  if (declared && TTS_PROTOCOLS.has(declared as TtsProtocol)) return declared as TtsProtocol
+  return endpoint ? TTS_ENDPOINTS[endpoint] : undefined
+}
+
 /**
  * 读出全部 TTS 模型（能力为 audio.speech，且声明了本适配器支持的接口）。
  *
@@ -51,14 +77,13 @@ export function ttsModels(declarations: readonly ModelDeclaration[]): TtsModel[]
   return declarations
     .filter((declaration) => declaration.capabilities.includes('audio.speech'))
     .map((declaration) => {
-      const endpoint = declaration.channels.find(
-        (channel) => channel.channel === 'bailian',
-      )?.endpoint
-      const protocol = endpoint ? TTS_ENDPOINTS[endpoint] : undefined
+      const channel = declaration.channels.find((item) => item.channel === 'bailian')
+      const endpoint = channel?.endpoint
+      const protocol = protocolFor(endpoint, channel?.protocol)
       if (!protocol || !endpoint) return null
       const speech = declaration.limits?.speech
       return {
-        id: declaration.channels[0]?.id ?? declaration.id,
+        id: channel?.id ?? declaration.id,
         protocol,
         endpoint,
         instruction: declaration.limits?.instruction !== false,
@@ -216,6 +241,41 @@ export interface TtsRequest {
 }
 
 /**
+ * MiniMax 的音色参数：扁平的 speed / vol / pitch / emotion 归到 `voice_setting`。
+ *
+ * 其余参数（audio_setting、language_boost、pronunciation_dict 等）原样留在 `input` 里。
+ */
+const MINIMAX_VOICE_FIELDS = ['speed', 'vol', 'pitch', 'emotion'] as const
+
+/** MiniMax 的 `voice_setting`：音色 ID 必选，其余按官方范围取值。 */
+function minimaxVoiceSetting(opts: TtsOptions): Json {
+  const extra: Json = { ...opts.parameters }
+  const declared = asJson(extra.voice_setting)
+  delete extra.voice_setting
+  const voice: Json = { ...declared }
+  for (const key of MINIMAX_VOICE_FIELDS) {
+    if (extra[key] !== undefined) {
+      voice[key] = extra[key]
+      delete extra[key]
+    }
+  }
+  const fallback = typeof declared.voice_id === 'string' ? declared.voice_id : ''
+  voice.voice_id = opts.voice || fallback
+  return voice
+}
+
+/** MiniMax 的请求体：`input.voice_setting` + 其余 input 字段，没有顶层 parameters。 */
+function minimaxInput(opts: TtsOptions, text: string): Json {
+  const extra: Json = { ...opts.parameters }
+  delete extra.voice_setting
+  for (const key of MINIMAX_VOICE_FIELDS) delete extra[key]
+  const input: Json = { text, voice_setting: minimaxVoiceSetting(opts) }
+  if (opts.language) input.language_boost = opts.language
+  Object.assign(input, extra)
+  return input
+}
+
+/**
  * 生成一段合成的 `(path, body)`。
  *
  * 接口路径取自声明的渠道 endpoint，请求体形状按该模型声明的协议生成。
@@ -228,6 +288,12 @@ export function ttsRequest(
 ): TtsRequest {
   const known = models.find((item) => item.id === model)
   const protocol = known?.protocol ?? 'multimodal'
+  if (protocol === 'minimax') {
+    return {
+      path: known?.endpoint ?? QWEN_TTS_PATH,
+      body: { model, input: minimaxInput(opts, text) },
+    }
+  }
   if (protocol === 'synthesizer') {
     const input: Json = {
       text,
@@ -281,6 +347,18 @@ export function checkTts(
       return '本地交付按 WAV 拼接分段；其他格式请改用 url 交付'
     return null
   }
+  if (known.protocol === 'minimax') {
+    // voice_setting.voice_id 是必选项，没有默认音色可替
+    if (!opts.voice && !asJson(opts.parameters?.voice_setting).voice_id)
+      return '该语音模型必须指定音色 ID（voice_setting.voice_id）'
+    if (opts.instructions) return `${model} 不支持 instructions，请用 voice_setting.emotion`
+    const extra = opts.parameters ?? {}
+    if (Object.keys(extra).some((key) => ['text', 'model', 'voice'].includes(key)))
+      return 'parameters 不能覆盖 text / voice / model'
+    if (opts.language && !/^(auto|[A-Za-z][A-Za-z, ]*)$/.test(opts.language))
+      return 'language 须是 auto 或官方语种名（如 Chinese）'
+    return null
+  }
   if (opts.instructions) return `${model} 不支持 instructions，请改用音频模型`
   return null
 }
@@ -289,6 +367,60 @@ export interface TtsResult {
   url: string
   requestId?: string
   usage?: Json
+}
+
+/** MiniMax 返回的音频格式 → MIME。 */
+const MINIMAX_AUDIO_MIME: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  flac: 'audio/flac',
+  pcm: 'audio/L16',
+}
+
+/** 解 hex 编码的音频（不用 Node 的 Buffer，core 的运行时隔离检查也过）。 */
+export function hexBytes(value: string): Uint8Array {
+  const bytes = new Uint8Array(value.length / 2)
+  for (let i = 0; i < bytes.length; i += 1)
+    bytes[i] = Number.parseInt(value.slice(i * 2, i * 2 + 2), 16)
+  return bytes
+}
+
+export interface MinimaxTtsResult {
+  output: ProviderOutput
+  usage?: ProviderUsage
+}
+
+/**
+ * 解析 MiniMax 的语音合成结果：音频在 `output.data.audio`（hex），规格在 `output.extra_info`。
+ *
+ * 官方返回的不是链接而是 hex 音频，所以这里直接给字节。
+ */
+export function parseMinimaxTtsResponse(data: Json): MinimaxTtsResult {
+  const output = asJson(data.output)
+  const payload = asJson(output.data)
+  const extra = asJson(output.extra_info)
+  const hex = payload.audio
+  if (typeof hex !== 'string' || !/^(?:[a-f\d]{2})+$/i.test(hex))
+    throw new ProviderError('unknown', '百炼 MiniMax 语音合成结果缺少音频数据', {
+      retryable: false,
+    })
+  const format = typeof extra.audio_format === 'string' ? extra.audio_format.toLowerCase() : 'mp3'
+  const usage: ProviderUsage = {}
+  const characters = asJson(data.usage).characters
+  if (typeof characters === 'number') usage.characters = characters
+  else if (typeof extra.usage_characters === 'number') usage.characters = extra.usage_characters
+  // 官方给的 audio_length 是毫秒
+  if (typeof extra.audio_length === 'number') usage.seconds = extra.audio_length / 1000
+  return {
+    output: {
+      type: 'file',
+      kind: 'audio',
+      mime: MINIMAX_AUDIO_MIME[format] ?? 'audio/mpeg',
+      data: hexBytes(hex),
+      name: `bailian.${format}`,
+    },
+    ...(Object.keys(usage).length > 0 ? { usage } : {}),
+  }
 }
 
 /** Parse `output.audio.url` from a SpeechSynthesizer / multimodal-generation response. */
@@ -332,6 +464,33 @@ export async function synthesizeQwenAudioTts(
   const { path, body } = ttsRequest(model, { ...opts, text, voice }, text, models)
   const data = await requestJson(ctx, path, body)
   return parseTtsResponse(data)
+}
+
+/**
+ * MiniMax 语音合成：走同一条多模态生成接口，请求体用 `input.voice_setting`，
+ * 返回的是 hex 音频而不是链接，所以结果直接给字节。
+ *
+ * 官方允许一次提交一整段文本（上限 10000 字符），不分段。
+ */
+export async function synthesizeMinimaxTts(
+  ctx: AdapterContext,
+  opts: TtsOptions,
+  models: readonly TtsModel[],
+): Promise<MinimaxTtsResult> {
+  const model = resolveTtsModel(models, {
+    model: opts.model,
+    voice: opts.voice,
+    language: opts.language,
+    parameters: opts.parameters,
+  })
+  const text = (opts.text ?? '').trim()
+  if (!text) throw new ProviderError('invalid_input', '语音文本不能为空')
+  const voice = opts.voice ?? defaultVoiceFor(models, model, Boolean(opts.model))
+  const problem = checkTts(model, { ...opts, text, voice }, models)
+  if (problem) throw new ProviderError('invalid_input', problem)
+  const { path, body } = ttsRequest(model, { ...opts, text, voice }, text, models)
+  const data = await requestJson(ctx, path, body)
+  return parseMinimaxTtsResponse(data)
 }
 
 /** Response of `audio.speech` through the legacy multimodal-generation endpoint. */
