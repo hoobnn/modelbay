@@ -173,6 +173,11 @@ export const SOURCES: PlatformSources[] = [
       'qwen-audio-3.1-asr-flash-streaming',
       'qwen-audio-3.0-asr-flash-streaming',
       'qwen-audio-3.1-asr-flash-message',
+      // 实时双工语音对话（端到端语音转语音，支持委派后台任务），与 realtime 系列同类
+      'qwen-audio-3.1-live',
+      // 音频打标：输出带时间标记的语音 / 音效 / 背景声标注与场景描述，是音频理解而非转写；
+      // 现有能力里没有对应项，请求体（input.file_url）与结果（text 内嵌标注 JSON）也和 audio.transcribe 不同
+      'qwen-audio-3.1-captioner',
       // 旧版本 / 旧快照：已声明更新的版本（qwen-image-3.0、wan2.7-image-pro、wan3.0-video、text-embedding-v4、
       // qwen3-vl-embedding、qwen3.7-text-rerank、qwen3-asr-flash）
       'wan2.6-t2i',
