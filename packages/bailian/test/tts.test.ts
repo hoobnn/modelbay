@@ -6,8 +6,10 @@ import {
   choiceContents,
   defaultTtsModel,
   defaultVoiceFor,
+  hexBytes,
   instructionLength,
   instructionModelIds,
+  parseMinimaxTtsResponse,
   parseTtsResponse,
   parseUsage,
   QWEN_TTS_PATH,
@@ -15,6 +17,7 @@ import {
   splitText,
   synthModelIds,
   SYNTH_PATH,
+  synthesizeMinimaxTts,
   synthesizeQwenAudioTts,
   TTS_CHUNK,
   ttsModels,
@@ -495,5 +498,147 @@ describe('移植：qwen_audio_instruction_does_not_inherit_cosyvoice_character_l
           .instruction,
       ).toBe('慢'.repeat(51))
     }
+  })
+})
+
+// ── MiniMax 语音协议（百炼转售） ──────────
+
+const MINIMAX_MODEL = 'MiniMax/speech-2.8-hd'
+
+describe('MiniMax 协议（声明驱动）', () => {
+  it('声明里的 protocol 决定协议，不靠接口路径猜', () => {
+    const model = models.find((item) => item.id === MINIMAX_MODEL)
+    expect(model?.protocol).toBe('minimax')
+    // 与 CosyVoice / qwen3-tts 同一条接口，但请求体形状不同
+    expect(model?.endpoint).toBe(QWEN_TTS_PATH)
+    expect(models.find((item) => item.id === 'qwen3-tts-flash')?.protocol).toBe('multimodal')
+    expect(models.find((item) => item.id === 'cosyvoice-v2')?.protocol).toBe('synthesizer')
+  })
+
+  it('请求体用 input.voice_setting，音色参数扁平归进去', () => {
+    const { path, body } = ttsRequest(
+      MINIMAX_MODEL,
+      {
+        text: '你好',
+        voice: 'male-qn-qingse',
+        parameters: {
+          speed: 1.2,
+          vol: 2,
+          pitch: -3,
+          emotion: 'happy',
+          audio_setting: { sample_rate: 32000, format: 'mp3' },
+        },
+      },
+      '你好',
+      models,
+    )
+    expect(path).toBe(QWEN_TTS_PATH)
+    expect(body).toEqual({
+      model: MINIMAX_MODEL,
+      input: {
+        text: '你好',
+        voice_setting: {
+          voice_id: 'male-qn-qingse',
+          speed: 1.2,
+          vol: 2,
+          pitch: -3,
+          emotion: 'happy',
+        },
+        audio_setting: { sample_rate: 32000, format: 'mp3' },
+      },
+    })
+  })
+
+  it('language 映射到 language_boost', () => {
+    const { body } = ttsRequest(
+      MINIMAX_MODEL,
+      { text: '你好', voice: 'v', language: 'Chinese' },
+      '你好',
+      models,
+    )
+    expect((body.input as Record<string, unknown>).language_boost).toBe('Chinese')
+  })
+
+  it('voice_setting 整体传时保留其中的字段，音色 ID 仍以 voice 为准', () => {
+    const { body } = ttsRequest(
+      MINIMAX_MODEL,
+      {
+        text: '你好',
+        voice: 'male-qn-qingse',
+        parameters: { voice_setting: { voice_id: 'other', timbre_weights: [] } },
+      },
+      '你好',
+      models,
+    )
+    const voice = (body.input as Record<string, unknown>).voice_setting as Record<string, unknown>
+    expect(voice.voice_id).toBe('male-qn-qingse')
+    expect(voice.timbre_weights).toEqual([])
+  })
+
+  it('必须给音色，不支持自然语言指令', () => {
+    expect(checkTts(MINIMAX_MODEL, { text: 'hi' }, models)).toMatch(/必须指定音色/)
+    expect(
+      checkTts(MINIMAX_MODEL, { text: 'hi', voice: 'v', instructions: '温柔点' }, models),
+    ).toMatch(/不支持 instructions/)
+    expect(
+      checkTts(MINIMAX_MODEL, { text: 'hi', voice: 'v', parameters: { text: 'x' } }, models),
+    ).toMatch(/不能覆盖/)
+    expect(checkTts(MINIMAX_MODEL, { text: 'hi', voice: 'v', language: 'zh-CN' }, models)).toMatch(
+      /语种名/,
+    )
+  })
+
+  it('hex 音频解码成字节，规格从 extra_info 取', () => {
+    const f = fixture('tts-minimax')
+    const result = parseMinimaxTtsResponse(f.response.body)
+    expect(result.output).toMatchObject({
+      type: 'file',
+      kind: 'audio',
+      mime: 'audio/mpeg',
+      name: 'bailian.mp3',
+    })
+    const data = (result.output as { data: Uint8Array }).data
+    expect([...data]).toEqual([0x49, 0x44, 0x33])
+    expect(result.usage).toEqual({ characters: 34, seconds: 4.536 })
+  })
+
+  it('缺音频数据时报错且不重试', () => {
+    expect(() => parseMinimaxTtsResponse({ output: { data: {} } })).toThrow(ProviderError)
+  })
+
+  it('hexBytes 解出字节', () => {
+    expect([...hexBytes('494433')]).toEqual([0x49, 0x44, 0x33])
+  })
+
+  it('合成请求按官方契约发出', async () => {
+    const f = fixture('tts-minimax')
+    const { ctx, calls } = fakeContext([f.response.body])
+    const result = await synthesizeMinimaxTts(
+      ctx,
+      {
+        text: '今天是不是很开心呀',
+        model: MINIMAX_MODEL,
+        voice: 'male-qn-qingse',
+        parameters: {
+          speed: 1,
+          vol: 1,
+          pitch: 0,
+          emotion: 'happy',
+          audio_setting: { sample_rate: 32000, bitrate: 128000, format: 'mp3', channel: 1 },
+        },
+      },
+      models,
+    )
+    expect(calls()[0]?.url).toBe(f.request.url)
+    expect(calls()[0]?.body).toEqual(f.request.body)
+    expect((result.output as { data: Uint8Array }).data.length).toBe(3)
+  })
+
+  it('没给音色时在发请求前就拒绝', async () => {
+    const { ctx, calls } = fakeContext([])
+    await expect(
+      synthesizeMinimaxTts(ctx, { text: 'hi', model: MINIMAX_MODEL }, models),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(calls()).toHaveLength(0)
   })
 })

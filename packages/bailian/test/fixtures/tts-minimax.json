@@ -1,0 +1,51 @@
+{
+  "note": "MiniMax speech-2.8-hd on Bailian: multimodal-generation endpoint with input.voice_setting, hex audio in output.data.audio.",
+  "request": {
+    "url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer <redacted>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "model": "MiniMax/speech-2.8-hd",
+      "input": {
+        "text": "今天是不是很开心呀",
+        "voice_setting": {
+          "voice_id": "male-qn-qingse",
+          "speed": 1,
+          "vol": 1,
+          "pitch": 0,
+          "emotion": "happy"
+        },
+        "audio_setting": {
+          "sample_rate": 32000,
+          "bitrate": 128000,
+          "format": "mp3",
+          "channel": 1
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "output": {
+        "base_resp": { "status_code": 0, "status_msg": "success" },
+        "data": { "audio": "494433", "ced": "", "status": 2 },
+        "extra_info": {
+          "audio_channel": 1,
+          "audio_format": "mp3",
+          "audio_length": 4536,
+          "audio_sample_rate": 32000,
+          "audio_size": 74292,
+          "bitrate": 128000,
+          "usage_characters": 34
+        },
+        "trace_id": "07251d0708c723e3a8f8dd979928e429"
+      },
+      "usage": { "characters": 34 },
+      "request_id": "35c7bb92-2898-9c4a-9be4-200bc7c5d61f"
+    }
+  }
+}

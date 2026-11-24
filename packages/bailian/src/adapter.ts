@@ -58,6 +58,7 @@ import {
   parseUsage,
   QWEN_TTS_PATH,
   synthesizeQwenAudioTts,
+  synthesizeMinimaxTts,
   ttsModels,
 } from './tts'
 import {
@@ -718,6 +719,42 @@ export function createBailianAdapter(
               tts,
             )
             return { state: 'succeeded', outputs: [fileOutput('audio', result.url)] }
+          }
+          if (known?.protocol === 'minimax') {
+            // MiniMax 的语速在 voice_setting 里；SDK 的 speed 参数一并带过去
+            const params = {
+              ...asJson(input.extra),
+              ...(input.speed !== undefined ? { speed: input.speed } : {}),
+            }
+            const spec = toModelInfo(known.declaration)
+            if (optionsProblem(spec.optionsSchema, params))
+              throw new ProviderError('invalid_input', '百炼 MiniMax 语音参数无效')
+            const limits = modelLimits(models, model)
+            const maxText = limits.promptMaxLength ?? 600
+            // 平台按 Unicode 码点计字数
+            // oxlint-disable-next-line typescript/no-misused-spread -- 平台按 Unicode 码点计字数
+            const length = [...input.text].length
+            if (!input.text.trim() || length > maxText)
+              throw new ProviderError('invalid_input', `MiniMax 语音文本须为 1–${maxText} 字符`)
+            const result = await synthesizeMinimaxTts(
+              ctx,
+              {
+                text: input.text,
+                model,
+                voice: input.voice,
+                language:
+                  typeof (input as Json).language === 'string'
+                    ? String((input as Json).language)
+                    : undefined,
+                parameters: params,
+              },
+              tts,
+            )
+            return {
+              state: 'succeeded',
+              outputs: [result.output],
+              ...(result.usage ? { usage: result.usage } : {}),
+            }
           }
           const limits = modelLimits(models, model)
           // 平台按 Unicode 码点计字数

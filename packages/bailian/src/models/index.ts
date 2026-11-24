@@ -38,6 +38,18 @@ import qwen37TextEmbedding from './qwen3-7-text-embedding'
 import qwen37TextEmbeddingFlash from './qwen3-7-text-embedding-flash'
 import wan22S2v from './wan2-2-s2v'
 import zImageTurbo from './z-image-turbo'
+import deepseekV4Pro from './deepseek-v4-pro'
+import deepseekV41Flash from './deepseek-v4-1-flash'
+import kimiK3 from './kimi-k3'
+import kimiK31Pro from './kimi-k3-1-pro'
+import glm53 from './glm-5-3'
+import minimaxM31Flash from './minimax-m3-1-flash'
+import mimoV26ProUltraspeed from './mimo-v2-6-pro-ultraspeed'
+import step5Preview from './step-5-preview'
+import minimaxSpeech28Hd from './minimax-speech-2-8-hd'
+import minimaxSpeech28Turbo from './minimax-speech-2-8-turbo'
+import minimaxSpeech02Hd from './minimax-speech-02-hd'
+import minimaxSpeech02Turbo from './minimax-speech-02-turbo'
 
 export {
   qwen38Max,
@@ -79,6 +91,14 @@ export {
   qwen37TextEmbeddingFlash,
   wan22S2v,
   zImageTurbo,
+  deepseekV4Pro,
+  deepseekV41Flash,
+  kimiK3,
+  kimiK31Pro,
+  glm53,
+  minimaxM31Flash,
+  mimoV26ProUltraspeed,
+  step5Preview,
 }
 
 export const all: ModelDeclaration[] = [
@@ -121,4 +141,16 @@ export const all: ModelDeclaration[] = [
   qwen37TextEmbeddingFlash,
   wan22S2v,
   zImageTurbo,
+  deepseekV4Pro,
+  deepseekV41Flash,
+  kimiK3,
+  kimiK31Pro,
+  glm53,
+  minimaxM31Flash,
+  mimoV26ProUltraspeed,
+  step5Preview,
+  minimaxSpeech28Hd,
+  minimaxSpeech28Turbo,
+  minimaxSpeech02Hd,
+  minimaxSpeech02Turbo,
 ]

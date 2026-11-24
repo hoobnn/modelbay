@@ -368,4 +368,44 @@ describe('bailian 图片 / 视频 / 语音经 submit', () => {
     expect(error).toBeUndefined()
     expect((result!.content[0] as { text: string }).text).toContain(out)
   })
+
+  it('text_to_speech 的模型清单里列出了 MiniMax 语音模型', async () => {
+    const { handlers } = handlersWith(() => Response.json({ output: {} }))
+    const tools = await handlers.listTools()
+    const tts = tools.find((item) => item.name === 'text_to_speech')
+    const description = String(
+      (tts?.inputSchema.properties?.model as { description?: string } | undefined)?.description ??
+        '',
+    )
+    expect(description).toContain('MiniMax/speech-2.8-hd')
+    expect(description).toContain('MiniMax/speech-02-turbo')
+    expect(tts?.description ?? '').toContain('aliyun/minimax-speech-2.8-hd')
+  })
+
+  it('text_to_speech：MiniMax 语音模型用 voice_setting，hex 音频回成 audio 块', async () => {
+    const { captured, result, error } = await call(
+      'text_to_speech',
+      {
+        text: '你好',
+        model: 'bailian:MiniMax/speech-2.8-hd',
+        voice: 'male-qn-qingse',
+        parameters: { emotion: 'happy', speed: 1.2 },
+      },
+      () =>
+        Response.json({
+          output: {
+            data: { audio: '494433' },
+            extra_info: { audio_format: 'mp3', audio_length: 1200, usage_characters: 2 },
+          },
+          usage: { characters: 2 },
+        }),
+    )
+    expect(error).toBeUndefined()
+    expect(captured[0]!.body.input).toMatchObject({
+      text: '你好',
+      voice_setting: { voice_id: 'male-qn-qingse', emotion: 'happy', speed: 1.2 },
+    })
+    const audio = result!.content.find((item) => item.type === 'audio')
+    expect(audio).toMatchObject({ type: 'audio', mimeType: 'audio/mpeg' })
+  })
 })
