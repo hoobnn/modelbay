@@ -148,14 +148,21 @@ const pathKey = (row: Row, depth: number) =>
 /**
  * 行本身没有日期时，从所在小节往外找：先找最近一层标题下所有行里出现的日期，
  * 找不到再往外一层（火山的下线公告把 EOM / EOS 日期写在同一批次的「下线计划」表里）。
+ *
+ * 点名了某个模型的片段（按换行和 `<br>` 切分）里的日期只属于那个模型，不算批次日期：
+ * 火山第十批在 EOS 格里用「注意」单列了 doubao-seed-2-0-pro-260215 的 2027-01-22，
+ * 其他模型仍是批次的 2026-11-24。
  */
-function scopeDates(rows: Row[], row: Row): string[] {
+function scopeDates(rows: Row[], row: Row, isModelId: (token: string) => boolean): string[] {
   for (let depth = row.path.length; depth >= 1; depth -= 1) {
     const key = pathKey(row, depth)
     const found = new Set<string>()
     for (const other of rows) {
       if (other.path.length >= depth && pathKey(other, depth) === key) {
-        for (const value of dates(other.raw)) found.add(value)
+        for (const segment of other.raw.split(/<br\s*\/?>|\n/i)) {
+          if (tokens(segment).some(isModelId)) continue
+          for (const value of dates(segment)) found.add(value)
+        }
       }
     }
     if (found.size > 0) return [...found].sort()
@@ -330,6 +337,9 @@ export function audit(input: AuditInput): Gap[] {
     rows: parseRows(snapshot.markdown),
   }))
 
+  const isModelId = (token: string) =>
+    byName.has(lower(token)) || isCandidateId(token, prefixes, lowercaseOnly, digitless)
+
   // 1. 下线 / 弃用公告点名的已声明模型。列表页上的历史模型在第 2 步一律归档。
   const mentions = new Map<DeclaredModel, { ids: Set<string>; evidence: Evidence[] }>()
   for (const { snapshot, rows } of parsed) {
@@ -345,7 +355,7 @@ export function audit(input: AuditInput): Gap[] {
       // 行里没有日期时，往外找跟进时带来的上下文日期和所在小节的日期
       if (found.length === 0) {
         found = snapshot.contextDates ?? []
-        if (found.length === 0) found = scopeDates(rows, row)
+        if (found.length === 0) found = scopeDates(rows, row, isModelId)
       }
       for (const [name, original] of named) {
         const model = byName.get(name)!

@@ -50,11 +50,10 @@ export default {
   channels: [{ channel: 'ark', id: 'doubao-seedream-5-0-260128' }],
   aliases: { official: ['doubao-seedream-5-0-lite-260128'], short: [] },
   lifecycle: {
-    status: 'sunsetting',
     // 第十批下线说明：「EOS 模型服务下线 2026-11-24 14:00（UTC+8）」，例外只有 doubao-seed-2-0-lite / mini / pro-260215
-    // 三个模型；「doubao-seedream-5-0-lite-260128 / doubao-seedream-5-0-260128」一行没有单独日期，按批次的 2026-11-24。
-    // 2026-11-24 核对原文。
-    sunsetOn: '2026-11-24',
+    // 三个模型；「doubao-seedream-5-0-lite-260128 / doubao-seedream-5-0-260128」一行没有单独日期，按批次的
+    // 2026-11-24 关停，已过 EOS。2026-11-24 核对原文。
+    status: 'retired',
     source: {
       url: 'https://docs.volcengine.com/docs/ark/model-deprecation-notice?lang=zh',
       checkedAt: '2026-11-24',

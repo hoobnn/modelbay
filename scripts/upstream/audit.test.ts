@@ -148,6 +148,34 @@ describe('生命周期', () => {
     ])
   })
 
+  it('批次日期不含「注意」里单列给其他模型的日期', () => {
+    const page: Snapshot = {
+      url: 'https://x/dep',
+      role: 'deprecation',
+      markdown: [
+        '# 第十批',
+        '## 下线计划',
+        '| 节点 | 时间 |',
+        '| --- | --- |',
+        '| EOS | **2026\\-11\\-24 14:00**<br><br>* doubao\\-z\\-1 模型的 EOS 时间：2027\\-01\\-22 |',
+        '## 下线模型',
+        '| 模型 ID | 建议迁移模型 |',
+        '| --- | --- |',
+        '| doubao\\-z\\-1 `EOS 时间：2027-01-22` | doubao\\-y\\-2 |',
+        '| doubao\\-x\\-1 | doubao\\-y\\-2 |',
+      ].join('\n'),
+    }
+    const gaps = run([page], [model('doubao-x-1'), model('doubao-y-2')], {
+      today: '2026-11-25',
+    })
+    expect(gaps).toEqual([
+      expect.objectContaining({
+        canonicalId: 'v/doubao-x-1',
+        proposed: { status: 'retired', source: 'https://x/dep' },
+      }),
+    ])
+  })
+
   it('跟进的公告用链接所在小节的日期', () => {
     const page: Snapshot = {
       url: 'https://x/notice/1',
