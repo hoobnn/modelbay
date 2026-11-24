@@ -8,12 +8,12 @@ export default {
   features: ['tools', 'vision', 'structured'],
   // 上下文窗口与最大输出：按量渠道见 https://docs.volcengine.com/docs/ark/model-list?lang=zh「doubao-seed-evolving」行，
   // 写「上下文窗口: 1024k」「最大回答: 256k」；套餐渠道见
-  // https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview「支持模型及 Harness」表，写「上下文窗口：1024k」「最大输出：256k」。两个渠道一致，2026-11-07 核对原文。
+  // https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview「支持模型及 Harness」表，写「上下文窗口：1024k」「最大输出：256k」。两个渠道一致，2026-11-24 核对原文。
   // 方舟文档的 k 未定义进制，按 1000 换算（1024k 记 1024000）。
   contextWindow: 1024000,
   maxOutputTokens: 256000,
   // 最大输入：https://docs.volcengine.com/docs/ark/model-list?lang=zh
-  // 「doubao-seed-evolving」行写「最大输入: 1024k」，2026-11-14 核对原文。
+  // 「doubao-seed-evolving」行写「最大输入: 1024k」，2026-11-24 核对原文。
   // 方舟文档的 k 未定义进制，按 1000 换算。
   maxInputTokens: 1024000,
   // 联网搜索与续接响应走 Responses API（POST /responses，按量渠道），字段与取值范围来自：
@@ -110,6 +110,6 @@ export default {
   },
   source: {
     url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
-    checkedAt: '2026-11-07',
+    checkedAt: '2026-11-24',
   },
 } satisfies ModelDeclaration
