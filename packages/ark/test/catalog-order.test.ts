@@ -31,6 +31,7 @@ describe('方舟目录顺序', () => {
       'doubao-seedream-5-0-pro-260628',
       'doubao-seedream-5-0-flash-260915',
       'doubao-seedream-5-0-260128',
+      'doubao-seedream-4-0-260415',
       'custom-image',
     ])
     expect(idsIn('ark', 'video.generate')).toEqual([
@@ -54,6 +55,7 @@ describe('方舟目录顺序', () => {
       'deepseek-v4-pro',
       'deepseek-v4.1-flash',
       'deepseek-v4.1-flash-economy',
+      'glm-5.4',
       'glm-5.3',
       'glm-5.3-flash',
       'kimi-k2.8-preview',
