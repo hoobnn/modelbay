@@ -7,10 +7,14 @@ export default {
   capabilities: ['text.chat'],
   features: ['tools', 'vision', 'structured'],
   // 上下文窗口与最大输出：https://docs.volcengine.com/docs/ark/model-list?lang=zh
-  // 「doubao-seed-2-1-pro-260915」行，长度限制写「上下文窗口: 1024k」「最大回答: 256k」，2026-11-07 核对原文。
+  // 「doubao-seed-2-1-pro-260915」行，长度限制写「上下文窗口: 1024k」「最大回答: 256k」，2026-11-24 核对原文。
   // 方舟文档的 k 未定义进制，按 1000 换算（1024k 记 1024000）。
   contextWindow: 1024000,
   maxOutputTokens: 256000,
+  // 最大输入：https://docs.volcengine.com/docs/ark/model-list?lang=zh
+  // 「doubao-seed-2-1-pro-260915」行写「最大输入: 1024k」，2026-11-24 核对原文。
+  // 方舟文档的 k 未定义进制，按 1000 换算。
+  maxInputTokens: 1024000,
   default: true,
   // 联网搜索与续接响应走 Responses API（POST /responses，按量渠道），字段与取值范围来自：
   // - 创建模型响应 tools（web_search）/ previous_response_id / max_tool_calls：
@@ -92,6 +96,6 @@ export default {
   },
   source: {
     url: 'https://docs.volcengine.com/docs/ark/model-list?lang=zh',
-    checkedAt: '2026-11-07',
+    checkedAt: '2026-11-24',
   },
 } satisfies ModelDeclaration

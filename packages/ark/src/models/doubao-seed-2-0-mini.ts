@@ -8,10 +8,15 @@ export default {
   description: 'Agent Plan 套餐文本模型，仅用于内置 Agent；可用性取决于套餐档位',
   features: ['tools', 'structured'],
   // 上下文窗口与最大输出：https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview
-  // 「支持模型及 Harness」表，长度限制写「上下文窗口：256k」「最大输出：128k」，2026-11-07 核对原文。
+  // 「支持模型及 Harness」表，长度限制写「上下文窗口：256k」「最大输出：128k」，2026-11-24 核对原文。
   // 方舟文档的 k 未定义进制，按 1000 换算（1024k 记 1024000）。
   contextWindow: 256000,
   maxOutputTokens: 128000,
+  // 最大输入：套餐概览页只写上下文窗口与最大输出，同一模型的按量列表页
+  // https://docs.volcengine.com/docs/ark/model-list?lang=zh
+  // 「doubao-seed-2-0-mini-260428」行写「最大输入: 224k」，2026-11-24 核对原文。
+  // 方舟文档的 k 未定义进制，按 1000 换算（224k 记 224000）。
+  maxInputTokens: 224000,
   agentOnly: true,
   channels: [{ channel: 'ark-plan', id: 'doubao-seed-2.0-mini' }],
   aliases: { official: [], short: ['mini'] },
@@ -24,6 +29,6 @@ export default {
   },
   source: {
     url: 'https://console.volcengine.com/ark/region:cn-beijing/docs/agent-plan-personal-plan-overview',
-    checkedAt: '2026-11-07',
+    checkedAt: '2026-11-24',
   },
 } satisfies ModelDeclaration

@@ -424,6 +424,12 @@ export interface ModelSpec {
   contextWindow?: number
   /** 单次请求最多能输出的 token 数；平台官方公布了才填。 */
   maxOutputTokens?: number
+  /**
+   * 单次请求最多能接受的输入 token 数。平台官方把它和上下文窗口分开公布时才填
+   * （例如上下文窗口 1,050,000、最大输入 922,000）；官方只公布上下文窗口时不填，
+   * 宿主按「输入不超过上下文窗口」处理。
+   */
+  maxInputTokens?: number
   /** 仅供内置 Agent 使用，不用于普通画布生成。 */
   agentOnly?: boolean
   limits?: ModelLimits

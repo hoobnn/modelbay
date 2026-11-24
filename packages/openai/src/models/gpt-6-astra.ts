@@ -7,9 +7,12 @@ export default {
   capabilities: ['text.chat'],
   features: ['vision', 'tools', 'structured'],
   // 上下文窗口与最大输出：https://developers.openai.com/api/docs/models/gpt-6-astra
-  // 页面写「1,050,000 context window」「128,000 max output tokens」，2026-11-07 核对原文。
+  // 页面写「1,050,000 context window」「128,000 max output tokens」，2026-11-24 核对原文。
+  // 最大输入：同一页面（Markdown 版）写「Maximum input tokens: 922,000」，与上下文窗口分开公布，
+  // 2026-11-24 核对原文。
   contextWindow: 1050000,
   maxOutputTokens: 128000,
+  maxInputTokens: 922000,
   limits: { temperature: false },
   optionsSchema: {
     type: 'object',
@@ -61,6 +64,6 @@ export default {
   },
   source: {
     url: 'https://developers.openai.com/api/docs/models/gpt-6-astra',
-    checkedAt: '2026-11-07',
+    checkedAt: '2026-11-24',
   },
 } satisfies ModelDeclaration

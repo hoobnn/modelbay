@@ -7,9 +7,10 @@ export default {
   capabilities: ['text.chat'],
   features: ['vision', 'tools', 'structured'],
   // 上下文窗口与最大输出：https://developers.openai.com/api/docs/models/gpt-6.2-sol
-  // 页面写「1,050,000 context window」「128,000 max output tokens」（另写「Maximum input tokens: 922,000」），2026-11-19 核对原文。
+  // 页面写「1,050,000 context window」「128,000 max output tokens」「Maximum input tokens: 922,000」，2026-11-24 核对原文。
   contextWindow: 1050000,
   maxOutputTokens: 128000,
+  maxInputTokens: 922000,
   // 不支持 temperature：https://developers.openai.com/api/docs/guides/latest-model/gpt-6.2-astra 「omit `temperature`」，2026-11-19 核对。
   limits: { temperature: false },
   optionsSchema: {
@@ -64,6 +65,6 @@ export default {
   },
   source: {
     url: 'https://developers.openai.com/api/docs/models/gpt-6.2-sol',
-    checkedAt: '2026-11-19',
+    checkedAt: '2026-11-24',
   },
 } satisfies ModelDeclaration

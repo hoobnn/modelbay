@@ -88,10 +88,11 @@ describe('MCP DeepSeek 工具经真实适配器', () => {
         top_p: 0.99,
         user_id: 'u1',
         max_tokens: 64,
-        temperature: 0.5,
         stream: true,
       },
     })
+    // 声明里 limits.temperature: false：官方思考模式不采纳 temperature，不发。
+    expect(captured.at(-1)!.body).not.toHaveProperty('temperature')
     expect(captured.at(-1)!.body.messages).toEqual([
       { role: 'system', content: 'be brief' },
       { role: 'user', content: 'hi' },
@@ -109,6 +110,7 @@ describe('MCP DeepSeek 工具经真实适配器', () => {
       prompt: 'latest news',
       web_search: true,
       thinking: { type: 'disabled' },
+      temperature: 0.7,
       parameters: { title: { enabled: true } },
     })
     expect(result.isError).toBeFalsy()
@@ -116,6 +118,8 @@ describe('MCP DeepSeek 工具经真实适配器', () => {
       url: 'https://api.deepseek.com/responses',
       body: {
         reasoning: { effort: 'none' },
+        // 思考已关闭，temperature 有效，照常透传。
+        temperature: 0.7,
         tools: [{ type: 'deepseek_web_search' }],
         title: { enabled: true },
       },

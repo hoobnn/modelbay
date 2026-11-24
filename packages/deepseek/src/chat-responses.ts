@@ -85,6 +85,7 @@ async function toInput(request: AdapterRequest<'text.chat'>, ctx: AdapterContext
 export async function responsesBody(
   request: AdapterRequest<'text.chat'>,
   ctx: AdapterContext,
+  model?: ModelDeclaration,
 ): Promise<Json> {
   const { input } = request
   const extra = { ...input.extra }
@@ -117,7 +118,13 @@ export async function responsesBody(
   if (effort !== undefined) body.reasoning = { effort }
   if (tools.length) body.tools = tools
   if (input.toolChoice) body.tool_choice = input.toolChoice
-  if (input.temperature !== undefined) body.temperature = input.temperature
+  // 声明 `limits.temperature: false` 时，思考模式下不发 temperature（官方不采纳这个参数）；
+  // 思考已关闭（effort 为 none）时 temperature 有效，照常透传。
+  if (
+    input.temperature !== undefined &&
+    (model?.limits?.temperature !== false || effort === 'none')
+  )
+    body.temperature = input.temperature
   if (input.maxTokens !== undefined) body.max_output_tokens = input.maxTokens
   if (input.jsonSchema)
     body.text = {
@@ -186,9 +193,9 @@ export async function terminalResponse(response: Response, ctx: AdapterContext):
 export async function responsesChat(
   request: AdapterRequest<'text.chat'>,
   ctx: AdapterContext,
-  _model: ModelDeclaration,
+  model: ModelDeclaration,
 ): Promise<SubmitResult> {
-  const body = await responsesBody(request, ctx)
+  const body = await responsesBody(request, ctx, model)
   const response = await sendRequest(ctx, '/responses', 'POST', JSON.stringify(body), {
     'Content-Type': 'application/json',
   })
