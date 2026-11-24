@@ -57,7 +57,9 @@ describe('fetchPage 分档抓取', () => {
 
   it('拿不到 Markdown、域名又没登记渲染容器时报错，不退到浏览器渲染', async () => {
     stubFetch({ 'https://help.aliyun.com/zh/y': { type: 'text/html', body: '<html></html>' } })
-    await expect(fetchPage('https://help.aliyun.com/zh/y')).rejects.toThrow('RENDER_SELECTORS')
+    await expect(
+      fetchPage('https://help.aliyun.com/zh/y', { retryDelaysMs: [0, 1] }),
+    ).rejects.toThrow('RENDER_SELECTORS')
   })
 
   it('非白名单地址和 4xx 直接失败', async () => {

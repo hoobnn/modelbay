@@ -191,6 +191,9 @@ export const SOURCES: PlatformSources[] = [
       'qwen3-5-omni-plus',
       'qwen-audio-3-1-tts-flash',
       'qwen-audio-3-1-tts-plus',
+      // 写法变体：文本生成模型列表只写 step-5-preview，接口只认带厂商前缀的 stepfun/step-5-preview（已声明）；
+      // 2026-11-24 实测不带前缀返回 model_not_found
+      'step-5-preview',
       // 不是百炼模型：迁移对照表里列的 OpenAI 模型
       'text-embedding-3-large',
       // 实时 / 全模态对话（WebSocket 双向流或音频输出），不在支持的能力内

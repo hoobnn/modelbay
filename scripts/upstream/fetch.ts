@@ -153,6 +153,8 @@ function domToMarkdown(root: Element): string {
 
 export interface FetchOptions {
   timeoutMs?: number
+  /** 拿不到 Markdown 时每次重试前的等待；第一项是首次抓取，一般写 0 */
+  retryDelaysMs?: number[]
 }
 
 /** 按档位抓一个页面，返回 Markdown。 */
@@ -162,7 +164,13 @@ export async function fetchPage(
 ): Promise<FetchedPage> {
   const timeoutMs = options.timeoutMs ?? 30_000
   const url = fetchUrl(original)
-  const page = await fetchMarkdown(url, timeoutMs)
+  // 阿里云帮助中心连续请求一多会回滑块校验页（HTTP 200 的 HTML），过一阵自己解除，隔开再重试
+  let page: FetchedPage | null = null
+  for (const delay of options.retryDelaysMs ?? [0, 20_000, 60_000]) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay))
+    page = await fetchMarkdown(url, timeoutMs)
+    if (page) break
+  }
   if (page) return { ...page, url: original }
   // 只有登记了正文容器的域名才渲染：其他站点拿不到 Markdown 多半是被限流，渲染出来的是
   // 导航和校验页，会造成误报，宁可算抓取失败
@@ -174,7 +182,18 @@ export async function fetchPage(
   return { url: original, method: 'rendered', markdown }
 }
 
+/** 只认 `.md` 的站点：先抓 `.md`，省掉一次 HTML 请求（阿里云帮助中心请求一多就回滑块校验页）。 */
+const SUFFIX_FIRST_HOSTS = new Set(['help.aliyun.com'])
+
 async function fetchMarkdown(url: string, timeoutMs: number): Promise<FetchedPage | null> {
+  if (SUFFIX_FIRST_HOSTS.has(new URL(url).hostname)) {
+    const first = await get(markdownSuffixUrl(url), 'text/markdown, text/plain', timeoutMs).catch(
+      () => null,
+    )
+    if (first && looksLikeMarkdown(first)) {
+      return { url, method: 'markdown-suffix', markdown: first.body }
+    }
+  }
   const direct = await get(url, 'text/markdown, text/plain;q=0.9, text/html;q=0.8', timeoutMs)
   if (looksLikeMarkdown(direct)) return { url, method: 'markdown', markdown: direct.body }
 
