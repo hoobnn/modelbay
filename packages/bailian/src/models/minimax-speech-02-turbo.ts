@@ -4,7 +4,8 @@ import type { ModelDeclaration } from '@modelbay/core'
  *
  * 走百炼的多模态生成接口，请求体用 `input.voice_setting`，返回的音频是 hex 而不是链接，
  * 所以渠道上用 `protocol: 'minimax'` 指明这一形态。
- * 来源：https://help.aliyun.com/zh/model-studio/speech-02-turbo（2026-11-14 核对原文）
+ * 来源：https://help.aliyun.com/zh/model-studio/speech-02-turbo（模型页，2026-11-24 核对原文）；请求参数见
+ * https://help.aliyun.com/zh/model-studio/minimax-synchronous-speech-synthesis-api（2026-11-24 核对原文）
  */
 export default {
   canonicalId: 'aliyun/minimax-speech-02-turbo',
@@ -48,11 +49,11 @@ export default {
     status: 'active',
     source: {
       url: 'https://help.aliyun.com/zh/model-studio/speech-02-turbo',
-      checkedAt: '2026-11-14',
+      checkedAt: '2026-11-24',
     },
   },
   source: {
     url: 'https://help.aliyun.com/zh/model-studio/speech-02-turbo',
-    checkedAt: '2026-11-14',
+    checkedAt: '2026-11-24',
   },
 } satisfies ModelDeclaration
