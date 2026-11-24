@@ -93,6 +93,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TITLE: 上游文档对账：${{ matrix.platform }}
           ATTENTION: ${{ steps.audit.outputs.attention }}
+          ERRORS: ${{ steps.audit.outputs.errors }}
           OWNER: ${{ github.repository_owner }}
         run: |
           gh label create upstream-docs --color BFD4F2 --force >/dev/null
@@ -112,7 +113,8 @@ jobs:
             else
               gh issue create --title "$TITLE" --label upstream-docs --assignee "$OWNER" --body-file "$body"
             fi
-          elif [ -n "$number" ]; then
+          elif [ -n "$number" ] && [ "$ERRORS" = "0" ]; then
+            # 有页面抓取失败时这次对账不完整，「没有差距」不代表问题已解决，不自动关闭
             gh issue close "$number" --comment "最新一次对账没有差距，自动关闭。"
           fi
       - name: 抓取失败时让 job 失败

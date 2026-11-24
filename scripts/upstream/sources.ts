@@ -28,6 +28,12 @@ export interface PlatformSources {
   /** 推出来但太宽泛、会把普通词当成模型 ID 的前缀。 */
   excludePrefixes?: string[]
   /**
+   * 模型 ID 不带版本号（数字）的前缀。候选规则默认要求 ID 带数字，免得把文档路径
+   * 当成模型；有些平台的模型 ID 就是不带数字的（OpenAI 的 `gpt-transcribe`），
+   * 在这里按前缀放行。
+   */
+  digitless?: string[]
+  /**
    * 官方列表页和来源页里本来就不会出现的渠道内 ID：设置里自填的自定义模型，或文档写法和接口实际
    * 返回不一致、已按接口核实过的 ID（写注释说明）。
    */
@@ -75,6 +81,9 @@ export const SOURCES: PlatformSources[] = [
         role: 'deprecation',
       },
     ],
+    // 3D 生成系列：方舟列表页有，modelbay 没有对应能力。前缀只取开头纯字母段，
+    // 所以 hyper3d / hitem3d 要写成 hyper / hitem 才认得出来。
+    prefixes: ['hyper', 'hitem'],
     unlisted: [
       'custom-chat',
       'custom-image',
@@ -106,6 +115,8 @@ export const SOURCES: PlatformSources[] = [
       'doubao-seed-2-0-code-preview-260215',
       // 3D 生成：没有对应能力
       'doubao-seed3d-2-0-260328',
+      'hyper3d-gen2-260112',
+      'hitem3d-2-0-251223',
       // 第三方模型的旧快照：deepseek-v4-1-flash-260910 已有更新的 261017；deepseek-v4-pro-260425 在第十批下线公告里
       // （2026-11-24 下线，按量渠道已声明 deepseek-v4-pro-ga-260813）；glm-5-2-260617 已有 glm-5.3 系列
       'deepseek-v4-1-flash-260910',
@@ -153,6 +164,26 @@ export const SOURCES: PlatformSources[] = [
         role: 'deprecation',
         follow: /^https:\/\/www\.aliyun\.com\/notice\/\d+$/,
       },
+    ],
+    // 百炼转售第三方模型：这些系列在百炼一个都没声明过，前缀得写明，官方上新才看得见。
+    // 前缀只取开头那段连续字母，所以 `Tripo/…` 写 `tripo`、`ZHIPU/…` 写 `zhipu`。
+    prefixes: [
+      'deepseek',
+      'glm',
+      'kimi',
+      'minimax',
+      'mimo',
+      'step',
+      'antdigital',
+      'kling',
+      'pixverse',
+      'siliconflow',
+      'tripo',
+      'unisound',
+      'vanchin',
+      'vidu',
+      'xiaomi',
+      'zhipu',
     ],
     skipped: [
       // 2026-11-11 逐个核对官方列表页后分组；要接的从这里删掉再写声明，新增条目写明不接的原因。
@@ -230,6 +261,19 @@ export const SOURCES: PlatformSources[] = [
       'wan2.7-videoedit',
       'wan2.2-animate-move',
       'wan2.2-animate-mix',
+      // 2026-11-14 补上 prefixes 后新报出的百炼转售模型，文本类的已全部接入并写进声明。
+      // 写法变体：短横线写法与已声明的 glm-5.3 是同一个（文档链接路径里的写法）
+      'glm-5-3',
+      // 不是模型 ID：系列名（小标题），下面的具体型号才是模型 ID
+      'Qwen3-TTS',
+      'Qwen3-ASR',
+      // 3D 模型生成：modelbay 没有 3D 能力（厂商前缀写法与不带前缀的写法都在列表页上）
+      'Tripo/Tripo-H3.1',
+      'Tripo/Tripo-P1.0',
+      'Tripo-H3.1',
+      'Tripo-P1.0',
+      // 不是模型 ID：文档链接路径
+      'tripo-3d-generation-guide',
     ],
   },
   {
@@ -253,7 +297,25 @@ export const SOURCES: PlatformSources[] = [
   },
   {
     key: 'doubao-speech',
-    pages: [],
+    pages: [
+      {
+        // 官方模型目录页：汇总各产品线的可用模型。页面用产品名和版本（「TTS 2.0」
+        // 「Seed Audio 1.0」）而不是 API 模型 ID，抽取时按「产品名 + 版本」合成候选。
+        url: 'https://docs.volcengine.com/docs/6561/2499930',
+        role: 'list',
+        channel: 'doubao-speech',
+      },
+    ],
+    // 官方目录页只写产品名（「TTS 3.0」「ICL 2.0」），候选 ID 从表头合成（tts-3.0），
+    // 声明里的前缀是 `seed`，推不出 `tts` / `icl`，要在这里写明。
+    prefixes: ['tts', 'icl'],
+    unlisted: [
+      // 1.0 代际：官方模型目录页与 TTS 接口页当前都只列 2.0 代际的资源 ID
+      // （seed-tts-2.0 / seed-icl-2.0），1.0 只留给历史音色继续合成，
+      // 已按接口核实过这两个 ID 仍可调用。
+      'seed-tts-1.0',
+      'seed-icl-1.0',
+    ],
   },
   {
     key: 'openai',
@@ -261,6 +323,8 @@ export const SOURCES: PlatformSources[] = [
       { url: 'https://developers.openai.com/api/docs/models', role: 'list', channel: 'openai' },
       { url: 'https://developers.openai.com/api/docs/deprecations', role: 'deprecation' },
     ],
+    // OpenAI 的语音与研究模型 ID 不带版本号（gpt-transcribe、gpt-rosalind-research 等）。
+    digitless: ['gpt'],
     skipped: [
       // 2026-11-11 逐个核对官方列表页后分组；要接的从这里删掉再写声明，新增条目写明不接的原因。
       // 旧版本：已声明 gpt-6 / gpt-6.1 系列
@@ -289,6 +353,14 @@ export const SOURCES: PlatformSources[] = [
       // 开放权重模型，平台不提供托管调用
       'gpt-oss-120b',
       'gpt-oss-20b',
+      // 2026-11-14 补上 digitless 后新报出的模型（ID 不带版本号，默认候选规则看不见）。
+      // 语音转写与实时翻译：modelbay 还没有 OpenAI 的转写 / 实时语音能力
+      'gpt-transcribe',
+      'gpt-live-transcribe',
+      'gpt-realtime-whisper',
+      'gpt-realtime-translate',
+      // 需单独申请权限的生命科学推理模型
+      'gpt-rosalind-research',
     ],
   },
 ]
