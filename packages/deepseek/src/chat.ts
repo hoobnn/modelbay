@@ -74,7 +74,12 @@ export async function chat(
     ctx,
     label: 'DeepSeek',
     model: request.model,
-    input: { ...input, extra },
+    // 声明 `limits.temperature: false` 时不发 temperature：思考模式下官方不采纳这个参数。
+    input: {
+      ...input,
+      extra,
+      ...(model.limits?.temperature === false ? { temperature: undefined } : {}),
+    },
     baseURL: baseUrl(ctx),
     replayReasoning: true,
     structured: 'json_object',

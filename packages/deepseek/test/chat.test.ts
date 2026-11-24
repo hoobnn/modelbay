@@ -76,7 +76,6 @@ describe('DeepSeek chat', () => {
     expect(c.body()).toMatchObject({
       model: 'deepseek-flash',
       stream: true,
-      temperature: 0.4,
       max_tokens: 42,
       thinking: { type: 'disabled' },
       user_id: 'u1',
@@ -87,6 +86,19 @@ describe('DeepSeek chat', () => {
       outputs: [{ type: 'text', text: 'hi' }],
       usage: { inputTokens: 3, outputTokens: 8 },
     })
+  })
+
+  it('声明 limits.temperature: false 时不发 temperature，没声明才照发', async () => {
+    const c = context(say('hi'))
+    await chat(request({}, { temperature: 0.4 }), c.ctx, flash)
+    expect(c.body()).not.toHaveProperty('temperature')
+
+    const open = context(say('hi'))
+    await chat(request({}, { temperature: 0.4 }), open.ctx, {
+      ...flash,
+      limits: { ...flash.limits, temperature: undefined },
+    })
+    expect(open.body()).toMatchObject({ temperature: 0.4 })
   })
 
   it('requests json_object with an instruction and validates the schema', async () => {

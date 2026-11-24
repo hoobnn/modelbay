@@ -14,6 +14,10 @@ export default {
   // 方舟文档的 k 未定义进制，按 1000 换算（1024k 记 1024000）。
   contextWindow: 1024000,
   maxOutputTokens: 1024000,
+  // 最大输入：https://docs.volcengine.com/docs/ark/model-list?lang=zh
+  // 「kimi-k3-1-pro-261024」行写「最大输入: 1024k」，2026-11-14 核对原文。
+  // 方舟文档的 k 未定义进制，按 1000 换算。
+  maxInputTokens: 1024000,
   channels: [
     { channel: 'ark', id: 'kimi-k3-1-pro-261024' },
     {

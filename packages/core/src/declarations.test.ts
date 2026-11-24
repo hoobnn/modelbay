@@ -403,6 +403,44 @@ describe('toModelInfo', () => {
     expect('maxOutputTokens' in info).toBe(false)
   })
 
+  it('maxInputTokens 从声明到达模型信息，渠道级覆盖只作用于该渠道', () => {
+    const declaration = patch({
+      contextWindow: 1_050_000,
+      maxOutputTokens: 128_000,
+      maxInputTokens: 922_000,
+      channels: [
+        { channel: 'a', id: 'x' },
+        { channel: 'b', id: 'y', maxInputTokens: 1_000_000 },
+      ],
+    })
+    const [open, scoped] = declaration.channels
+    expect(toModelInfo(declaration, open)).toMatchObject({ maxInputTokens: 922_000 })
+    expect(toModelInfo(declaration, scoped)).toMatchObject({ maxInputTokens: 1_000_000 })
+    expect('maxInputTokens' in toModelInfo(patch({}))).toBe(false)
+  })
+
+  it('maxInputTokens 必须是正整数，且不超过上下文窗口', () => {
+    expect(validateDeclaration(patch({ maxInputTokens: 0 }))).toContain('maxInputTokens 应为正整数')
+    expect(validateDeclaration(patch({ contextWindow: 1000, maxInputTokens: 1001 }))).toContain(
+      'maxInputTokens 不应超过 contextWindow',
+    )
+    expect(validateDeclaration(patch({ contextWindow: 1000, maxInputTokens: 1000 }))).toEqual([])
+    // 声明了最大输入就要有上下文窗口
+    expect(
+      validateDeclaration(patch({ maxInputTokens: 100 })).filter((p) =>
+        p.includes('声明了 maxInputTokens 就应同时声明 contextWindow'),
+      ),
+    ).toHaveLength(1)
+    // 渠道级最大输入按该渠道的生效窗口检查
+    const split = patch({
+      channels: [
+        { channel: 'a', id: 'a', contextWindow: 1000 },
+        { channel: 'b', id: 'b', contextWindow: 1000, maxInputTokens: 2000 },
+      ],
+    })
+    expect(validateDeclaration(split)).toContain('b.maxInputTokens 不应超过 contextWindow')
+  })
+
   it('token 数必须是正整数，声明了最大输出就要有上下文窗口', () => {
     expect(validateDeclaration(patch({ contextWindow: 0 }))).toContain('contextWindow 应为正整数')
     const missing = (problems: string[]) =>

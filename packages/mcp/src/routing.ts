@@ -187,11 +187,13 @@ function localResult(
           channels: model.channels.map((entry) => {
             const contextWindow = entry.contextWindow ?? model.contextWindow
             const maxOutputTokens = entry.maxOutputTokens ?? model.maxOutputTokens
+            const maxInputTokens = entry.maxInputTokens ?? model.maxInputTokens
             return {
               channel: entry.channel,
               id: entry.id,
               ...(contextWindow !== undefined ? { contextWindow } : {}),
               ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
+              ...(maxInputTokens !== undefined ? { maxInputTokens } : {}),
             }
           }),
         }))

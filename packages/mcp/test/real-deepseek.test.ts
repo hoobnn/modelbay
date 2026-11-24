@@ -88,10 +88,11 @@ describe('MCP DeepSeek 工具经真实适配器', () => {
         top_p: 0.99,
         user_id: 'u1',
         max_tokens: 64,
-        temperature: 0.5,
         stream: true,
       },
     })
+    // 声明里 limits.temperature: false：官方思考模式不采纳 temperature，不发。
+    expect(captured.at(-1)!.body).not.toHaveProperty('temperature')
     expect(captured.at(-1)!.body.messages).toEqual([
       { role: 'system', content: 'be brief' },
       { role: 'user', content: 'hi' },

@@ -55,7 +55,11 @@ export default {
       reasoning_effort: {
         type: 'string',
         title: '思考强度',
-        enum: ['none', 'low', 'high', 'max'],
+        // 官方「思考模式」页（https://api-docs.deepseek.com/guides/thinking_mode，2026-11-14 核对原文）
+        // 的请求强度映射表列出 minimal / low / medium / high / xhigh / max / ultra 七种请求值：
+        // minimal→low、low→low、medium→high、high→high、xhigh→high、max→max、ultra→max。
+        // none 只在 Responses API 生效（关闭思考模式），Chat Completions 用 thinking.type 关闭。
+        enum: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
       },
       top_p: {
         type: 'number',
@@ -95,4 +99,9 @@ export default {
     },
     additionalProperties: false,
   },
+  // 官方「思考模式」页写「Thinking mode does not support the temperature, presence_penalty,
+  // or frequency_penalty parameters」，思考模式是默认开的，设了也不报错但没有效果，
+  // https://api-docs.deepseek.com/guides/thinking_mode（2026-11-14 核对原文）。
+  // 关闭思考时温度才生效，但本项目不替用户切换思考模式，所以按「不支持调温」处理：不发 temperature。
+  limits: { temperature: false },
 } satisfies ModelDeclaration

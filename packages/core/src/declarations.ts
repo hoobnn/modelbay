@@ -62,6 +62,15 @@ export interface ChannelRef {
   contextWindow?: number
   /** 这个渠道里该模型单次最多输出的 token 数；不填用声明的 `maxOutputTokens`。 */
   maxOutputTokens?: number
+  /** 这个渠道里该模型单次最多接受的输入 token 数；不填用声明的 `maxInputTokens`。 */
+  maxInputTokens?: number
+  /**
+   * 同一个接口路径下平台有多种请求体形态时，声明用这个名字指明用哪一种。
+   *
+   * core 只当字符串承载，不解释它的取值；各平台包自己定义有哪些名字。
+   * 不填按接口路径判断。
+   */
+  protocol?: string
   /** 这个渠道不支持 `optionsSchema` 里的这些参数：派生出的模型信息里不展示。 */
   omitOptions?: string[]
   /**
@@ -174,9 +183,11 @@ export function validateDeclaration(model: ModelDeclaration): string[] {
   const tokenFields: Array<[string, number | undefined]> = [
     ['contextWindow', model.contextWindow],
     ['maxOutputTokens', model.maxOutputTokens],
+    ['maxInputTokens', model.maxInputTokens],
     ...model.channels.flatMap((channel): Array<[string, number | undefined]> => [
       [`${channel.channel}.contextWindow`, channel.contextWindow],
       [`${channel.channel}.maxOutputTokens`, channel.maxOutputTokens],
+      [`${channel.channel}.maxInputTokens`, channel.maxInputTokens],
     ]),
   ]
   for (const [name, value] of tokenFields) {
@@ -189,17 +200,34 @@ export function validateDeclaration(model: ModelDeclaration): string[] {
     ? model.channels.map((channel) => ({
         // 渠道没覆盖任何一项时问题出在模型级，不按渠道重复报告
         name:
-          channel.contextWindow === undefined && channel.maxOutputTokens === undefined
+          channel.contextWindow === undefined &&
+          channel.maxOutputTokens === undefined &&
+          channel.maxInputTokens === undefined
             ? ''
             : `${channel.channel}.`,
         window: channel.contextWindow ?? model.contextWindow,
         output: channel.maxOutputTokens ?? model.maxOutputTokens,
+        input: channel.maxInputTokens ?? model.maxInputTokens,
       }))
-    : [{ name: '', window: model.contextWindow, output: model.maxOutputTokens }]
-  for (const { name, window, output } of effective) {
+    : [
+        {
+          name: '',
+          window: model.contextWindow,
+          output: model.maxOutputTokens,
+          input: model.maxInputTokens,
+        },
+      ]
+  for (const { name, window, output, input } of effective) {
     const problem = `${name}声明了 maxOutputTokens 就应同时声明 contextWindow`
     if (output !== undefined && window === undefined && !problems.includes(problem)) {
       problems.push(problem)
+    }
+    const inputProblem = `${name}声明了 maxInputTokens 就应同时声明 contextWindow`
+    if (input !== undefined && window === undefined && !problems.includes(inputProblem)) {
+      problems.push(inputProblem)
+    }
+    if (input !== undefined && window !== undefined && input > window) {
+      problems.push(`${name}maxInputTokens 不应超过 contextWindow`)
     }
   }
   return problems
@@ -365,6 +393,9 @@ export function toModelInfo(declaration: ModelDeclaration, channel?: ChannelRef)
       : {}),
     ...((channel?.maxOutputTokens ?? declaration.maxOutputTokens) !== undefined
       ? { maxOutputTokens: channel?.maxOutputTokens ?? declaration.maxOutputTokens }
+      : {}),
+    ...((channel?.maxInputTokens ?? declaration.maxInputTokens) !== undefined
+      ? { maxInputTokens: channel?.maxInputTokens ?? declaration.maxInputTokens }
       : {}),
     ...(declaration.limits || channel?.limits
       ? { limits: { ...declaration.limits, ...channel?.limits } }

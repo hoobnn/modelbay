@@ -11,6 +11,10 @@ export default {
   // 方舟文档的 k 未定义进制，按 1000 换算（1024k 记 1024000）。
   contextWindow: 256000,
   maxOutputTokens: 256000,
+  // 最大输入：https://docs.volcengine.com/docs/ark/model-list?lang=zh
+  // 「doubao-seed-2-1-turbo-260628」行写「最大输入: 256k」，2026-11-14 核对原文。
+  // 方舟文档的 k 未定义进制，按 1000 换算。
+  maxInputTokens: 256000,
   // 联网搜索与续接响应走 Responses API（POST /responses，按量渠道），字段与取值范围来自：
   // - 创建模型响应 tools（web_search）/ previous_response_id / max_tool_calls：
   //   https://docs.volcengine.com/docs/82379/1569618

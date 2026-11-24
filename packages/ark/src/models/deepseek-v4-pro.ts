@@ -13,6 +13,10 @@ export default {
   // 方舟文档的 k 未定义进制，按 1000 换算（1024k 记 1024000）。
   contextWindow: 1024000,
   maxOutputTokens: 384000,
+  // 最大输入：https://docs.volcengine.com/docs/ark/model-list?lang=zh
+  // 「deepseek-v4-pro-ga-260813」行写「最大输入: 1024k」，2026-11-14 核对原文。
+  // 方舟文档的 k 未定义进制，按 1000 换算。
+  maxInputTokens: 1024000,
   channels: [
     { channel: 'ark', id: 'deepseek-v4-pro-ga-260813' },
     {
