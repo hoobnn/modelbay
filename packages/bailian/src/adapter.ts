@@ -742,6 +742,7 @@ export function createBailianAdapter(
                 text: input.text,
                 model,
                 voice: input.voice,
+                instructions: input.instruction,
                 language:
                   typeof (input as Json).language === 'string'
                     ? String((input as Json).language)

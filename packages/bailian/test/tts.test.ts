@@ -23,6 +23,7 @@ import {
   ttsModels,
   ttsRequest,
 } from '../src/tts'
+import { createBailianAdapter } from '../src/adapter'
 import { all } from '../src/models/index'
 import { fakeContext, fixture } from './helpers'
 
@@ -638,6 +639,30 @@ describe('MiniMax 协议（声明驱动）', () => {
     const { ctx, calls } = fakeContext([])
     await expect(
       synthesizeMinimaxTts(ctx, { text: 'hi', model: MINIMAX_MODEL }, models),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(calls()).toHaveLength(0)
+  })
+  it('SDK 传了 instruction 时在发请求前拒绝', async () => {
+    const adapter = createBailianAdapter(all)
+    const { ctx, calls } = fakeContext([])
+    await expect(
+      adapter.submit(
+        {
+          capability: 'audio.speech',
+          model: MINIMAX_MODEL,
+          input: { text: 'hi', voice: 'male-qn-qingse', instruction: '温柔一点' },
+        },
+        ctx,
+      ),
+    ).rejects.toMatchObject({ code: 'invalid_input' })
+    expect(calls()).toHaveLength(0)
+  })
+
+  it('原生 qwen-audio-tts 不接 MiniMax 模型，提交前就拒绝', async () => {
+    const adapter = createBailianAdapter(all)
+    const { ctx, calls } = fakeContext([])
+    await expect(
+      adapter.native!('qwen-audio-tts', { model: MINIMAX_MODEL, text: 'hi', voice: 'v' }, ctx),
     ).rejects.toMatchObject({ code: 'invalid_input' })
     expect(calls()).toHaveLength(0)
   })
