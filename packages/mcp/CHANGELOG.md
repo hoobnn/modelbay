@@ -1,5 +1,27 @@
 # @modelbay/mcp
 
+## 0.6.0
+
+### Minor Changes
+
+- 08efce3: 方舟新增图片模型 `doubao-seedream-4-0-260415`（别名 `doubao-seedream-4-0-20260415`，支持组图，最多 14 张参考图，分辨率档位 1K / 2K / 4K）和 Agent Plan 套餐模型 `glm-5.4`；`doubao-seedream-5-0-260128` 的下线日期与官方第十批下线说明对照后不变，仍是 2026-11-24。
+- 436d662: 百炼新增 8 个对话模型：`deepseek-v4-pro`、`deepseek-v4.1-flash`、`kimi-k3`、`kimi-k3.1-pro`、`glm-5.3`、`MiniMax-M3.1-Flash`、`mimo-v2.6-pro-ultraspeed`、`stepfun/step-5-preview`；新增 MiniMax 语音合成 `speech-2.8-hd`、`speech-2.8-turbo`、`speech-02-hd`、`speech-02-turbo`（必须指定 voice，单次最多 9999 字符，不支持 instructions，返回音频本身而不是链接）。
+- 52bbbae: 模型声明新增 `maxInputTokens`（官方把最大输入与上下文窗口分开公布时才填，渠道上可以单独覆盖），模型信息与 `list_declared_models` 都会带上；渠道新增 `protocol` 字段，用来区分同一接口路径下的不同请求体形态。方舟 14 个模型、OpenAI GPT-6 / 6.1 / 6.2 系列补上最大输入，方舟 `kimi-k3` 标为即将下线。DeepSeek 思考强度支持官方列出的七种请求值，思考开启时不再发送官方不采纳的 `temperature`（显式关闭思考后照常透传）。
+
+### Patch Changes
+
+- 53634df: 更新未显式指定模型时使用的默认值。OpenAI 对话和图像分别改用 GPT-6.2 Astra 和 GPT-Image-2.6 Sunburst，方舟按量与套餐的图像生成和处理改用 Seedream 5.5，百炼按量对话改用 Qwen4-Max，套餐对话继续使用 Qwen3.8-Max，MiniMax 对话和图像分别改用 M3.1 Flash 和 H3 Image。显式传入的模型 ID 仍按原声明解析。
+- Updated dependencies [318d726]
+- Updated dependencies [08efce3]
+- Updated dependencies [436d662]
+- Updated dependencies [3100ebf]
+- Updated dependencies [53634df]
+- Updated dependencies [52bbbae]
+- Updated dependencies [ef02c1a]
+- Updated dependencies [53634df]
+- Updated dependencies [e38a0c9]
+  - modelbay@0.6.0
+
 ## 0.5.1
 
 ### Patch Changes
