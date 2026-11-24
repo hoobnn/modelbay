@@ -76,6 +76,7 @@ describe('DeepSeek chat', () => {
     expect(c.body()).toMatchObject({
       model: 'deepseek-flash',
       stream: true,
+      temperature: 0.4,
       max_tokens: 42,
       thinking: { type: 'disabled' },
       user_id: 'u1',
@@ -99,6 +100,30 @@ describe('DeepSeek chat', () => {
       limits: { ...flash.limits, temperature: undefined },
     })
     expect(open.body()).toMatchObject({ temperature: 0.4 })
+  })
+
+  it('显式关闭思考时 temperature 照常透传，思考开启（含默认）时不发', async () => {
+    const off = context(say('hi'))
+    await chat(request({ thinking: { type: 'disabled' } }, { temperature: 0.4 }), off.ctx, flash)
+    expect(off.body()).toMatchObject({ temperature: 0.4 })
+
+    const on = context(say('hi'))
+    await chat(request({ thinking: { type: 'enabled' } }, { temperature: 0.4 }), on.ctx, flash)
+    expect(on.body()).not.toHaveProperty('temperature')
+  })
+
+  it('Responses 路径：思考关闭（effort none）才透传 temperature', async () => {
+    const off = context(terminal([answer('ok')]))
+    await chat(
+      request({ api: 'responses', thinking: { type: 'disabled' } }, { temperature: 0.4 }),
+      off.ctx,
+      flash,
+    )
+    expect(off.body()).toMatchObject({ reasoning: { effort: 'none' }, temperature: 0.4 })
+
+    const on = context(terminal([answer('ok')]))
+    await chat(request({ api: 'responses' }, { temperature: 0.4 }), on.ctx, flash)
+    expect(on.body()).not.toHaveProperty('temperature')
   })
 
   it('requests json_object with an instruction and validates the schema', async () => {

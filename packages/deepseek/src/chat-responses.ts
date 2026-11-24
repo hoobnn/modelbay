@@ -118,8 +118,12 @@ export async function responsesBody(
   if (effort !== undefined) body.reasoning = { effort }
   if (tools.length) body.tools = tools
   if (input.toolChoice) body.tool_choice = input.toolChoice
-  // 声明 `limits.temperature: false` 时不发 temperature：思考模式下官方不采纳这个参数。
-  if (input.temperature !== undefined && model?.limits?.temperature !== false)
+  // 声明 `limits.temperature: false` 时，思考模式下不发 temperature（官方不采纳这个参数）；
+  // 思考已关闭（effort 为 none）时 temperature 有效，照常透传。
+  if (
+    input.temperature !== undefined &&
+    (model?.limits?.temperature !== false || effort === 'none')
+  )
     body.temperature = input.temperature
   if (input.maxTokens !== undefined) body.max_output_tokens = input.maxTokens
   if (input.jsonSchema)

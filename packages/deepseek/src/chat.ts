@@ -74,11 +74,14 @@ export async function chat(
     ctx,
     label: 'DeepSeek',
     model: request.model,
-    // 声明 `limits.temperature: false` 时不发 temperature：思考模式下官方不采纳这个参数。
+    // 声明 `limits.temperature: false` 时，思考模式下不发 temperature（官方不采纳这个参数）；
+    // 调用方显式关闭思考（extra.thinking.type 为 disabled）后 temperature 有效，照常透传。
     input: {
       ...input,
       extra,
-      ...(model.limits?.temperature === false ? { temperature: undefined } : {}),
+      ...(model.limits?.temperature === false && asJson(extra.thinking).type !== 'disabled'
+        ? { temperature: undefined }
+        : {}),
     },
     baseURL: baseUrl(ctx),
     replayReasoning: true,
