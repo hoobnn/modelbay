@@ -31,6 +31,8 @@ import doubaoSeed21Pro260915 from './doubao-seed-2-1-pro-260915'
 import doubaoSeed21Lite260915 from './doubao-seed-2-1-lite-260915'
 import doubaoSeed21Turbo260628 from './doubao-seed-2-1-turbo-260628'
 import doubaoSeedream50260128 from './doubao-seedream-5-0-260128'
+import doubaoSeedream40260415 from './doubao-seedream-4-0-260415'
+import glm54 from './glm-5-4'
 import doubaoEmbeddingVision from './doubao-embedding-vision'
 
 export {
@@ -66,6 +68,8 @@ export {
   doubaoSeed21Lite260915,
   doubaoSeed21Turbo260628,
   doubaoSeedream50260128,
+  doubaoSeedream40260415,
+  glm54,
   doubaoEmbeddingVision,
 }
 
@@ -87,6 +91,7 @@ export const all: ModelDeclaration[] = [
   deepseekV4Pro,
   deepseekV41Flash,
   deepseekV41FlashEconomy,
+  glm54,
   glm53,
   glm53Flash,
   kimiK28Preview,
@@ -96,6 +101,7 @@ export const all: ModelDeclaration[] = [
   doubaoSeedream50Pro260628,
   doubaoSeedream50Flash260915,
   doubaoSeedream50260128,
+  doubaoSeedream40260415,
   doubaoSeedance25260628,
   doubaoSeedance25Flash261115,
   doubaoSeedance20260128,
