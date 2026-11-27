@@ -4,9 +4,9 @@
 
 ## 现状
 
-一份 TypeScript 实现覆盖火山方舟、阿里云百炼、MiniMax、豆包语音和 OpenAI，SDK、MCP、CLI 都从同一份模型声明派生。功能已齐，0.1.x 已发布到 npm。对外只发 `modelbay`、`@modelbay/mcp`、`@modelbay/cli` 三个包，其余是不发布的内部包，见 [0005](docs/decisions/0005-three-published-packages.md)，见 [目标与范围](docs/goals.md)。
+一份 TypeScript 实现覆盖火山方舟、阿里云百炼、MiniMax、豆包语音、OpenAI 和 DeepSeek。SDK、MCP、CLI 共用模型声明，MCP 随当前平台的工具发布可按需加载的 Skills。对外只发 `modelbay`、`@modelbay/mcp`、`@modelbay/cli` 三个包，见 [0005](docs/decisions/0005-three-published-packages.md) 和 [目标与范围](docs/goals.md)。
 
-平台包自描述：每个平台包导出一个 `PlatformDescriptor`，汇总入口、MCP、CLI 都只遍历 `packages/modelbay/src/platforms.ts` 里的注册表。新增平台只动它自己的包和注册表，见 [扩展指南](docs/extending.md)。
+每个平台包通过 `PlatformDescriptor` 提供模型目录、密钥要求、适配器工厂和 MCP 工具定义。入口统一遍历 `packages/modelbay/src/platforms.ts` 的注册表。上游对账和声明自检读取静态目录，SDK、CLI 与 MCP 调用使用适配器，见 [扩展指南](docs/extending.md)。
 
 ## 从哪里开始
 
@@ -15,7 +15,7 @@
 | 加模型、加平台、加能力、加 MCP 工具  | [扩展指南](docs/extending.md)                                      |
 | 工具链、目录、测试、命令、提交与发布 | [工程规范](docs/engineering.md)                                    |
 | 要做到什么、现在做到哪               | [目标与范围](docs/goals.md)                                        |
-| MCP 工具怎么从声明生成               | [MCP 工具生成](docs/mcp.md)                                        |
+| MCP 工具生成、Skills 发布和维护      | [MCP 工具与 Skills](docs/mcp.md)                                   |
 | 上游文档对账、审对账 issue 和 PR     | [上游文档对账](docs/upstream.md)                                   |
 | 为什么这么分层                       | [0001](docs/decisions/0001-single-implementation-architecture.md)  |
 | 声明格式和生命周期                   | [0003](docs/decisions/0003-capabilities-and-model-declarations.md) |

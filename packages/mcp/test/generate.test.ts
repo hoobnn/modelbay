@@ -153,10 +153,12 @@ describe('deriveInputSchema 合并', () => {
 })
 
 describe('generateTools / listTools / toMCPTool', () => {
-  it('无 adapter / 无声明时 tools/list 仍可用（回退）', () => {
+  it('适配器未就绪时，工具 schema 仍能从平台注册表读取模型', () => {
     const set = generateTools('ark')
-    expect(set.all.length).toBeGreaterThan(0)
-    expect(listTools(set, MCP_TOOL_GROUPS.all).length).toBeGreaterThanOrEqual(9)
+    const tools = listTools(set, MCP_TOOL_GROUPS.all)
+    expect(
+      tools.find((tool) => tool.name === 'chat')?.inputSchema.properties?.model?.default,
+    ).toEqual(expect.any(String))
   })
 
   it('toMCPTool 去掉内部字段（group/route）', () => {

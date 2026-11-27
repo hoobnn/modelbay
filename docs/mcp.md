@@ -1,6 +1,8 @@
-# MCP 工具生成
+# MCP 工具与 Skills
 
 `@modelbay/mcp` 把注册表里带 `mcp` 的平台变成 MCP server，命令是 `modelbay-mcp <平台>`。工具定义分两层：平台包只写与模型无关的部分，与模型有关的部分在启动时从声明派生。
+
+模型声明可从 `PlatformDescriptor.models` 读出。适配器尚未初始化时，工具 schema 和 `list_declared_models` 仍能用静态目录回答。
 
 ## 两层来源
 
@@ -59,7 +61,7 @@
 
 ## 工具组
 
-`MODELBAY_MCP_GROUPS`（逗号分隔）控制 `tools/list` 暴露哪些组，默认只有 `core`。
+`MODELBAY_MCP_GROUPS`（逗号分隔）决定当前连接启用的组，默认只有 `core`。工具清单、帮助、能力查询、Skill 引用和实际调用均使用同一个连接目录。调用其他组的工具时会返回所属组及当前启用状态。
 
 | 组           | 默认   | 放什么                                                      |
 | ------------ | ------ | ----------------------------------------------------------- |
@@ -72,11 +74,23 @@
 
 - 同一个归一化能力在所有平台用同一个工具名：`generate_image`、`generate_video`、`text_to_speech`、`clone_voice`、`design_voice`、`get_job`……每个能力只注册一个工具，不提供同义名。
 - 每个平台额外有一个 `list_declared_models`：列出声明里的模型、能力、生命周期提示和各渠道的上下文窗口 / 最大输出 / 最大输入（官方公布了才有），客户端不用硬编码模型清单。它不叫 `list_models`，因为百炼的 `list_models` 是官方模型目录查询，语义不同。工具名要符合 `^[a-zA-Z0-9_-]{1,64}$`，所以不用带冒号的名字。
-- `resources/list`、`resources/templates/list`、`prompts/list` 返回空集合，避免部分客户端探测时报 `-32601`。
+- `resources/list` 列出当前连接的 Skill 文件。`resources/templates/list` 和 `prompts/list` 返回空集合。
 
 ## `voice.list` 的命名
 
 `voice.list` 是归一化能力，三家都支持，但工具名不统一：MiniMax 和百炼有 `list_voices`（百炼另有 `get_voice`），豆包语音只有按 `speaker_id` 查单个音色的 `get_voice`。这里没有给豆包伪造 `list_voices`。要不要三家同名还没定。
+
+## Skills over MCP
+
+`@modelbay/mcp` 实现 [MCP Skills Extension（SEP-2640）](https://skills.extensions.modelcontextprotocol.io/specification/beta/skills)。客户端用 `server/discover`（MCP `2026-07-28`）或 `initialize`（早期修订）发现 `io.modelcontextprotocol/skills`，用 `skills/list` / `skills/get` 获取技能元数据和文件摘要，再用 `resources/read` 读取 `SKILL.md` 和所需的参考文件。
+
+工作流放在 `packages/mcp/skills/<技能名>/SKILL.md`，随 npm 包发布。启动时，`src/skills.ts` 根据当前平台和已启用的工具组生成清单、`references/tools.md` 和每个文件的 SHA-256 摘要。清单和文件内容在连接期间来自同一份快照。
+
+- `metadata.modelbay-entry-tools` 指定这份 Skill 的入口工具。任意入口工具出现在 `tools/list` 时就发布该 Skill。
+- `metadata.modelbay-related-tools` 指定可按需使用的辅助工具。参考文件只列出当前连接提供的入口和辅助工具，以及 schema 的必填字段。
+- `SKILL.md` 说明任务步骤和如何选择工具。模型参数、默认值、生命周期和平台选项由工具 schema、`list_declared_models` 和 `get_tool_help` 提供。
+
+以方舟为例，视频技能的入口是 `skill://modelbay/ark/modelbay-video/SKILL.md`。它教 Agent 先核对模型和参考素材，再提交任务、用同一个 ID 查询状态并交付文件。
 
 ## 工具清单快照
 

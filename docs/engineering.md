@@ -27,8 +27,10 @@ packages/
   minimax/         @modelbay/minimax（内部）
   doubao-speech/   @modelbay/doubao-speech（内部）：豆包语音
   openai/          @modelbay/openai（内部）：OpenAI 与 OpenAI 兼容渠道
+  deepseek/        @modelbay/deepseek（内部）：DeepSeek 对话与应用 API
   modelbay/        modelbay（发布）：汇总入口、平台注册表、modelbay/node、modelbay/<平台>，构建时打进内部包
-  mcp/             @modelbay/mcp（发布）：MCP server，命令 modelbay-mcp <平台>
+  mcp/             @modelbay/mcp（发布）：MCP 工具与技能，命令 modelbay-mcp <平台>
+    skills/        各任务的 SKILL.md，随 npm 包发布
   cli/             @modelbay/cli（发布）：命令 modelbay
 scripts/           仓库级检查：覆盖率、包发布、许可、core 运行时隔离；upstream/ 是上游文档对账
 docs/
@@ -40,7 +42,7 @@ vite.package.ts    各包共用的打包入口探测与测试别名
 ```text
 src/
   index.ts         根入口，运行时无关
-  platform.ts      平台描述对象（definePlatform）
+  platform.ts      平台描述对象，引用静态模型目录和工具定义，提供适配器工厂
   models/          模型声明，一个模型一个文件，纯数据；index.ts 汇总成 all
   mcp/tools.ts     MCP 工具定义（没有 MCP 的平台不建）
   node/            Node 专属实现，从 @modelbay/<平台>/node 导出 nodeOptions
@@ -48,6 +50,22 @@ src/
 test/
   *.test.ts        测试
   fixtures/        录制好的请求和响应
+```
+
+### 声明与调用路径
+
+```mermaid
+flowchart LR
+    Models[各平台模型声明] --> Registry[平台注册表]
+    Tools[平台工具定义] --> Registry
+    Registry --> Audit[上游文档对账]
+    Registry --> Catalog[MCP 连接目录]
+    Catalog --> Skills[Skills over MCP]
+    Registry --> Adapters[平台适配器]
+    Adapters --> SDK[SDK]
+    SDK --> CLI[CLI]
+    Catalog --> Routing[MCP 调用路由]
+    Adapters --> Routing
 ```
 
 ## 包的约定
@@ -92,7 +110,7 @@ test/
 - 测试放在各包的 `test/` 下（core 暂时和源码放在一起），只测行为，不联网。
 - 请求构造、响应解析、错误映射用 `test/fixtures/` 里的录制数据，一个 JSON 文件记一次请求和响应。录制时把 `Authorization`、签名、key 和账号 ID 替换成 `<redacted>`。
 - 声明自检在 `packages/modelbay/test/declarations.test.ts`，遍历注册表里的全部声明，新增模型不用写测试。
-- MCP 的工具清单快照对照在 `packages/mcp/test/`，说明见 [MCP 工具生成](mcp.md)。
+- MCP 的工具清单对照和 Skills 发现、读取的 stdio 检查在 `packages/mcp/test/`，说明见 [MCP 工具与 Skills](mcp.md)。
 - 覆盖率按包统计：core 行覆盖不低于 90%，其余每个包不低于 80%（`scripts/check-coverage.mjs`）。`src/bin/` 不计入。
 - 夜间真实冒烟（每家最便宜的一档跑一次真实调用）还没做，key 放在哪、预算多少未定。
 

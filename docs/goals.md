@@ -15,6 +15,7 @@
 | G3   | 接入容易           | 外部 TypeScript 项目只装 `modelbay` 并配好 key，十行以内调通生图、生视频、配音中的任意一种，异步轮询由 SDK 处理    |
 | G4   | 核心不绑定运行时   | `modelbay` 根入口（含内部的 core 和各平台包）能在 Node、Bun、Deno 和浏览器里加载。Node 专属能力只在 `/node` 子路径 |
 | G5   | 上游变化能被发现   | 定时任务现抓官方文档，和声明双向核对：下线、列表缺失、新模型都能定位到具体声明，并生成改动草稿                     |
+| G6   | 按需加载工作流     | 接入平台 MCP 后，支持 SEP-2640 的客户端可直接发现技能和工具清单。清单随平台、声明和启用的工具组生成                |
 
 ## 不做的事
 
@@ -32,7 +33,7 @@
 - `@modelbay/core`：能力、声明格式与校验、默认模型选择、异步任务运行、平台描述类型。
 - 六个平台包（方舟按量与套餐、百炼、MiniMax、豆包语音、OpenAI 与 OpenAI 兼容渠道、DeepSeek）。
 - `modelbay` 汇总入口与平台注册表，`modelbay/node` 注入 Node 专属能力，`modelbay/<平台>` 提供平台特有导出。对外只发 `modelbay`、`@modelbay/mcp`、`@modelbay/cli` 三个包。
-- `@modelbay/mcp`：`modelbay-mcp <平台>`，支持方舟、MiniMax、百炼、豆包语音、OpenAI（官方渠道的对话与生图）、DeepSeek（对话与独立应用 API），工具从声明生成，本地 stdio 冒烟通过。
+- `@modelbay/mcp` 提供 `modelbay-mcp <平台>`。六个平台根据工具目录和模型声明发布工具，并通过 [Skills over MCP](mcp.md#skills-over-mcp) 提供按需加载的工作流。
 - `@modelbay/cli`：`modelbay models / capabilities / doctor / generate`。
 - 上游文档对账：每天现抓官方 Markdown（个别站点浏览器渲染），统一抽取模型清单和下线信息，与声明双向核对，差距进跟踪 issue，生命周期补丁开草稿 PR。
 

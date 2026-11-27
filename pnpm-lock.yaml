@@ -351,6 +351,9 @@ importers:
       modelbay:
         specifier: workspace:*
         version: link:../modelbay
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
     devDependencies:
       '@modelbay/ark':
         specifier: workspace:*

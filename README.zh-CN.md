@@ -5,11 +5,12 @@
 [![npm](https://img.shields.io/npm/v/modelbay)](https://www.npmjs.com/package/modelbay)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Modelbay 是开源（MIT）的 TypeScript SDK、MCP 服务和命令行工具，用一套接口调用火山方舟（豆包、Seedream、Seedance）、阿里云百炼 / DashScope（千问、万相）、MiniMax、豆包语音和 OpenAI，覆盖对话、生图、生视频、语音和音乐，异步任务的轮询由 SDK 代劳。
+Modelbay 是开源（MIT）的 TypeScript SDK、MCP 服务和命令行工具，统一接入火山方舟（豆包、Seedream、Seedance）、阿里云百炼 / DashScope（千问、万相）、MiniMax、豆包语音、OpenAI 和 DeepSeek，覆盖对话、图像、视频、语音和音乐。SDK 负责轮询异步任务。
 
 用 `npm i modelbay zod` 安装 SDK，或用 `npx -y @modelbay/mcp ark` 给 Claude Code、Codex、Cursor、Claude Desktop 接入 MCP 服务。npm 上有三个包：[`modelbay`](https://www.npmjs.com/package/modelbay)、`@modelbay/mcp`、`@modelbay/cli`。
 
-SDK、MCP、CLI 共用一份 TypeScript 实现，模型参数、上下限、默认值和生命周期都写成声明数据，MCP 工具 schema 从声明派生；上游改动只需改一处。
+SDK、MCP、CLI 共用一份 TypeScript 实现。模型参数、上下限、默认值和生命周期都写成声明数据，MCP 工具 schema 从声明派生，上游改动只需改一处。
+平台注册表提供静态模型目录，供上游文档对账和 MCP 枚举使用。实际调用由三个入口共用的平台适配器执行。
 
 ## 快速开始
 
@@ -33,13 +34,17 @@ modelbay doctor              # 检查密钥配置（不会打印密钥）
 modelbay generate --capability image.generate --prompt "a cat" --model ark:doubao-seedream
 ```
 
+## Skills over MCP
+
+每个 Modelbay MCP 连接按当前平台和工具组发布技能。支持 [SEP-2640](https://skills.extensions.modelcontextprotocol.io/) 的客户端连接后，可以按需读取选模型、生成视频和恢复任务等工作流，以及当前连接的工具清单。详见 [MCP 接入说明](packages/mcp/README.md#skills-over-mcp)。
+
 ## 常见问题
 
-**Modelbay 是什么？** 面向火山方舟、阿里云百炼、MiniMax、豆包语音和 OpenAI 的 TypeScript SDK、MCP 服务和 CLI，三个入口共用一份实现和一份模型声明。
+**Modelbay 是什么？** 面向火山方舟、阿里云百炼、MiniMax、豆包语音、OpenAI 和 DeepSeek 的 TypeScript SDK、MCP 服务和 CLI。三个入口共用一套适配器和模型声明。
 
-**怎么在 Claude Code、Codex、Cursor、Claude Desktop 里用？** 添加一个运行 `npx -y @modelbay/mcp <平台>` 的 MCP 服务，平台取 `ark`、`minimax`、`bailian`、`doubao-speech` 或 `openai`，并通过服务的环境变量传入密钥，例如 `ARK_API_KEY`。每个平台是独立的服务，详见 [`packages/mcp/README.md`](packages/mcp/README.md)（英文）。
+**怎么在 Claude Code、Codex、Cursor、Claude Desktop 里用？** 添加一个运行 `npx -y @modelbay/mcp <平台>` 的 MCP 服务，平台取 `ark`、`minimax`、`bailian`、`doubao-speech`、`openai` 或 `deepseek`，并通过服务的环境变量传入密钥，例如 `ARK_API_KEY`。每个平台是独立的服务，详见 [`packages/mcp/README.md`](packages/mcp/README.md)（英文）。
 
-**支持哪些平台和能力？** 方舟、百炼、MiniMax、豆包语音、OpenAI；按平台不同，涵盖对话、生图与改图、生视频、语音合成、音乐、音色复刻与设计、语音识别。当前清单用 `modelbay models`、`modelbay capabilities` 查看，或见[目标与范围](docs/goals.md)。
+**支持哪些平台和能力？** 方舟、百炼、MiniMax、豆包语音、OpenAI 和 DeepSeek 按平台提供对话、生图与改图、生视频、语音合成、音乐、音色复刻与设计、语音识别。可用 `modelbay models`、`modelbay capabilities` 查看当前清单。详见[目标与范围](docs/goals.md)。
 
 **收费吗？什么许可证？** 免费开源，MIT 许可证。模型调用费用由各平台按你自己的账号计费。
 

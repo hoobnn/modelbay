@@ -23,7 +23,8 @@ import type {
   SubmitResult,
 } from 'modelbay'
 import { normalizeArguments } from './arguments'
-import { listTools } from './generate'
+import { toMCPTool, toolsInGroups } from './generate'
+import { createSkillCatalog } from './skills'
 import {
   JobRegistry,
   deliver,
@@ -36,6 +37,7 @@ import {
 import type {
   CallToolContent,
   CallToolResult,
+  GeneratedTool,
   GeneratedToolSet,
   LocalHandler,
   ServerInfo,
@@ -146,32 +148,27 @@ function stripChannel(model: string, channels: readonly string[]): string {
 function localResult(
   handler: LocalHandler,
   args: Record<string, unknown>,
-  set: GeneratedToolSet,
+  tools: ReadonlyMap<string, GeneratedTool>,
   models: readonly ModelDeclaration[],
 ): CallToolResult {
   switch (handler) {
     case 'tool-help': {
       const name = typeof args.tool === 'string' ? args.tool : undefined
-      const tool = name ? set.byName.get(name) : undefined
+      const tool = name ? tools.get(name) : undefined
       if (tool) return result(tool.description)
-      return result(`可用工具：\n${[...set.byName.keys()].sort().join('\n')}`)
+      return result(`可用工具：\n${[...tools.keys()].sort().join('\n')}`)
     }
     case 'capabilities': {
-      const capabilities = [
-        ...new Set(
-          set.all
-            .filter((tool) => tool.route.kind === 'submit')
-            .map((tool) => (tool.route.kind === 'submit' ? tool.route.capability : '')),
-        ),
-      ].sort()
-      const nativeOperations = [
-        ...new Set(
-          set.all
-            .filter((tool) => tool.route.kind === 'native')
-            .map((tool) => (tool.route.kind === 'native' ? tool.route.op : '')),
-        ),
-      ].sort()
-      return result({ capabilities, nativeOperations })
+      const capabilities = new Set<string>()
+      const nativeOperations = new Set<string>()
+      for (const { route } of tools.values()) {
+        if (route.kind === 'submit') capabilities.add(route.capability)
+        if (route.kind === 'native') nativeOperations.add(route.op)
+      }
+      return result({
+        capabilities: [...capabilities].sort(),
+        nativeOperations: [...nativeOperations].sort(),
+      })
     }
     case 'models': {
       const filter = typeof args.capability === 'string' ? args.capability : undefined
@@ -215,7 +212,7 @@ function localResult(
     case 'usage-examples': {
       return result({
         note: '按工具名调用 get_tool_help 读取完整用法；工具清单见 tools/list。',
-        tools: [...set.byName.keys()].sort(),
+        tools: [...tools.keys()].sort(),
       })
     }
     default:
@@ -226,7 +223,9 @@ function localResult(
 export function createHandlers(options: RoutingOptions): ServerHandlers {
   const { set, adapter, context, groups, secrets, serverInfo, primaryChannel, defaultOutDir } =
     options
-  const models: readonly ModelDeclaration[] = adapter?.models ?? []
+  const models = set.declaredModels ?? adapter?.models ?? []
+  const enabled = toolsInGroups(set, groups)
+  const visible = new Map(enabled.map((tool) => [tool.name, tool]))
   const pool: readonly PlatformAdapter[] = options.adapters?.length
     ? options.adapters
     : adapter
@@ -400,12 +399,17 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
   }
 
   async function callTool(name: string, args: Record<string, unknown>): Promise<CallToolResult> {
-    const tool = set.byName.get(name)
-    if (!tool) return errorResult(`未知工具 ${name}`)
+    const tool = visible.get(name)
+    if (!tool) {
+      const group = set.byName.get(name)?.group
+      return errorResult(group ? `工具 ${name} 所属的 ${group} 组未启用` : `未知工具 ${name}`)
+    }
     const route = tool.route
 
     if (route.kind === 'local' && (route.handler !== 'jobs' || name === 'list_jobs')) {
-      return name === 'list_jobs' ? listJobs(args) : localResult(route.handler, args, set, models)
+      return name === 'list_jobs'
+        ? listJobs(args)
+        : localResult(route.handler, args, visible, models)
     }
 
     // 未配置 key：返回清晰错误而不是崩溃；log 走 stderr（由 context.log 决定是否输出）。
@@ -465,9 +469,15 @@ export function createHandlers(options: RoutingOptions): ServerHandlers {
     return jobResult(name, id, await settle(chosen, submitted, context, wait), outDir)
   }
 
+  const listEnabledTools = () => enabled.map(toMCPTool)
+  const skills = createSkillCatalog(set.platform, listEnabledTools())
   return {
     serverInfo,
-    listTools: () => listTools(set, groups),
+    ...(skills.entries.size > 0
+      ? { instructions: '根据任务加载本服务提供的 Skill。每份 Skill 都附有当前连接的工具清单。' }
+      : {}),
+    skills,
+    listTools: listEnabledTools,
     callTool,
   }
 }
