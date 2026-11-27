@@ -1,7 +1,7 @@
 {
   "name": "@modelbay/mcp",
   "version": "0.6.1",
-  "description": "MCP server for Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech and OpenAI: image, video, speech, music and chat tools for Claude Code, Codex, Cursor and Claude Desktop",
+  "description": "MCP tools and on-demand Skills for Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech, OpenAI and DeepSeek",
   "keywords": [
     "mcp",
     "mcp-server",
@@ -40,7 +40,8 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "exports": {
     ".": {
@@ -59,7 +60,8 @@
     "zod": "^4.6"
   },
   "dependencies": {
-    "modelbay": "workspace:*"
+    "modelbay": "workspace:*",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@modelbay/ark": "workspace:*",

@@ -19,13 +19,14 @@
 
 ## 新增一个平台
 
-平台包自描述，消费方（汇总入口、MCP、CLI）都只遍历注册表，所以新平台只动它自己的包和注册表。
+消费入口通过平台注册表发现平台。新平台在各自的包里提供声明和能力，再登记对外子路径及上游来源。
 
 1. 照现有平台建 `packages/<平台>/`：`package.json`（`exports` 有 `"."`，有 Node 扩展再加 `"./node"`）、`tsconfig.json`、`tsconfig.build.json`、三行的 `vite.config.ts`（`definePackageConfig(import.meta.url)`）、`README.md`。
 2. 写适配器：`src/` 下按需拆成鉴权、请求、响应映射、错误映射，失败一律抛 `ProviderError`。根入口只能用各运行时都有的 API（`fetch`、`Uint8Array`、`crypto.subtle`……）。
 3. 写声明：`src/models/*.ts` 加 `src/models/index.ts`，根入口导出 `models`。
 4. 写 `src/platform.ts`，用 `definePlatform()` 导出描述对象，并从 `src/index.ts` 再导出：
    - `key`：包名后缀，也是 MCP 命令的参数；
+   - `models`：直接引用 `src/models/index.ts` 的 `all`，供目录发现、声明自检和上游对账读取；
    - `secrets`：必填密钥（外层任选一组，内层同组要配齐）、可选配置、别名；
    - `createAdapters(options)`：返回本平台的全部适配器；
    - `mcp.tools`（可选）：有它就自动有 `modelbay-mcp <key>`。
@@ -69,3 +70,7 @@
 4. `inputSchema` 里的每个参数都要真的生效。通用换算（见 [MCP 工具生成](mcp.md)）覆盖不到的，写 `mapArguments` 换成适配器读的字段或 native 参数；做不到就不要写进目录。在 `packages/mcp/test/real-<平台>.test.ts` 里用真实适配器加注入 fetch 断言请求体。
 
 完整规则见 [MCP 工具生成](mcp.md)。
+
+## 新增一个 MCP Skill
+
+需要跨工具说明任务步骤时，在 `packages/mcp/skills/<技能名>/SKILL.md` 添加工作流。使用标准 Agent Skills `name` 和 `description`，在 `metadata.modelbay-entry-tools` 写触发发布的工具，在 `metadata.modelbay-related-tools` 写辅助工具。这些值由空格分隔。服务启动时按当前连接的工具清单筛选，并生成 `references/tools.md`。模型 ID、上下限和默认值继续来自模型声明。详见 [Skills over MCP](mcp.md#skills-over-mcp)。

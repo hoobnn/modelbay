@@ -5,6 +5,7 @@
  * 新增平台时只需要写一个平台包，再把它的描述对象加进 `modelbay` 的注册表。
  */
 import type { PlatformAdapter } from './adapter'
+import type { ModelDeclaration } from './declarations'
 import type { ModelParamKind } from './model-limits'
 
 /** 平台需要的密钥与配置项，只记名字，SDK 不存储值。 */
@@ -68,6 +69,8 @@ export interface PlatformDescriptor<Options extends object = object> {
   /** 平台键，也是包名后缀、MCP 命令参数：`ark`、`bailian`… */
   key: string
   title: string
+  /** 静态目录，用于在创建适配器前读取模型声明。内置平台均提供。 */
+  models?: readonly ModelDeclaration[]
   /** 未指定模型时，默认模型在哪个渠道里选。 */
   primaryChannel: string
   secrets: PlatformSecrets

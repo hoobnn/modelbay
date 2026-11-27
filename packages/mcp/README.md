@@ -2,9 +2,8 @@
 
 MCP tool generator and per-platform stdio servers for [Modelbay](https://github.com/hoobnn/modelbay#readme). MIT licensed.
 
-`@modelbay/mcp` derives MCP tools from `ModelDeclaration` data and `@modelbay/core` schemas, and
-serves them over a minimal stdio JSON-RPC transport. It does **not** depend on
-`@modelcontextprotocol/sdk` or any other new runtime dependency.
+`@modelbay/mcp` derives tools from Modelbay's declarations and serves them over stdio. Each
+connection also publishes [Agent Skills](https://agentskills.io/) for its available workflows.
 
 ## Command
 
@@ -63,7 +62,8 @@ server still starts and only the video-reference path is unavailable.
 
 ## Tool groups
 
-`MODELBAY_MCP_GROUPS` (comma separated) controls which groups are exposed by `tools/list`:
+`MODELBAY_MCP_GROUPS` accepts a comma-separated list of groups. The selection applies to
+tool calls, help, discovery and Skill references.
 
 | Group        | Default | Contents                                                                  |
 | ------------ | ------- | ------------------------------------------------------------------------- |
@@ -73,6 +73,19 @@ server still starts and only the video-reference path is unavailable.
 | `node`       | no      | capabilities that require the optional `node:` subpath (e.g. file upload) |
 
 Example: `MODELBAY_MCP_GROUPS=core,realtime modelbay-mcp doubao-speech`.
+
+## Skills over MCP
+
+Connect a platform with the command above. Clients that support the [MCP Skills extension](https://skills.extensions.modelcontextprotocol.io/)
+can discover the Skills from the server and load them when needed. Each Skill has a `SKILL.md`
+and a `references/tools.md` derived from the same tools exposed by `tools/list`.
+
+Workflows cover model selection, image and video generation, audio, transcription, voice creation
+and async job recovery. A workflow appears when the connection exposes one of its entry tools.
+The platform argument and `MODELBAY_MCP_GROUPS` select which tools appear in its reference.
+
+Claude Code documents MCP Skills support starting with v2.1.331 on [supported setups](https://code.claude.com/docs/en/mcp#where-mcp-skills-are-supported).
+Clients can also browse the Skill files through standard MCP resources.
 
 ## Output directory
 
@@ -97,14 +110,15 @@ server's `env_vars` list in `~/.codex/config.toml`.
 - Shared capabilities use the same tool name on every platform (`generate_image`,
   `text_to_speech`, `clone_voice`, `design_voice`, `get_job`, ...).
 
-Details (in Chinese): [`docs/mcp.md`](https://github.com/hoobnn/modelbay/blob/main/docs/mcp.md).
+See [`docs/mcp.md`](https://github.com/hoobnn/modelbay/blob/main/docs/mcp.md) for tool generation and Skill authoring details in Chinese.
 
 ## JSON-RPC methods
 
-`initialize`, `ping`, `tools/list`, `tools/call`; plus `resources/list`,
-`resources/templates/list`, `prompts/list` (empty, protocol completeness). Framing supports both
-newline-delimited JSON (MCP stdio standard) and `Content-Length` headers. Responses use the same
-framing as the request. All logs go to **stderr** so stdout is never polluted.
+`server/discover` provides discovery for MCP `2026-07-28`. Clients on earlier protocol revisions
+use `initialize`. Both can call `ping`, `tools/list`, `tools/call`, `skills/list`, `skills/get`,
+`resources/list` and `resources/read`. `resources/templates/list` and `prompts/list` return empty
+lists. Stdio accepts newline-delimited JSON and `Content-Length` frames and responds using the same
+framing as the request. Logs go to **stderr**.
 
 `tools/call` routes to `PlatformAdapter.submit` (normalized capabilities) or
 `PlatformAdapter.native` (single-platform ops); local introspection tools are answered in-process.

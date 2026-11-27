@@ -13,6 +13,7 @@ export const doubaoSpeechPlatform = definePlatform<DoubaoAdapterOptions>({
   key: 'doubao-speech',
   title: 'Doubao Speech',
   primaryChannel: 'doubao-speech',
+  models: all,
   secrets: {
     required: [[apiKey], [appId, accessToken]],
     // 控制台 OpenAPI 用的 IAM AK/SK，和语音 API Key 是两套凭证

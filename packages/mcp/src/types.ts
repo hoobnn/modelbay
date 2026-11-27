@@ -1,5 +1,11 @@
 /** MCP 生成器与 stdio server 的公共类型。 */
-import type { ToolGroup as CoreToolGroup, ToolNature as CoreToolNature, ToolSpec } from 'modelbay'
+import type {
+  ModelDeclaration,
+  ToolGroup as CoreToolGroup,
+  ToolNature as CoreToolNature,
+  ToolSpec,
+} from 'modelbay'
+import type { SkillCatalog } from './skills'
 
 /** 打开哪些工具组的环境变量（逗号分隔）。 */
 export const GROUP_ENV_VAR = 'MODELBAY_MCP_GROUPS'
@@ -91,6 +97,8 @@ export interface GeneratedTool extends MCPTool {
 export interface GeneratedToolSet {
   /** 平台键（`PlatformDescriptor.key`）。 */
   platform: string
+  /** 本次工具 schema 使用的完整声明目录，包括历史模型。 */
+  declaredModels?: readonly ModelDeclaration[]
   /** 全量工具（含所有组）。 */
   all: GeneratedTool[]
   routes: Map<string, ToolRoute>
@@ -145,6 +153,8 @@ export interface ServerInfo {
 export interface ServerHandlers {
   serverInfo: ServerInfo
   protocolVersion?: string
+  instructions?: string
+  skills?: SkillCatalog
   listTools(): MCPTool[] | Promise<MCPTool[]>
   callTool(name: string, args: Record<string, unknown>): Promise<CallToolResult>
 }

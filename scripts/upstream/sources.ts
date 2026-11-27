@@ -33,6 +33,8 @@ export interface PlatformSources {
    * 在这里按前缀放行。
    */
   digitless?: string[]
+  /** 某渠道的目录展示写法 → 已核实的 API ID，仅用于对账。 */
+  catalogAliases?: Readonly<Record<string, Readonly<Record<string, string>>>>
   /**
    * 官方列表页和来源页里本来就不会出现的渠道内 ID：设置里自填的自定义模型，或文档写法和接口实际
    * 返回不一致、已按接口核实过的 ID（写注释说明）。
@@ -185,15 +187,18 @@ export const SOURCES: PlatformSources[] = [
       'xiaomi',
       'zhipu',
     ],
+    catalogAliases: {
+      bailian: {
+        // 文本模型目录用短名，2026-11-24 实测 API 只接收限定 ID。见 PR #68。
+        'step-5-preview': 'stepfun/step-5-preview',
+      },
+    },
     skipped: [
       // 2026-11-11 逐个核对官方列表页后分组；要接的从这里删掉再写声明，新增条目写明不接的原因。
       // 不是模型 ID：文档链接路径里的短横线写法（qwen-audio-3.1-tts-* 已按点号声明）
       'qwen3-5-omni-plus',
       'qwen-audio-3-1-tts-flash',
       'qwen-audio-3-1-tts-plus',
-      // 写法变体：文本生成模型列表只写 step-5-preview，接口只认带厂商前缀的 stepfun/step-5-preview（已声明）；
-      // 2026-11-24 实测不带前缀返回 model_not_found
-      'step-5-preview',
       // 不是百炼模型：迁移对照表里列的 OpenAI 模型
       'text-embedding-3-large',
       // 实时 / 全模态对话（WebSocket 双向流或音频输出），不在支持的能力内
@@ -312,6 +317,12 @@ export const SOURCES: PlatformSources[] = [
     // 官方目录页只写产品名（「TTS 3.0」「ICL 2.0」），候选 ID 从表头合成（tts-3.0），
     // 声明里的前缀是 `seed`，推不出 `tts` / `icl`，要在这里写明。
     prefixes: ['tts', 'icl'],
+    catalogAliases: {
+      'doubao-speech': {
+        // 2026-11-27 核对 TTS 3.0 的 HTTP 文档，model_id 使用完整 ID。
+        'tts-3.0': 'doubao-seed-tts-3.0',
+      },
+    },
     unlisted: [
       // 1.0 代际：官方模型目录页与 TTS 接口页当前都只列 2.0 代际的资源 ID
       // （seed-tts-2.0 / seed-icl-2.0），1.0 只留给历史音色继续合成，
@@ -320,8 +331,6 @@ export const SOURCES: PlatformSources[] = [
       'seed-icl-1.0',
     ],
     skipped: [
-      // 写法变体：目录页的产品名「TTS 3.0」就是已声明的 doubao-seed-tts-3.0（接口 model_id）
-      'tts-3.0',
       // 实时音视频对话（双向流），不在支持的能力内；声明 doubao-seed-tts-3.0 后 doubao 前缀才把它带出来
       'doubao-seed-realtime-1.0',
     ],

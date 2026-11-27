@@ -10,7 +10,8 @@ name: Upstream docs audit
 #    issue 指派给仓库所有者并 @ 提醒处理；报告有变化时再评论 @ 一次，没变化不重复打扰；
 #    差距消失后自动关掉。草稿 PR 同样指派给仓库所有者。
 #
-# 定时任务不合并、不打 tag、不发布；补丁必须人工对照原文核对。抓取失败时 job 显式失败。
+# 跟踪 issue 需要完整对账，生命周期 PR 需要完整的模型清单和下线公告。抓取失败时仍保留报告和证据。
+# 定时任务不合并、不打 tag、不发布；补丁必须人工对照原文核对。
 
 on:
   workflow_dispatch:
@@ -58,6 +59,8 @@ jobs:
         id: audit
         run: pnpm upstream:audit --platform "${{ matrix.platform }}" --apply
       - name: 格式化改动过的声明
+        id: format_patches
+        if: ${{ !cancelled() && steps.audit.outputs.lifecycle_complete == 'true' }}
         run: pnpm exec vp fmt packages/*/src/models
       - name: 抓到的全文和报告留作审阅附件
         if: always()
@@ -72,6 +75,7 @@ jobs:
         if: always()
         run: if test -f "$REPORT"; then cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"; fi
       - name: 生命周期补丁开草稿 PR
+        if: ${{ !cancelled() && steps.format_patches.outcome == 'success' && steps.audit.outputs.lifecycle_complete == 'true' }}
         uses: peter-evans/create-pull-request@v7
         with:
           branch: upstream-docs/${{ matrix.platform }}
@@ -88,12 +92,11 @@ jobs:
           assignees: ${{ github.repository_owner }}
           delete-branch: true
       - name: 更新跟踪 issue
-        if: steps.audit.outcome == 'success'
+        if: steps.audit.outputs.complete == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TITLE: 上游文档对账：${{ matrix.platform }}
           ATTENTION: ${{ steps.audit.outputs.attention }}
-          ERRORS: ${{ steps.audit.outputs.errors }}
           OWNER: ${{ github.repository_owner }}
         run: |
           gh label create upstream-docs --color BFD4F2 --force >/dev/null
@@ -113,12 +116,6 @@ jobs:
             else
               gh issue create --title "$TITLE" --label upstream-docs --assignee "$OWNER" --body-file "$body"
             fi
-          elif [ -n "$number" ] && [ "$ERRORS" = "0" ]; then
-            # 有页面抓取失败时这次对账不完整，「没有差距」不代表问题已解决，不自动关闭
+          elif [ -n "$number" ]; then
             gh issue close "$number" --comment "最新一次对账没有差距，自动关闭。"
           fi
-      - name: 抓取失败时让 job 失败
-        if: steps.audit.outputs.errors != '0'
-        run: |
-          echo "有 ${{ steps.audit.outputs.errors }} 个页面抓取失败，见报告的「抓取情况」。"
-          exit 1

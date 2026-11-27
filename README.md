@@ -13,6 +13,8 @@ One TypeScript implementation serves the SDK, the MCP servers and the CLI.
 Model parameters, limits, defaults and lifecycle states are
 declared as data; the MCP tool schemas and UI forms are derived from those
 declarations, so an upstream change only needs one edit.
+The platform registry exposes model declarations directly for documentation audits and MCP
+discovery. SDK, CLI and MCP requests share the platform adapters for execution.
 
 ## Packages
 
@@ -21,7 +23,7 @@ Three packages are published to npm:
 | Package         | Role                                                                      |
 | --------------- | ------------------------------------------------------------------------- |
 | `modelbay`      | The SDK: core API, `createModelbay()`, platform registry, `modelbay/node` |
-| `@modelbay/mcp` | MCP server generated from declarations; command `modelbay-mcp <platform>` |
+| `@modelbay/mcp` | MCP tools and on-demand Skills through `modelbay-mcp <platform>`          |
 | `@modelbay/cli` | CLI, command name `modelbay`                                              |
 
 Platform-specific exports live on subpaths of `modelbay`: `modelbay/ark`,
@@ -60,6 +62,10 @@ is omitted.
 
 See [`packages/modelbay/README.md`](packages/modelbay/README.md) for the full
 API and key names.
+
+## Skills over MCP
+
+Each Modelbay MCP connection publishes workflows for its available tools. A client that supports [SEP-2640](https://skills.extensions.modelcontextprotocol.io/) can discover those Skills and load their tool references on demand. Connect a platform to use its workflows for tasks such as choosing a model, generating a video, or recovering an existing job. See [MCP setup](packages/mcp/README.md#skills-over-mcp).
 
 ## CLI
 

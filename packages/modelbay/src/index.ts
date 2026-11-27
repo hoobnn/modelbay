@@ -1,7 +1,7 @@
 /**
  * `modelbay` — the single install point for the Modelbay SDK.
  *
- * It re-exports the runtime-agnostic `@modelbay/core` API and the five platform
+ * It re-exports the runtime-agnostic `@modelbay/core` API and the platform
  * adapter packages. `createModelbay()` wires the adapters into a `ModelRegistry`,
  * resolves default models through core (`defaultFor()`, active only) and drives
  * async jobs through core's `runJob()`, so consumers never write a polling loop
@@ -40,13 +40,14 @@ import * as bailian from '@modelbay/bailian'
 import * as minimax from '@modelbay/minimax'
 import * as doubaoSpeech from '@modelbay/doubao-speech'
 import * as openai from '@modelbay/openai'
+import * as deepseek from '@modelbay/deepseek'
 import { PLATFORMS } from './platforms'
 
 // core 的公共 API 全部再导出：外部项目只装 modelbay 即可用到全部类型与校验函数
 export * from '@modelbay/core'
 
 // 平台包以命名空间再导出，消费方可访问各平台特有的导出
-export { ark, bailian, minimax, doubaoSpeech, openai }
+export { ark, bailian, minimax, doubaoSpeech, openai, deepseek }
 export { PLATFORMS, findPlatform } from './platforms'
 
 /** 从环境读取所有平台用得到的密钥（含别名与可选配置）。 */
@@ -249,5 +250,3 @@ export function createModelbay(options: ModelbayOptions = {}): Modelbay {
 
   return { registry, adapters, capabilities, generate, doctor }
 }
-
-export * as deepseek from '@modelbay/deepseek'

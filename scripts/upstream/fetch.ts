@@ -54,12 +54,14 @@ async function get(url: string, accept: string, timeoutMs: number): Promise<RawR
 function looksLikeMarkdown(response: RawResponse): boolean {
   if (response.status !== 200) return false
   if (!/markdown|text\/plain/i.test(response.type)) return false
-  return !/^\s*<(!doctype|html)/i.test(response.body)
+  return Boolean(response.body.trim()) && !/^\s*<(!doctype|html)/i.test(response.body)
 }
 
 function markdownSuffixUrl(url: string): string {
   const parsed = new URL(url)
-  return `${parsed.origin}${parsed.pathname.replace(/\/$/, '')}.md`
+  parsed.pathname = `${parsed.pathname.replace(/\/$/, '')}.md`
+  parsed.hash = ''
+  return parsed.href
 }
 
 function embeddedMarkdownUrl(html: string): string | null {
@@ -186,22 +188,23 @@ export async function fetchPage(
 const SUFFIX_FIRST_HOSTS = new Set(['help.aliyun.com'])
 
 async function fetchMarkdown(url: string, timeoutMs: number): Promise<FetchedPage | null> {
-  if (SUFFIX_FIRST_HOSTS.has(new URL(url).hostname)) {
-    const first = await get(markdownSuffixUrl(url), 'text/markdown, text/plain', timeoutMs).catch(
-      () => null,
-    )
-    if (first && looksLikeMarkdown(first)) {
+  const suffixFirst = SUFFIX_FIRST_HOSTS.has(new URL(url).hostname)
+  const getSuffix = () =>
+    get(markdownSuffixUrl(url), 'text/markdown, text/plain', timeoutMs).catch(() => null)
+  if (suffixFirst) {
+    const first = await getSuffix()
+    if (first?.status === 429) return null
+    if (first && looksLikeMarkdown(first))
       return { url, method: 'markdown-suffix', markdown: first.body }
-    }
   }
   const direct = await get(url, 'text/markdown, text/plain;q=0.9, text/html;q=0.8', timeoutMs)
+  if (direct.status === 429 || direct.status >= 500) return null
   if (looksLikeMarkdown(direct)) return { url, method: 'markdown', markdown: direct.body }
 
-  const suffix = await get(markdownSuffixUrl(url), 'text/markdown, text/plain', timeoutMs).catch(
-    () => null,
-  )
-  if (suffix && looksLikeMarkdown(suffix)) {
-    return { url, method: 'markdown-suffix', markdown: suffix.body }
+  if (!suffixFirst) {
+    const suffix = await getSuffix()
+    if (suffix && looksLikeMarkdown(suffix))
+      return { url, method: 'markdown-suffix', markdown: suffix.body }
   }
 
   const embedded = direct.status === 200 ? embeddedMarkdownUrl(direct.body) : null

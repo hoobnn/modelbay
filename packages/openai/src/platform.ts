@@ -9,6 +9,7 @@ export const openaiPlatform = definePlatform<OpenAIAdapterOptions>({
   key: 'openai',
   title: 'OpenAI',
   primaryChannel: 'openai',
+  models: all,
   secrets: {
     required: [['OPENAI_API_KEY'], ['OPENAI_COMPATIBLE_API_KEY']],
     optional: ['OPENAI_COMPATIBLE_BASE_URL'],

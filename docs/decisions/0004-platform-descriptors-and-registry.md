@@ -14,20 +14,20 @@
 
 ## 决策
 
-1. **平台自描述。** 每个平台包导出一个 `PlatformDescriptor`（`@modelbay/core` 的 `definePlatform()`），包括平台键、标题、主渠道、密钥规格（必填组、可选项、别名）、`createAdapters(options)`，以及可选的 MCP 工具定义。
+1. **平台自描述。** 每个平台包用 `definePlatform()` 导出平台键、标题、主渠道、静态模型目录 `models`、密钥规格、`createAdapters(options)` 和 MCP 工具定义。内置平台的静态目录与其适配器共用同一组声明，CI 会核对一致性。
 2. **单一注册表。** `modelbay` 包的 `src/platforms.ts` 导出 `PLATFORMS`。汇总入口的默认适配器、环境变量读取、`doctor`，MCP 的命令，CLI，声明自检，上游文档对账，都只遍历它。
 3. **Node 扩展一个约定。** 平台的 Node 专属能力放 `@modelbay/<平台>/node`，统一导出 `nodeOptions`，由 `modelbay/node` 加载后传给 `createAdapters()`。
-4. **MCP 只有一个命令。** `modelbay-mcp <平台>`，工具定义放在平台包的 `src/mcp/tools.ts`，平台独有工具的路由、性质、分组也写在那里。
-5. **声明只有 TS 一份。** 不在仓库里存 JSON。上游文档对账直接从注册表读声明。
+4. **MCP 连接使用一个工具目录。** `modelbay-mcp <平台>` 读取平台工具定义，按连接启用的组生成工具清单、帮助、调用路由和 Skill 引用。
+5. **模型声明通过 TypeScript 目录消费。** 文档对账直接读 `PlatformDescriptor.models`。适配器工厂在运行调用时注册渠道和宿主扩展。
 
 ## 理由
 
-- 新增平台的改动集中在它自己的包，外加注册表里的一行。消费方不需要知道有哪些平台。
+- 新平台的能力和目录由它自己的包提供。发布子路径、Node 注入和上游文档来源按 [扩展指南](../extending.md#新增一个平台) 登记。
 - 同一个事实只写一处，不会再出现两份密钥名、两份声明不一致。
 - 声明自检直接调用 core 的真实校验函数遍历注册表，不再维护一份平行的 JS 检查脚本。
 
 ## 代价与约束
 
-- `modelbay` 包依赖全部平台包。只想用一家的消费方直接装那个平台包，不经过汇总入口。
+- `modelbay` 打包全部内置平台。只用一个平台的调用方可以从 `modelbay/<平台>` 导入。
 - `modelbay/node` 要静态写出每个平台 `/node` 子路径的导入，打包器才能解析，所以有 Node 扩展的新平台要在那里加一行。
 - 别的语言或 UI 将来需要声明数据时，从注册表导出，不把导出物提交进仓库。

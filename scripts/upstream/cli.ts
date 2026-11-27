@@ -7,18 +7,18 @@
  *   vpx -s scripts/upstream/cli.ts audit [--platform <key>]... [--apply] [--offline]
  *                                        [--skeleton <id>]... [--today YYYY-MM-DD]
  *     抓取官方文档 → 抽取 → 和声明双向核对 → 报告写到 .upstream-docs/<平台>/report.md。
- *     --apply     把生命周期补丁写进声明文件
+ *     --apply     当前日期在线对账完整后，把生命周期补丁写进声明文件
  *     --offline   不联网，用 .upstream-docs/ 里上一次抓到的全文重新对账（调试抽取规则用）
  *     --skeleton  给这些未声明的 ID 生成声明骨架，附在报告里
  *
  * 仓库里不存任何官方文档内容，也不存上一次的结果：每次都拿现抓的原文和声明核对。
  * 抓到的全文和报告只写到不进仓库的 .upstream-docs/<平台>/，供本地查看和 CI artifact。
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { audit, type Gap, type LifecycleGap, type PageRole, type Snapshot } from './audit'
+import { audit, type Gap, type LifecycleGap, type Snapshot } from './audit'
 import {
-  applyLifecycle,
+  applyLifecycles,
   coverageProblems,
   defaultVendor,
   loadDeclarations,
@@ -30,39 +30,20 @@ import {
 import { closeRenderer, fetchPage, linksIn } from './fetch'
 import { dates, normalizeSnapshot, parseRows } from './markdown'
 import { needsAttention, type PageStatus, renderReport } from './report'
+import {
+  captureCoverage,
+  readCapture,
+  writeCapture,
+  type CapturedPage,
+  type PageEntry,
+} from './snapshots'
 import { isOfficialUrl, type PlatformSources, SOURCES } from './sources'
-
-interface PageEntry {
-  url: string
-  role: PageRole
-  channel?: string
-  contextDates?: string[]
-  method?: string
-}
 
 const CACHE_DIR = join(ROOT, '.upstream-docs')
 
 function today(): string {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' })
 }
-
-function slug(url: string): string {
-  const parsed = new URL(url)
-  const name = `${parsed.hostname}${parsed.pathname}${parsed.search}`
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-  return `${name}.md`
-}
-
-function platformDir(platform: string): string {
-  return join(CACHE_DIR, platform)
-}
-
-function pagesDir(platform: string): string {
-  return join(platformDir(platform), 'pages')
-}
-
-const indexPath = (platform: string) => join(platformDir(platform), 'pages.json')
 
 function sourcesOf(platform: string): PlatformSources {
   return SOURCES.find((item) => item.key === platform) ?? { key: platform, pages: [] }
@@ -101,7 +82,7 @@ function followed(platform: string, entry: PageEntry, markdown: string): PageEnt
 async function mapLimit<T, R>(
   items: T[],
   limit: number,
-  fn: (item: T) => Promise<R>,
+  fn: (item: T) => R | Promise<R>,
 ): Promise<R[]> {
   const results: R[] = Array.from({ length: items.length })
   let next = 0
@@ -116,25 +97,36 @@ async function mapLimit<T, R>(
   return results
 }
 
-interface Fetched {
-  entry: PageEntry
-  markdown?: string
-  error?: string
+type LoadPage = (entry: PageEntry) => CapturedPage | Promise<CapturedPage>
+
+const fetchCapture: LoadPage = (entry) =>
+  fetchPage(entry.url).then(
+    (page): CapturedPage => ({
+      entry: { ...entry, method: page.method },
+      markdown: normalizeSnapshot(page.markdown),
+    }),
+    (error: unknown): CapturedPage => ({
+      entry,
+      error: error instanceof Error ? error.message : String(error),
+    }),
+  )
+
+function replayCapture(directory: string): LoadPage {
+  const cached = new Map(readCapture(directory).map((item) => [item.entry.url, item]))
+  return (entry) => {
+    const item = cached.get(entry.url)
+    return item?.markdown !== undefined
+      ? { entry: { ...entry, method: 'offline' }, markdown: item.markdown }
+      : { entry, error: item?.error ?? '缓存缺少该来源页' }
+  }
 }
 
-async function fetchAll(platform: string, planned: PageEntry[]): Promise<Fetched[]> {
-  const run = (entry: PageEntry) =>
-    fetchPage(entry.url).then(
-      (page): Fetched => ({
-        entry: { ...entry, method: page.method },
-        markdown: normalizeSnapshot(page.markdown),
-      }),
-      (error: unknown): Fetched => ({
-        entry,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    )
-  const first = await mapLimit(planned, 4, run)
+async function captureAll(
+  platform: string,
+  planned: PageEntry[],
+  load: LoadPage,
+): Promise<CapturedPage[]> {
+  const first = await mapLimit(planned, 4, load)
   const extra = first.flatMap((item) =>
     item.markdown ? followed(platform, item.entry, item.markdown) : [],
   )
@@ -146,63 +138,35 @@ async function fetchAll(platform: string, planned: PageEntry[]): Promise<Fetched
     if (existing) existing.entry = { ...existing.entry, ...entry, method: existing.entry.method }
     else if (!fresh.some((item) => item.url === entry.url)) fresh.push(entry)
   }
-  const second = await mapLimit(fresh, 2, run)
+  const second = await mapLimit(fresh, 2, load)
   return [...first, ...second]
 }
 
-interface PageText extends PageEntry {
-  markdown: string
-}
-
-/**
- * 把本次抓到的全文写到 .upstream-docs/（覆盖上一次），返回参与对账的页面。
- * 某个渠道的列表页有一页没抓到，就整个渠道不做列表核对，免得把漏抓当成「官方没列」。
- */
-function collectPages(platform: string, fetched: Fetched[]): PageText[] {
-  rmSync(pagesDir(platform), { recursive: true, force: true })
-  mkdirSync(pagesDir(platform), { recursive: true })
+/** 某渠道少一页列表证据，就暂停该渠道的列表核对。 */
+function usableSnapshots(captured: CapturedPage[]): Snapshot[] {
   const brokenChannels = new Set(
-    fetched.flatMap((item) =>
+    captured.flatMap((item) =>
       item.markdown === undefined && item.entry.role === 'list' && item.entry.channel
         ? [item.entry.channel]
         : [],
     ),
   )
-  const pages: PageText[] = []
-  for (const item of fetched) {
-    if (item.markdown === undefined) continue
-    writeFileSync(join(pagesDir(platform), slug(item.entry.url)), item.markdown)
-    if (item.entry.role === 'list' && brokenChannels.has(item.entry.channel ?? '')) continue
-    pages.push({ ...item.entry, markdown: item.markdown })
-  }
-  const index = pages.map(({ markdown: _, ...entry }) => entry)
-  writeFileSync(indexPath(platform), `${JSON.stringify(index, null, 2)}\n`)
-  return pages
-}
-
-function readPages(platform: string): PageText[] {
-  if (!existsSync(indexPath(platform))) return []
-  const index = JSON.parse(readFileSync(indexPath(platform), 'utf8')) as PageEntry[]
-  return index.flatMap((entry) => {
-    const path = join(pagesDir(platform), slug(entry.url))
-    return existsSync(path) ? [{ ...entry, markdown: readFileSync(path, 'utf8') }] : []
+  return captured.flatMap(({ entry, markdown }) => {
+    if (
+      markdown === undefined ||
+      (entry.role === 'list' && brokenChannels.has(entry.channel ?? ''))
+    )
+      return []
+    return [{ ...entry, markdown }]
   })
-}
-
-function toSnapshot(page: PageText): Snapshot {
-  return {
-    url: page.url,
-    role: page.role,
-    ...(page.channel ? { channel: page.channel } : {}),
-    ...(page.contextDates ? { contextDates: page.contextDates } : {}),
-    markdown: page.markdown,
-  }
 }
 
 interface AuditResult {
   platform: string
   gaps: Gap[]
   errors: number
+  complete: boolean
+  lifecycleComplete: boolean
   attention: boolean
 }
 
@@ -212,49 +176,43 @@ async function auditPlatform(
 ): Promise<AuditResult> {
   const declarations = loadDeclarations(platform)
   const declared = declarations.map(toDeclared)
+  const directory = join(CACHE_DIR, platform)
+  const planned = plannedPages(
+    platform,
+    declared.flatMap((model) => model.sources),
+  )
+  const load = options.offline ? replayCapture(directory) : fetchCapture
+  const captured = await captureAll(platform, planned, load)
+  if (!options.offline) writeCapture(directory, captured)
 
-  let texts: PageText[]
-  let pages: PageStatus[]
-  if (options.offline) {
-    texts = readPages(platform)
-    pages = texts.map((entry) => ({ url: entry.url, role: entry.role, method: 'offline' }))
-  } else {
-    const planned = plannedPages(
-      platform,
-      declared.flatMap((model) => model.sources),
-    )
-    const fetched = await fetchAll(platform, planned)
-    texts = collectPages(platform, fetched)
-    pages = fetched.map((item) => ({
-      url: item.entry.url,
-      role: item.entry.role,
-      ...(item.entry.method ? { method: item.entry.method } : {}),
-      ...(item.error ? { error: item.error } : {}),
-    }))
-  }
+  const pages: PageStatus[] = captured.map(({ entry: { url, role, method }, error }) => ({
+    url,
+    role,
+    method,
+    error,
+  }))
+  const { failedUrls, complete, lifecycleComplete } = captureCoverage(captured)
 
   const config = sourcesOf(platform)
   const gaps = audit({
     platform,
     today: options.today,
-    snapshots: texts.map(toSnapshot),
+    snapshots: usableSnapshots(captured),
     declared,
     ...(config.prefixes ? { prefixes: config.prefixes } : {}),
     ...(config.excludePrefixes ? { excludePrefixes: config.excludePrefixes } : {}),
     ...(config.digitless ? { digitless: config.digitless } : {}),
-    ...(pages.some((page) => page.error)
-      ? { failedUrls: pages.filter((page) => page.error).map((page) => page.url) }
-      : {}),
+    failedUrls,
+    catalogAliases: config.catalogAliases,
     ...(config.unlisted ? { unlisted: config.unlisted } : {}),
     ...(config.skipped ? { skipped: config.skipped } : {}),
   })
 
-  const applied: string[] = []
-  if (options.apply) {
-    for (const gap of gaps.filter((item): item is LifecycleGap => item.kind === 'lifecycle')) {
-      applied.push(relative(ROOT, applyLifecycle(platform, gap, options.today)))
-    }
-  }
+  const lifecycle = gaps.filter((gap): gap is LifecycleGap => gap.kind === 'lifecycle')
+  const applied =
+    options.apply && lifecycleComplete
+      ? applyLifecycles(platform, lifecycle, options.today).map((path) => relative(ROOT, path))
+      : []
   const vendor = defaultVendor(declarations)
   const wanted = new Set(options.skeletons.map((id) => id.toLowerCase()))
   const skeletons = new Map<string, string>()
@@ -264,12 +222,26 @@ async function auditPlatform(
     }
   }
 
-  const report = renderReport({ platform, gaps, pages, applied, skeletons })
-  mkdirSync(platformDir(platform), { recursive: true })
-  writeFileSync(join(platformDir(platform), 'report.md'), report)
+  const report = renderReport({
+    platform,
+    gaps,
+    pages,
+    complete,
+    lifecycleComplete,
+    applied,
+    skeletons,
+  })
+  mkdirSync(directory, { recursive: true })
+  writeFileSync(join(directory, 'report.md'), report)
 
-  const errors = pages.filter((page) => page.error).length
-  return { platform, gaps, errors, attention: needsAttention(gaps) }
+  return {
+    platform,
+    gaps,
+    complete,
+    lifecycleComplete,
+    errors: failedUrls.length,
+    attention: needsAttention(gaps),
+  }
 }
 
 function parseFlags(argv: string[]) {
@@ -277,7 +249,8 @@ function parseFlags(argv: string[]) {
   const skeletons: string[] = []
   let apply = false
   let offline = false
-  let date = today()
+  const currentDate = today()
+  let date = currentDate
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
     if (flag === '--apply') apply = true
@@ -288,6 +261,9 @@ function parseFlags(argv: string[]) {
     else throw new Error(`未知参数：${flag}`)
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('--today 应为 YYYY-MM-DD')
+  if (apply && (offline || date !== currentDate)) {
+    throw new Error('--apply 需要使用当前日期在线对账')
+  }
   const keys = platformKeys()
   for (const key of platforms) {
     if (!keys.includes(key)) throw new Error(`未知平台：${key}（可选 ${keys.join('、')}）`)
@@ -315,18 +291,15 @@ function githubOutput(values: Record<string, string>) {
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv
   if (command === 'coverage') {
-    const problems = platformKeys().flatMap((key) =>
-      coverageProblems(loadDeclarations(key), isOfficialUrl),
-    )
+    const declarations = platformKeys().flatMap(loadDeclarations)
+    const problems = coverageProblems(declarations, isOfficialUrl)
     if (problems.length > 0) {
       process.stderr.write(
         `声明来源检查失败：\n${problems.map((item) => `- ${item}`).join('\n')}\n`,
       )
       return 1
     }
-    const total = new Set(
-      platformKeys().flatMap((key) => loadDeclarations(key).map((item) => item.canonicalId)),
-    ).size
+    const total = new Set(declarations.map((item) => item.canonicalId)).size
     process.stdout.write(`声明来源检查通过：${total} 个声明都有官方 https 来源和核对日期\n`)
     return 0
   }
@@ -339,7 +312,7 @@ async function main(argv: string[]): Promise<number> {
         results.push(result)
         const count = (kind: Gap['kind']) => result.gaps.filter((gap) => gap.kind === kind).length
         process.stdout.write(
-          `${platform}：生命周期 ${count('lifecycle')}，列表缺失 ${count('unlisted')}，` +
+          `${platform}（${result.complete ? '完整' : '不完整'}）：生命周期 ${count('lifecycle')}，列表缺失 ${count('unlisted')}，` +
             `未声明 ${count('undeclared')}，抓取失败 ${result.errors}` +
             ` → .upstream-docs/${platform}/report.md\n`,
         )
@@ -348,10 +321,12 @@ async function main(argv: string[]): Promise<number> {
       await closeRenderer()
     }
     githubOutput({
+      complete: String(results.every((result) => result.complete)),
+      lifecycle_complete: String(results.every((result) => result.lifecycleComplete)),
       attention: String(results.some((result) => result.attention)),
       errors: String(results.reduce((sum, result) => sum + result.errors, 0)),
     })
-    return 0
+    return results.every((result) => result.complete) ? 0 : 1
   }
   process.stderr.write(
     '用法：cli.ts coverage | audit [--platform <key>]... [--apply] [--offline] [--skeleton <id>]... [--today YYYY-MM-DD]\n',

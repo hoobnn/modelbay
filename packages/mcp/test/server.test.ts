@@ -397,6 +397,34 @@ describe('createHandlers tools/call 路由', () => {
     expect(((await noAdapter.callTool('nope', {})) as CallToolResult).content[0]?.text).toContain(
       '未知工具',
     )
+    expect((await noAdapter.callTool('list_declared_models', {})).structuredContent).toMatchObject({
+      models: expect.arrayContaining([
+        expect.objectContaining({ canonicalId: expect.any(String) }),
+      ]),
+    })
+  })
+
+  it('工具组同时约束工具清单、帮助、能力查询和调用', async () => {
+    const { adapter, calls } = fakeAdapter()
+    const handlers = createHandlers({
+      set: generateTools('minimax', { adapter }),
+      adapter,
+      context: fakeContext({ MINIMAX_API_KEY: 'k' }),
+      groups: MCP_TOOL_GROUPS.default,
+      secrets: platformOf('minimax').secrets,
+      serverInfo: { name: 'test', version: '1.0.0' },
+    })
+    expect((await handlers.listTools()).some((tool) => tool.name === 'upload_file')).toBe(false)
+    expect(
+      (await handlers.callTool('get_tool_help', { tool: 'upload_file' })).content[0].text,
+    ).not.toContain('upload_file')
+    expect((await handlers.callTool('list_capabilities', {})).content[0].text).not.toContain(
+      'upload-file',
+    )
+    expect(await handlers.callTool('upload_file', { file: 'fixture.mp4' })).toMatchObject({
+      isError: true,
+    })
+    expect(calls.native).toEqual([])
   })
 })
 
@@ -422,21 +450,34 @@ describe('launch', () => {
     expect(result === undefined || typeof result === 'object').toBe(true)
   })
 
-  it('startServer 注入流后可完成一次 tools/list 往返', async () => {
+  it('startServer 在同一连接发布平台工具和 Skills', async () => {
     const input = new PassThrough()
     const output = new PassThrough()
-    const messages: unknown[] = []
+    const messages: { id: number; result?: unknown }[] = []
     const reader = new FramedReader()
     output.on('data', (chunk: Uint8Array) => {
-      for (const decoded of reader.push(chunk)) messages.push(decoded.message)
+      for (const decoded of reader.push(chunk))
+        messages.push(decoded.message as (typeof messages)[number])
     })
     const started = await startServer('ark', { env: {}, input, output })
-    expect(started.set.all.length).toBeGreaterThan(0)
-    input.write(encodeMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, 'line'))
-    await waitUntil(() => messages.length >= 1)
-    const response = messages[0] as { result?: { tools?: unknown[] } }
-    expect(response.result?.tools?.length).toBeGreaterThanOrEqual(9)
-    started.detach()
+    try {
+      for (const [id, method] of [
+        [1, 'tools/list'],
+        [2, 'skills/list'],
+      ] as const) {
+        input.write(encodeMessage({ jsonrpc: '2.0', id, method }, 'line'))
+      }
+      await waitUntil(() => messages.length === 2)
+      const list = messages.find((response) => response.id === 1)?.result as { tools: MCPTool[] }
+      expect(list.tools.some((tool) => tool.name === 'generate_video')).toBe(true)
+      expect(messages.find((response) => response.id === 2)?.result).toMatchObject({
+        skills: expect.arrayContaining([
+          expect.objectContaining({ uri: 'skill://modelbay/ark/modelbay-video/SKILL.md' }),
+        ]),
+      })
+    } finally {
+      started.detach()
+    }
   })
 })
 

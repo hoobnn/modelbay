@@ -11,7 +11,7 @@ import { deriveMeta, EXTRA_TOOL_NAMES, type ToolMeta } from './tool-meta'
 import type { GeneratedTool, GeneratedToolSet, MCPTool, ToolGroup, ToolRoute } from './types'
 
 export interface GenerateOptions {
-  /** 平台适配器：提供 models 与 nodeOnly；缺省时用空声明集合（tools/list 仍可用）。 */
+  /** 平台适配器，提供运行时的 models 与 nodeOnly。缺省时读取平台的静态目录。 */
   adapter?: PlatformAdapter
   /** 直接给声明（测试构造伪造声明时用）。优先于 adapter.models。 */
   models?: readonly ModelDeclaration[]
@@ -32,8 +32,15 @@ export function toMCPTool(tool: GeneratedTool): MCPTool {
 }
 
 /** 按启用的工具组过滤（MCP_TOOL_GROUPS 开关）。 */
+export function toolsInGroups(
+  set: GeneratedToolSet,
+  groups: readonly ToolGroup[],
+): GeneratedTool[] {
+  return set.all.filter((tool) => groups.includes(tool.group))
+}
+
 export function listTools(set: GeneratedToolSet, groups: readonly ToolGroup[]): MCPTool[] {
-  return set.all.filter((tool) => groups.includes(tool.group)).map(toMCPTool)
+  return toolsInGroups(set, groups).map(toMCPTool)
 }
 
 /** 生成全量工具（含所有组）；实际 tools/list 由 listTools 按组过滤。 */
@@ -43,7 +50,7 @@ export function generateTools(
 ): GeneratedToolSet {
   const platform = typeof target === 'string' ? findPlatform(target) : target
   if (!platform?.mcp) throw new Error(`平台「${String(target)}」没有 MCP 工具目录`)
-  const declared: readonly ModelDeclaration[] = options.models ?? options.adapter?.models ?? []
+  const declared = options.models ?? options.adapter?.models ?? platform.models ?? []
   // 已归档（retired）的模型不进工具 schema 和说明；list_declared_models 仍能查到记录
   const models = declared.filter(isSelectable)
   const nodeOnly = new Set(options.adapter?.nodeOnly ?? [])
@@ -81,7 +88,7 @@ export function generateTools(
     routes.set(tool.name, tool.route)
     byName.set(tool.name, tool)
   }
-  return { platform: platform.key, all, routes, byName }
+  return { platform: platform.key, declaredModels: declared, all, routes, byName }
 }
 
 function archivedOnly(
