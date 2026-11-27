@@ -13,6 +13,8 @@ export interface ReportInput {
   platform: string
   gaps: Gap[]
   pages: PageStatus[]
+  complete: boolean
+  lifecycleComplete?: boolean
   /** 已写进声明文件的生命周期补丁。 */
   applied: string[]
   /** 用 --skeleton 点名的未声明模型的骨架：`渠道\nid` → TS 源码。 */
@@ -28,13 +30,19 @@ function escapeCell(value: string): string {
   return value.replace(/\|/g, '\\|')
 }
 
-function lifecycleSection(gaps: LifecycleGap[], applied: string[]): string[] {
+function lifecycleSection(
+  gaps: LifecycleGap[],
+  applied: string[],
+  lifecycleComplete: boolean,
+): string[] {
   if (gaps.length === 0) return []
   const out = ['### 生命周期待更新', '']
   out.push(
-    applied.length > 0
-      ? '补丁已写进声明文件，合并前逐条对照原文核对日期和状态。'
-      : '用 `--apply` 运行会把下面的补丁写进声明文件。',
+    lifecycleComplete
+      ? applied.length > 0
+        ? '补丁已写进声明文件，合并前逐条对照原文核对日期和状态。'
+        : '在线取得全部模型清单与下线公告后，可用 `--apply` 写入声明文件。'
+      : '下面是已取得页面的结果。补齐来源后再应用生命周期补丁。',
     '',
     '官方列表放在历史 / 已下线小节的模型一律归档为 `retired`，不再支持。',
     '',
@@ -129,7 +137,11 @@ export function renderReport(input: ReportInput): string {
 
   const out = [`# 上游文档对账：${input.platform}`, '']
   out.push(
-    '由 `pnpm upstream:audit` 生成：现抓官方文档，抽取模型清单和下线信息，与声明双向核对。',
+    '由 `pnpm upstream:audit` 生成，对照官方文档和模型声明。',
+    '',
+    input.complete
+      ? '本次对账已取得全部计划来源。'
+      : '本次对账不完整。以下是已取得来源的结果，待补齐页面后再确认其余模型。',
     '',
     '| 项 | 数量 |',
     '| --- | --- |',
@@ -141,10 +153,10 @@ export function renderReport(input: ReportInput): string {
   )
   out.push('## 声明 → 官方', '')
   if (lifecycle.length === 0 && unlisted.length === 0) {
-    out.push('每个声明都能在官方文档里对上。', '')
+    out.push(input.complete ? '声明侧未发现差距。' : '已取得来源中的声明侧未检出差距。', '')
   }
   out.push(
-    ...lifecycleSection(lifecycle, input.applied),
+    ...lifecycleSection(lifecycle, input.applied, input.lifecycleComplete ?? input.complete),
     ...unlistedSection(unlisted),
     ...undeclaredSection(undeclared, input.skeletons),
     ...pagesSection(input.pages),

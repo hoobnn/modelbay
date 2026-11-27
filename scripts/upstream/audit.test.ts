@@ -11,7 +11,7 @@ import {
   type LifecycleGap,
   type Snapshot,
 } from './audit'
-import { patchLifecycle } from './declarations'
+import { patchLifecycle, skeleton } from './declarations'
 import { dates, normalizeSnapshot, parseRows, plainText, tokens } from './markdown'
 import { needsAttention, renderReport } from './report'
 import { SOURCES } from './sources'
@@ -75,10 +75,11 @@ describe('markdown', () => {
     )
   })
 
-  it('tokens 拆出带斜杠的 ID 的各段', () => {
-    expect(tokens('用 antdigital/Ling-2.5 或 gpt-6-luna。')).toEqual(
-      expect.arrayContaining(['antdigital/Ling-2.5', 'Ling-2.5', 'gpt-6-luna']),
-    )
+  it('保留完整的厂商限定 ID，空格分隔的斜杠仍可列出多个 ID', () => {
+    expect(tokens('用 antdigital/Ling-2.5 / gpt-6-luna。')).toEqual([
+      'antdigital/Ling-2.5',
+      'gpt-6-luna',
+    ])
   })
 
   it('dates 认多种写法，不把模型 ID 里的日期后缀当日期', () => {
@@ -104,6 +105,64 @@ describe('markdown', () => {
 })
 
 describe('生命周期', () => {
+  it('公告只提到模型名或约定今天停服时，保留当天可用的可能', () => {
+    const page: Snapshot = {
+      url: 'https://x/dep',
+      role: 'deprecation',
+      markdown: `- 请关注 \`undated-1\` 的迁移说明。\n- \`timed-2\` will be discontinued on ${TODAY} at 14:00 (UTC+8).`,
+    }
+    expect(run([page], [model('undated-1'), model('timed-2')])).toMatchObject([
+      { canonicalId: 'v/timed-2', proposed: { status: 'sunsetting', sunsetOn: TODAY } },
+    ])
+  })
+
+  it('用包含最终下线日期的页面作为补丁来源', () => {
+    const notices = [
+      { url: 'https://x/old', role: 'deprecation', markdown: '`old-1` EOS 2026-12-01' },
+      { url: 'https://x/new', role: 'deprecation', markdown: '`old-1` EOS 2027-01-01' },
+    ] satisfies Snapshot[]
+    expect(run(notices, [model('old-1')])).toMatchObject([
+      {
+        proposed: { status: 'sunsetting', sunsetOn: '2027-01-01', source: 'https://x/new' },
+        evidence: [{ url: 'https://x/new' }, { url: 'https://x/old' }],
+      },
+    ])
+  })
+
+  it('停止新购的模型保留现状，同批有 EOS 的模型按实际停服日期对账', () => {
+    const notice: Snapshot = {
+      url: 'https://x/dep',
+      role: 'deprecation',
+      markdown: [
+        '# 第十批模型下线说明',
+        '## 下线计划',
+        '| 节点 | 时间 |',
+        '| --- | --- |',
+        '| EOM 模型停止新购 | 2026-10-30 |',
+        '| EOS 模型服务下线 | 2026-11-20 |',
+        '## 下线模型',
+        '',
+        'embedding 模型仅有 EOM 阶段，不涉及 EOS 阶段。',
+        '',
+        '| 模型 ID | 建议迁移模型 |',
+        '| --- | --- |',
+        '| `embed-1` | `embed-2` |',
+        '| `image-1` | `image-2` |',
+        '',
+        '| 模型 | 停止新购日期 |',
+        '| --- | --- |',
+        '| `old-1` | 2026-10-30 |',
+      ].join('\n'),
+    }
+    expect(
+      run(
+        [notice],
+        [model('embed-1', { capabilities: ['text.embed'] }), model('image-1'), model('old-1')],
+      ),
+    ).toMatchObject([
+      { canonicalId: 'v/image-1', proposed: { status: 'sunsetting', sunsetOn: '2026-11-20' } },
+    ])
+  })
   it('公告表格行带日期：未到期为 sunsetting，替代列里的模型不算', () => {
     const page: Snapshot = {
       url: 'https://x/dep',
@@ -424,7 +483,8 @@ describe('补丁与报告', () => {
       "  source: { url: 'https://x/old', checkedAt: '2026-01-01' },",
       '}',
     ].join('\n')
-    expect(patchLifecycle(source, gap, TODAY)).toBe(
+    const patched = patchLifecycle(source, gap, TODAY)
+    expect(patched).toBe(
       [
         'export default {',
         "  id: 'm-1',",
@@ -439,11 +499,13 @@ describe('补丁与报告', () => {
       ].join('\n'),
     )
     expect(() => patchLifecycle('export default {}', gap, TODAY)).toThrow('lifecycle')
+    expect(patchLifecycle(patched, gap, TODAY)).toBe(patched)
   })
 
   it('报告列出各类差距和抓取失败', () => {
     const report = renderReport({
       platform: 'p',
+      complete: false,
       gaps: [gap],
       pages: [{ url: 'https://x/dep', role: 'deprecation', error: '超时' }],
       applied: [],
@@ -452,19 +514,52 @@ describe('补丁与报告', () => {
     expect(report).toContain('`v/m-1`：active → sunsetting（2027-01-06）')
     expect(report).toContain('当前声明的依据：https://x/old')
     expect(report).toContain('**失败**：超时')
+    expect(report).toContain('本次对账不完整')
+  })
+
+  it('带厂商前缀的骨架使用合法 canonicalId，并保留 API ID', () => {
+    const modelSkeleton = skeleton(
+      {
+        kind: 'undeclared',
+        channel: 'bailian',
+        id: 'stepfun/step-6',
+        evidence: {
+          url: 'https://x/list',
+          section: '文本生成',
+          quote: 'stepfun/step-6',
+          dates: [],
+        },
+      },
+      'aliyun',
+      TODAY,
+    )
+    expect(modelSkeleton).toContain("canonicalId: 'aliyun/step-6'")
+    expect(modelSkeleton).toContain("channels: [{ channel: 'bailian', id: 'stepfun/step-6' }]")
   })
 
   it('没有差距时说明都对得上；点名的 ID 附骨架', () => {
     const report = renderReport({
       platform: 'p',
+      complete: true,
       gaps: [],
       pages: [],
       applied: [],
       skeletons: new Map(),
     })
-    expect(report).toContain('每个声明都能在官方文档里对上')
+    expect(report).toContain('声明侧未发现差距。')
+    expect(
+      renderReport({
+        platform: 'p',
+        complete: false,
+        gaps: [],
+        pages: [],
+        applied: [],
+        skeletons: new Map(),
+      }),
+    ).toContain('已取得来源中的声明侧未检出差距。')
     const undeclared = renderReport({
       platform: 'p',
+      complete: true,
       gaps: [
         {
           kind: 'undeclared',
@@ -519,8 +614,40 @@ describe('官方目录页写「产品名 + 版本」', () => {
     expect(productVersionId('TTS 2.0')).toBe('tts-2.0')
     expect(productVersionId('Seed Audio 1.0')).toBe('seed-audio-1.0')
     expect(productVersionId('O2.0版本')).toBe('o-2.0')
+    expect(productVersionId('gpt-6')).toBeUndefined()
     expect(productVersionId('全双工版本')).toBeUndefined()
     expect(productVersionId('模型名称')).toBeUndefined()
+  })
+
+  it('目录页以 API ID 为表头时，保留 ID 并识别同一表头中的新模型', () => {
+    const list: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: '类型 | `gpt-6` | `gpt-7`\n--- | --- | ---\n支持 | 是 | 是',
+    }
+    expect(run([list], [model('gpt-6')])).toMatchObject([
+      { kind: 'undeclared', id: 'gpt-7', evidence: { quote: expect.stringContaining('gpt-7') } },
+    ])
+  })
+
+  it('厂商限定 ID 不会重复计数，核实过的目录别名可作为已列出证据', () => {
+    const list: Snapshot = {
+      url: 'https://x/list',
+      role: 'list',
+      channel: 'c',
+      markdown: '- [`stepfun/step-5-preview`](/models/step-5-preview)\n- `step-6`',
+    }
+    const declared = model('stepfun/step-5-preview')
+    expect(run([list], [declared], { prefixes: ['step'] })).toMatchObject([
+      { kind: 'undeclared', id: 'step-6' },
+    ])
+    expect(
+      run([{ ...list, markdown: '- `step-5-preview`' }], [declared], {
+        prefixes: ['step'],
+        catalogAliases: { c: { 'step-5-preview': 'stepfun/step-5-preview' } },
+      }),
+    ).toEqual([])
   })
 
   it('词干相同就当同一个模型（官方写产品名，声明写 API ID）', () => {
@@ -550,7 +677,7 @@ describe('官方目录页写「产品名 + 版本」', () => {
         '## 语音合成',
         '| 模型名称 | TTS 3.0 | TTS 2.0 |',
         '| --- | --- | --- |',
-        '| 适用音色 | x | y |',
+        '| 支持场景 | 配音 | 声音复刻 |',
       ].join('\n'),
     }
     const config = SOURCES.find((item) => item.key === 'doubao-speech')
@@ -559,7 +686,7 @@ describe('官方目录页写「产品名 + 版本」', () => {
       ...(config?.prefixes ? { prefixes: config.prefixes } : {}),
     })
     expect(gaps).toHaveLength(1)
-    expect(gaps[0]).toMatchObject({ kind: 'undeclared', id: 'tts-3.0' })
+    expect(gaps[0]).toMatchObject({ kind: 'undeclared', id: 'tts-3.0', capability: 'audio.speech' })
   })
 
   it('普通 ID 不做词干匹配：qwen4-max 已声明时，新出现的 qwen5-max 仍然报出', () => {

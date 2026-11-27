@@ -99,20 +99,18 @@ export function parseRows(markdown: string): Row[] {
       continue
     }
 
-    if (trimmed.startsWith('|')) {
-      const next = lines[index + 1]?.trim() ?? ''
-      if (!header && TABLE_SEPARATOR.test(next)) {
-        header = splitCells(trimmed).map(plainText)
-        index += 1
-        continue
-      }
-      if (header) {
-        rows.push({ path: [...path], cells: splitCells(trimmed), header, raw, line: index + 1 })
-        continue
-      }
-    } else {
-      header = null
+    const cells = trimmed.includes('|') ? splitCells(trimmed) : []
+    const tableLine = cells.length > 1 || (cells.length === 1 && trimmed.startsWith('|'))
+    if (tableLine && TABLE_SEPARATOR.test(lines[index + 1]?.trim() ?? '')) {
+      header = cells.map(plainText)
+      index += 1
+      continue
     }
+    if (header && tableLine) {
+      rows.push({ path: [...path], cells, header, raw, line: index + 1 })
+      continue
+    }
+    header = null
 
     if (trimmed.length > 0) {
       rows.push({ path: [...path], cells: [trimmed], header: [], raw, line: index + 1 })
@@ -123,8 +121,7 @@ export function parseRows(markdown: string): Row[] {
 
 /** 行里可能是模型 ID 的记号：字母数字开头结尾，中间可以有 `.`、`-`、`_`、`/`。 */
 export function tokens(text: string): string[] {
-  const found = plainText(text).match(/[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?/g) ?? []
-  return found.flatMap((token) => (token.includes('/') ? [token, ...token.split('/')] : [token]))
+  return plainText(text).match(/[A-Za-z0-9](?:[A-Za-z0-9._/-]*[A-Za-z0-9])?/g) ?? []
 }
 
 const MONTHS: Record<string, number> = {

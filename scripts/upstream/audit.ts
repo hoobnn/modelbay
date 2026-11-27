@@ -108,15 +108,21 @@ export interface AuditInput {
   unlisted?: string[]
   /** 官方列表页上有、决定不接的渠道内 ID。 */
   skipped?: string[]
+  /** 渠道 → 官方目录的展示写法 → 已声明的 API ID。 */
+  catalogAliases?: Readonly<Record<string, Readonly<Record<string, string>>>>
 }
 
 /** 表头里表示「替代 / 迁移目标」的列：这些列里出现的模型不是被下线的那个。 */
 const REPLACEMENT_HEADER =
   /替代|替换|迁移|replacement|recommended|instead|alternative|substitute|successor/i
 
-/** 明确已下线的状态词。 */
-const RETIRED_WORDS =
-  /已下线|已停止服务|已停服|已停用|retired|shut ?down|removed from the api|discontinued/i
+const RETIRED_STATUS = /^(?:retired|shut ?down|removed from the api|discontinued)$/i
+const CONFIRMED_RETIREMENT =
+  /已(?:经)?(?:下线|停止服务|停服|停用)|\b(?:already|(?:has|have) been|is|are|was|were)\s+(?:retired|shut ?down|removed from the api|discontinued)\b/i
+const PURCHASE_END = /\bEOM\b|停止新购|停止新增接入点/i
+const SERVICE_END = /\bEOS\b|服务下线|停止服务|停服|关停/i
+const EMBEDDING_PURCHASE_ONLY = /\bembedding\b|向量模型|嵌入模型/i
+const EXPLICIT_NO_EOS = /(?:只|仅)(?:有|涉及)\s*EOM\b|不涉及\s*EOS\b/i
 
 /** 列表页里表示「历史 / 旧版」的小节，表格行写着「已下线」也算。这类模型一律归档，不再支持。 */
 const LEGACY_SECTION =
@@ -124,18 +130,27 @@ const LEGACY_SECTION =
 
 const lower = (value: string) => value.toLowerCase()
 
-/** 一行里参与判断的文本：表格行去掉替代列。 */
+function evidenceCells(row: Row): string[] {
+  return row.cells.filter((_, index) => !REPLACEMENT_HEADER.test(row.header[index] ?? ''))
+}
+
 function relevantText(row: Row): string {
-  if (row.header.length === 0) return row.cells.join(' ')
-  return row.cells.filter((_, index) => !REPLACEMENT_HEADER.test(row.header[index] ?? '')).join(' ')
+  return evidenceCells(row).join(' ')
+}
+
+function explicitlyRetired(row: Row): boolean {
+  return evidenceCells(row).some((cell) => {
+    const text = plainText(cell)
+    return RETIRED_STATUS.test(text) || CONFIRMED_RETIREMENT.test(text)
+  })
 }
 
 function sectionOf(row: Row): string {
   return row.path.map((heading) => heading.text).join(' › ')
 }
 
-function quoteOf(row: Row): string {
-  const text = plainText(row.raw)
+function quoteOf(row: Row, label?: string): string {
+  const text = plainText(label ? `${label} | ${row.raw}` : row.raw)
   return text.length > 240 ? `${text.slice(0, 237)}…` : text
 }
 
@@ -144,6 +159,11 @@ const pathKey = (row: Row, depth: number) =>
     .slice(0, depth)
     .map((heading) => `${heading.level}:${heading.text}`)
     .join('\n')
+
+function purchaseOnly(row: Row): boolean {
+  const text = plainText(`${row.header.join(' ')} ${relevantText(row)}`)
+  return PURCHASE_END.test(text) && !SERVICE_END.test(text)
+}
 
 /**
  * 行本身没有日期时，从所在小节往外找：先找最近一层标题下所有行里出现的日期，
@@ -158,7 +178,7 @@ function scopeDates(rows: Row[], row: Row, isModelId: (token: string) => boolean
     const key = pathKey(row, depth)
     const found = new Set<string>()
     for (const other of rows) {
-      if (other.path.length >= depth && pathKey(other, depth) === key) {
+      if (other.path.length >= depth && pathKey(other, depth) === key && !purchaseOnly(other)) {
         for (const segment of other.raw.split(/<br\s*\/?>|\n/i)) {
           if (tokens(segment).some(isModelId)) continue
           for (const value of dates(segment)) found.add(value)
@@ -203,6 +223,7 @@ export function isCandidateId(
   digitless: Set<string> = new Set(),
 ): boolean {
   if (token.length < 4 || token.length > 80) return false
+  if (!/^[a-z0-9](?:[a-z0-9._/-]*[a-z0-9])$/i.test(token)) return false
   if (lowercaseOnly && token !== lower(token)) return false
   if (!/[a-z]/i.test(token) || !/[-.]/.test(token)) return false
   if (FILE_LIKE.test(token)) return false
@@ -216,11 +237,13 @@ export function isCandidateId(
  * 「产品名 + 版本号」形态：官方目录页常用它代替 API 模型 ID
  * （豆包语音的「TTS 2.0」「Seed Audio 1.0」，表格列头里就是这些）。
  */
-const PRODUCT_VERSION = /^(.+?)\s*v?(\d+(?:\.\d+)*)\s*(?:版本)?$/i
+const PRODUCT_VERSION = /^(.+?)\s+v?(\d+(?:\.\d+)*)\s*(?:版本)?$/i
+const COMPACT_PRODUCT_VERSION = /^([a-z]+?)v?(\d+(?:\.\d+)*)\s*版本$/i
 
 /** 产品名 + 版本号 → 一个像模型 ID 的候选（小写、空格转连字符）。 */
 export function productVersionId(cell: string): string | undefined {
-  const match = PRODUCT_VERSION.exec(cell.trim())
+  const label = cell.trim()
+  const match = PRODUCT_VERSION.exec(label) ?? COMPACT_PRODUCT_VERSION.exec(label)
   if (!match) return undefined
   const product = match[1]!.trim()
   // 产品名里至少要有一个字母，纯数字的是版本号本身
@@ -257,8 +280,9 @@ const CAPABILITY_HINTS: [RegExp, string][] = [
 ]
 
 /** 从行文本、表头、所在小节由近到远猜能力，只用来填骨架，必须人工核对。 */
-export function guessCapability(row: Row): string | undefined {
+export function guessCapability(row: Row, label = ''): string | undefined {
   const contexts = [
+    label,
     relevantText(row),
     row.header.join(' '),
     ...row.path.map((heading) => heading.text).reverse(),
@@ -273,25 +297,60 @@ export function guessCapability(row: Row): string | undefined {
 /** 链接路径的最后一段（去掉 `.md`）：有的列表页只在链接里写模型 ID，比如 `/models/gpt-6-luna`。 */
 export function linkIds(markdown: string): string[] {
   const found: string[] = []
-  for (const match of markdown.matchAll(/\]\(([^)\s]+)\)/g)) {
-    const path = match[1]!.split(/[?#]/)[0]!.replace(/\/$/, '').replace(/\.md$/, '')
+  for (const match of markdown.matchAll(/\[([^\]]*)\]\(([^)\s]+)\)/g)) {
+    const path = match[2]!.split(/[?#]/)[0]!.replace(/\/$/, '').replace(/\.md$/, '')
     const last = path.split('/').pop()
-    if (last) found.push(last)
+    if (!last) continue
+    const qualified = tokens(match[1]!).some((id) => lower(id).endsWith(`/${lower(last)}`))
+    if (!qualified) found.push(last)
   }
   return found
+}
+
+/** 链接路径可补足展示名称中的 ID。已有完整限定 ID 时，保留它本身作为证据。 */
+function documentIds(markdown: string): string[] {
+  return [...tokens(markdown), ...linkIds(markdown)]
+}
+
+interface CatalogMention {
+  id: string
+  product?: boolean
+  label?: string
+}
+
+function catalogMentions(
+  row: Row,
+  text: string,
+  isModelId: (id: string) => boolean,
+): CatalogMention[] {
+  const names: CatalogMention[] = documentIds(text).map((id) => ({ id }))
+  for (const cell of row.header) {
+    if (REPLACEMENT_HEADER.test(cell)) continue
+    if (isModelId(cell)) {
+      names.push({ id: cell, label: cell })
+    } else {
+      const id = productVersionId(cell)
+      if (id) names.push({ id, product: true, label: cell })
+    }
+  }
+  return names
 }
 
 function proposedLifecycle(
   evidence: Evidence[],
   today: string,
-): { status: 'sunsetting' | 'retired'; sunsetOn?: string; source: string } {
+): { proposed: LifecycleGap['proposed']; decisive: Evidence } | undefined {
   const explicit = evidence.find((item) => item.retired)
-  if (explicit) return { status: 'retired', source: explicit.url }
-  const all = evidence.flatMap((item) => item.dates)
-  const shutdown = all.length > 0 ? [...all].sort().at(-1) : undefined
-  const source = evidence[0]!.url
-  if (shutdown && shutdown > today) return { status: 'sunsetting', sunsetOn: shutdown, source }
-  return { status: 'retired', source }
+  if (explicit) return { proposed: { status: 'retired', source: explicit.url }, decisive: explicit }
+  const dated = evidence.flatMap((item) => item.dates.map((date) => ({ date, item })))
+  const latest = dated.sort((left, right) => right.date.localeCompare(left.date))[0]
+  if (!latest) return undefined
+  const { date, item } = latest
+  const proposed: LifecycleGap['proposed'] =
+    date >= today
+      ? { status: 'sunsetting', sunsetOn: date, source: item.url }
+      : { status: 'retired', source: item.url }
+  return { proposed, decisive: item }
 }
 
 function needsLifecycleChange(
@@ -315,10 +374,18 @@ export function audit(input: AuditInput): Gap[] {
   const skipped = new Set((input.skipped ?? []).map(lower))
   const digitless = new Set((input.digitless ?? []).map(lower))
   const failedUrls = new Set(input.failedUrls ?? [])
+  const catalogAliases = new Map(
+    Object.entries(input.catalogAliases ?? {}).map(([channel, aliases]) => [
+      channel,
+      new Map(Object.entries(aliases).map(([name, id]) => [lower(name), lower(id)])),
+    ]),
+  )
 
   // 已声明的名字 → 模型（渠道内 ID 和别名都算）
   const byName = new Map<string, DeclaredModel>()
+  const channelIds = new Set<string>()
   for (const model of input.declared) {
+    for (const ref of model.channels) channelIds.add(`${ref.channel}\n${lower(ref.id)}`)
     for (const name of [...model.channels.map((ref) => ref.id), ...model.aliases]) {
       byName.set(lower(name), model)
     }
@@ -344,11 +411,35 @@ export function audit(input: AuditInput): Gap[] {
   const mentions = new Map<DeclaredModel, { ids: Set<string>; evidence: Evidence[] }>()
   for (const { snapshot, rows } of parsed) {
     if (snapshot.role !== 'deprecation') continue
+    const eomEmbeddingSections = new Set(
+      rows
+        .filter(
+          (row) =>
+            EMBEDDING_PURCHASE_ONLY.test(relevantText(row)) &&
+            EXPLICIT_NO_EOS.test(relevantText(row)),
+        )
+        .map((row) => pathKey(row, row.path.length)),
+    )
     for (const row of rows) {
+      if (purchaseOnly(row)) continue
       const text = relevantText(row)
-      const named = new Map<string, string>()
+      const named = new Map<DeclaredModel, Set<string>>()
+      const retired = explicitlyRetired(row)
+      const embeddingPurchaseOnly =
+        !retired &&
+        !SERVICE_END.test(plainText(text)) &&
+        eomEmbeddingSections.has(pathKey(row, row.path.length))
       for (const token of tokens(text)) {
-        if (byName.has(lower(token)) && !named.has(lower(token))) named.set(lower(token), token)
+        const model = byName.get(lower(token))
+        if (!model) continue
+        if (
+          embeddingPurchaseOnly &&
+          model.capabilities.some((capability) => capability.endsWith('.embed'))
+        )
+          continue
+        const ids = named.get(model) ?? new Set()
+        ids.add(token)
+        named.set(model, ids)
       }
       if (named.size === 0) continue
       let found = dates(text)
@@ -357,23 +448,24 @@ export function audit(input: AuditInput): Gap[] {
         found = snapshot.contextDates ?? []
         if (found.length === 0) found = scopeDates(rows, row, isModelId)
       }
-      for (const [name, original] of named) {
-        const model = byName.get(name)!
+      for (const [model, ids] of named) {
         const entry = mentions.get(model) ?? { ids: new Set(), evidence: [] }
-        entry.ids.add(original)
+        for (const id of ids) entry.ids.add(id)
         entry.evidence.push({
           url: snapshot.url,
           section: sectionOf(row),
           quote: quoteOf(row),
           dates: found,
-          ...(RETIRED_WORDS.test(text) ? { retired: true } : {}),
+          ...(retired ? { retired: true } : {}),
         })
         mentions.set(model, entry)
       }
     }
   }
   for (const [model, { ids, evidence }] of mentions) {
-    const proposed = proposedLifecycle(evidence, input.today)
+    const proposal = proposedLifecycle(evidence, input.today)
+    if (!proposal) continue
+    const { proposed, decisive } = proposal
     if (!needsLifecycleChange(model, proposed)) continue
     gaps.push({
       kind: 'lifecycle',
@@ -385,7 +477,7 @@ export function audit(input: AuditInput): Gap[] {
         ...(model.lifecycleSource ? { source: model.lifecycleSource } : {}),
       },
       proposed,
-      evidence,
+      evidence: [decisive, ...evidence.filter((entry) => entry !== decisive)],
     })
   }
 
@@ -400,6 +492,7 @@ export function audit(input: AuditInput): Gap[] {
   for (const { snapshot, rows } of parsed) {
     if (snapshot.role !== 'list' || !snapshot.channel) continue
     const channel = snapshot.channel
+    const aliases = catalogAliases.get(channel)
     const listed = listedByChannel.get(channel) ?? {
       names: new Set<string>(),
       products: new Set<string>(),
@@ -409,76 +502,54 @@ export function audit(input: AuditInput): Gap[] {
     for (const row of rows) {
       const legacy =
         row.path.some((heading) => LEGACY_SECTION.test(heading.text)) ||
-        (row.header.length > 0 && RETIRED_WORDS.test(relevantText(row)))
-      // 归档只认被归为历史的那一列：替代 / 推荐列里的新模型不算
-      const archivable = legacy
-        ? new Set([...tokens(relevantText(row)), ...linkIds(relevantText(row))].map(lower))
-        : undefined
-      for (const token of [...tokens(row.raw), ...linkIds(row.raw)]) {
-        const name = lower(token)
+        (row.header.length > 0 && explicitlyRetired(row))
+      const text = legacy ? relevantText(row) : row.raw
+      for (const { id, product, label } of catalogMentions(row, text, isModelId)) {
+        const name = lower(id)
+        const target = aliases?.get(name)
+        const listedName = target && channelIds.has(`${channel}\n${target}`) ? target : name
+        const model = byName.get(listedName)
         if (legacy) {
-          const model = archivable!.has(name) ? byName.get(name) : undefined
           if (model && !legacyHits.has(`${channel}\n${model.canonicalId}`)) {
             legacyHits.set(`${channel}\n${model.canonicalId}`, {
               model,
-              id: token,
+              id,
               evidence: {
                 url: snapshot.url,
                 section: sectionOf(row),
-                quote: quoteOf(row),
+                quote: quoteOf(row, label),
                 dates: [],
               },
             })
           }
         } else {
-          currentNames.add(`${channel}\n${name}`)
+          currentNames.add(`${channel}\n${listedName}`)
         }
-        listed.names.add(name)
+        listed.names.add(listedName)
+        if (product) listed.products.add(name)
         const key = `${channel}\n${name}`
         if (
           legacy ||
-          byName.has(name) ||
+          model ||
+          (product && declaredStems.has(name)) ||
           skipped.has(name) ||
           candidates.has(key) ||
-          !isCandidateId(token, prefixes, lowercaseOnly, digitless)
+          !isCandidateId(id, prefixes, lowercaseOnly, digitless)
         ) {
           continue
         }
-        const capability = guessCapability(row)
+        const capability = guessCapability(row, label)
         candidates.set(key, {
           kind: 'undeclared',
           channel,
-          id: token,
+          id,
           ...(capability ? { capability } : {}),
-          evidence: { url: snapshot.url, section: sectionOf(row), quote: quoteOf(row), dates: [] },
-        })
-      }
-      // 表头列名里的「产品名 + 版本号」也是模型候选（豆包语音的目录页只给产品名）
-      for (const cell of row.header) {
-        const token = productVersionId(cell)
-        if (!token) continue
-        const name = lower(token)
-        if (!legacy) currentNames.add(`${channel}\n${name}`)
-        listed.names.add(name)
-        listed.products.add(name)
-        const key = `${channel}\n${name}`
-        if (
-          legacy ||
-          byName.has(name) ||
-          skipped.has(name) ||
-          candidates.has(key) ||
-          declaredStems.has(name) ||
-          !isCandidateId(token, prefixes, lowercaseOnly, digitless)
-        ) {
-          continue
-        }
-        const capability = guessCapability(row)
-        candidates.set(key, {
-          kind: 'undeclared',
-          channel,
-          id: token,
-          ...(capability ? { capability } : {}),
-          evidence: { url: snapshot.url, section: sectionOf(row), quote: quoteOf(row), dates: [] },
+          evidence: {
+            url: snapshot.url,
+            section: sectionOf(row),
+            quote: quoteOf(row, label),
+            dates: [],
+          },
         })
       }
     }
@@ -490,7 +561,7 @@ export function audit(input: AuditInput): Gap[] {
   const namesByUrl = new Map<string, Set<string>>()
   for (const { snapshot } of parsed) {
     const names = new Set<string>()
-    for (const token of [...tokens(snapshot.markdown), ...linkIds(snapshot.markdown)]) {
+    for (const token of documentIds(snapshot.markdown)) {
       names.add(lower(token))
     }
     namesByUrl.set(snapshot.url, names)

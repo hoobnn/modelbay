@@ -3,11 +3,16 @@ import { fetchPage, linksIn } from './fetch'
 
 type Route = { status?: number; type: string; body: string }
 
-function stubFetch(routes: Record<string, Route>) {
+function stubFetch(routes: Record<string, Route | Route[]>) {
   const calls: string[] = []
   vi.stubGlobal('fetch', async (url: string) => {
     calls.push(url)
-    const route = routes[url] ?? { status: 404, type: 'text/html', body: 'not found' }
+    const entry = routes[url]
+    const route = (Array.isArray(entry) ? entry.shift() : entry) ?? {
+      status: 404,
+      type: 'text/html',
+      body: 'not found',
+    }
     return {
       status: route.status ?? 200,
       url,
@@ -56,10 +61,33 @@ describe('fetchPage 分档抓取', () => {
   })
 
   it('拿不到 Markdown、域名又没登记渲染容器时报错，不退到浏览器渲染', async () => {
-    stubFetch({ 'https://help.aliyun.com/zh/y': { type: 'text/html', body: '<html></html>' } })
+    const calls = stubFetch({
+      'https://help.aliyun.com/zh/y': { type: 'text/html', body: '<html></html>' },
+    })
     await expect(
       fetchPage('https://help.aliyun.com/zh/y', { retryDelaysMs: [0, 1] }),
     ).rejects.toThrow('RENDER_SELECTORS')
+    expect(calls).toEqual([
+      'https://help.aliyun.com/zh/y.md',
+      'https://help.aliyun.com/zh/y',
+      'https://help.aliyun.com/zh/y.md',
+      'https://help.aliyun.com/zh/y',
+    ])
+  })
+
+  it('首选页面发生限流时退避到下一轮，不立即请求同域的 HTML', async () => {
+    const source = 'https://help.aliyun.com/zh/x?edition=cn'
+    const markdown = 'https://help.aliyun.com/zh/x.md?edition=cn'
+    const calls = stubFetch({
+      [markdown]: [
+        { status: 429, type: 'text/html', body: 'rate limited' },
+        { type: 'text/markdown', body: '# 正文' },
+      ],
+    })
+    expect(await fetchPage(source, { retryDelaysMs: [0, 0] })).toMatchObject({
+      method: 'markdown-suffix',
+    })
+    expect(calls).toEqual([markdown, markdown])
   })
 
   it('非白名单地址和 4xx 直接失败', async () => {

@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ModelDeclaration } from '@modelbay/core'
-import { PLATFORMS } from '../../packages/modelbay/src/platforms'
+import { findPlatform, PLATFORMS } from '../../packages/modelbay/src/platforms'
 import type { DeclaredModel, LifecycleGap, UndeclaredGap } from './audit'
 
 export const ROOT = join(import.meta.dirname, '..', '..')
@@ -15,15 +15,12 @@ export function modelsDir(platform: string): string {
   return join(ROOT, 'packages', platform, 'src', 'models')
 }
 
-/** 注册表里某个平台的全部声明（按 canonicalId 去重）。 */
+/** 直接读取平台注册表的声明目录。 */
 export function loadDeclarations(platform: string): ModelDeclaration[] {
-  const descriptor = PLATFORMS.find((item) => item.key === platform)
+  const descriptor = findPlatform(platform)
   if (!descriptor) throw new Error(`注册表里没有平台：${platform}`)
-  const seen = new Map<string, ModelDeclaration>()
-  for (const adapter of descriptor.createAdapters()) {
-    for (const declaration of adapter.models) seen.set(declaration.canonicalId, declaration)
-  }
-  return [...seen.values()]
+  if (!descriptor.models) throw new Error(`平台没有模型声明目录：${platform}`)
+  return [...descriptor.models]
 }
 
 export function platformKeys(): string[] {
@@ -82,12 +79,19 @@ function lifecycleRange(source: string): { start: number; end: number; indent: s
 
 const singleQuoted = (value: string) => `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 
-/** 把生命周期补丁写进声明文件，返回改动的文件路径。 */
-export function applyLifecycle(platform: string, gap: LifecycleGap, today: string): string {
-  const path = declarationFile(platform, gap.canonicalId)
-  if (!path) throw new Error(`找不到声明文件：${gap.canonicalId}`)
-  writeFileSync(path, patchLifecycle(readFileSync(path, 'utf8'), gap, today))
-  return path
+/** 先在内存中生成整批补丁，再写回声明。 */
+export function applyLifecycles(
+  platform: string,
+  gaps: readonly LifecycleGap[],
+  today: string,
+): string[] {
+  const patches = gaps.map((gap) => {
+    const path = declarationFile(platform, gap.canonicalId)
+    if (!path) throw new Error(`找不到声明文件：${gap.canonicalId}`)
+    return { path, contents: patchLifecycle(readFileSync(path, 'utf8'), gap, today) }
+  })
+  for (const { path, contents } of patches) writeFileSync(path, contents)
+  return patches.map(({ path }) => path)
 }
 
 /** 替换声明源码里的 `lifecycle` 块，前面加一行官方原文引用。 */
@@ -114,20 +118,27 @@ export function patchLifecycle(source: string, gap: LifecycleGap, today: string)
     ...sourceLines,
     `${pad}},`,
   ].join('\n')
-  return source.slice(0, range.start) + block + source.slice(range.end)
+  const before = source
+    .slice(0, range.start)
+    .replace(/(^|\n)(?:[ \t]*\/\/ 官方原文（\d{4}-\d{2}-\d{2}）：[^\n]*\n)+$/, '$1')
+  return before + block + source.slice(range.end)
 }
 
 /** 未声明模型的骨架：页面能确定的字段填好，其余标 TODO。 */
 export function skeleton(gap: UndeclaredGap, vendor: string, today: string): string {
   const capability = gap.capability?.startsWith('native:') ? undefined : gap.capability
   const native = gap.capability?.startsWith('native:') ? gap.capability.slice(7) : undefined
+  const name = gap.id
+    .slice(gap.id.lastIndexOf('/') + 1)
+    .toLowerCase()
+    .replaceAll('_', '-')
   return [
     `import type { ModelDeclaration } from '@modelbay/core'`,
     ``,
     `// 由上游文档对账生成（${today}）。核对能力、上下限、默认值后再登记进 index.ts 的 all。`,
     `// 出处：${gap.evidence.section || gap.evidence.url}`,
     `export default {`,
-    `  canonicalId: ${singleQuoted(`${vendor}/${gap.id}`)},`,
+    `  canonicalId: ${singleQuoted(`${vendor}/${name}`)},`,
     `  id: ${singleQuoted(gap.id)},`,
     `  title: ${singleQuoted(gap.id)},`,
     `  capabilities: [${capability ? singleQuoted(capability) : '/* TODO */'}],`,
