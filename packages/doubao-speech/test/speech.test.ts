@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { ProviderError } from '@modelbay/core'
+import { createDoubaoAdapter } from '../src/adapter'
+import { all } from '../src/models/index'
 import {
+  buildSpeech3Request,
   buildSpeechRequest,
+  decodeSpeech3Stream,
   customVoiceId,
   decodeAudioStream,
   parseResponseBody,
@@ -173,6 +177,103 @@ describe('synthesizeSpeech (the ark-facing export)', () => {
     const { ctx, calls } = fakeContext([fixtureReply(fixture('tts-success'))])
     await synthesizeSpeech('seed-tts-2.0', { text: '你好' }, ctx, true)
     expect(calls()[0]?.url).toContain('/api/v3/plan/tts/unidirectional')
+  })
+})
+
+describe('TTS 3.0', () => {
+  const jsonl = (...lines: object[]) => lines.map((line) => JSON.stringify(line)).join('\n')
+  const closed = { event: 'final', is_final: true, reason: 'TTS_STREAM_FINAL_REASON_CLOSED' }
+  it('用 canonical ID 提交时走 3.0 域名，音色放在路径里', async () => {
+    const reply = new Response(
+      jsonl(
+        { event: 'ready', session_id: 's' },
+        { event: 'audio', audio: 'AQI=' },
+        { event: 'audio', audio: 'Aw==' },
+        closed,
+      ),
+      { status: 200 },
+    )
+    const { ctx, calls } = fakeContext([reply])
+    const result = await createDoubaoAdapter(all).submit(
+      {
+        capability: 'audio.speech',
+        model: 'doubao/seed-tts-3.0',
+        input: { text: '你好', instruction: '温柔自然', speed: 1.2 },
+      },
+      ctx,
+    )
+    const call = calls()[0]!
+    expect(call.url).toBe(
+      'https://voice.cn-beijing.volces.com/api/v3/text-to-speech/multi_female_tuanzi_v3_uranus_bigtts/streaming',
+    )
+    expect(call.headers?.['X-Request-Id']).toBeTruthy()
+    expect(call.headers?.['X-Api-Request-Id']).toBeUndefined()
+    expect(call.headers?.['X-Api-Resource-Id']).toBeUndefined()
+    expect(call.body).toEqual({
+      text: '你好',
+      model_id: 'doubao-seed-tts-3.0',
+      output_format: { format: 'mp3', sample_rate: 24000 },
+      voice_settings: { speed: 1.2, instructions: ['温柔自然'] },
+    })
+    expect([
+      ...(result.state === 'succeeded' ? (result.outputs[0] as { data: Uint8Array }).data : []),
+    ]).toEqual([1, 2, 3])
+  })
+  it('显式音色原样传，wav 用 pcm 请求再封装', () => {
+    const built = buildSpeech3Request(
+      { text: 'hi', voice: 'multi_male_jamie_v3_uranus_bigtts' },
+      { ...settings, format: 'wav', sampleRate: '16000' },
+    )
+    expect(built.path).toBe('/api/v3/text-to-speech/multi_male_jamie_v3_uranus_bigtts/streaming')
+    expect(built.body.output_format).toEqual({ format: 'pcm', sample_rate: 16000 })
+    const wav = decodeSpeech3Stream(
+      jsonl({ event: 'audio', audio: 'AAA=' }, closed),
+      fakeContext().ctx,
+      { ...settings, format: 'wav', sampleRate: '16000' },
+    )
+    expect(new TextDecoder().decode(wav.slice(0, 4))).toBe('RIFF')
+  })
+  it('收到音频后，仍须等到会话明确结束', () => {
+    const { ctx } = fakeContext()
+    const partial = jsonl(
+      { event: 'audio', audio: 'AQI=' },
+      { ...closed, reason: 'TTS_STREAM_FINAL_REASON_FLUSHED' },
+    )
+    expect(() => decodeSpeech3Stream(partial, ctx, settings)).toThrow('合成完成标记')
+  })
+  it('error 事件和 HTTP 错误正文都转成 ProviderError', async () => {
+    const { ctx } = fakeContext()
+    expect(() =>
+      decodeSpeech3Stream(
+        jsonl({ event: 'error', error: { code: 'validation_error', message: 'bad text' } }),
+        ctx,
+        settings,
+      ),
+    ).toThrow(ProviderError)
+    expect(() =>
+      decodeSpeech3Stream(jsonl({ event: 'audio', audio: 'AQI=' }), ctx, settings),
+    ).toThrow('合成完成标记')
+    const forbidden = new Response(
+      jsonl({
+        event: 'error',
+        error: {
+          type: 'authorization_error',
+          code: 'forbidden',
+          message: 'requested resource not granted',
+        },
+      }),
+      { status: 403 },
+    )
+    const failing = fakeContext([forbidden])
+    await expect(
+      synthesizeSpeech('doubao-seed-tts-3.0', { text: '你好' }, failing.ctx),
+    ).rejects.toMatchObject({ code: 'auth' })
+  })
+  it('只配了旧版 APP ID 时直接报鉴权错误', async () => {
+    const { ctx } = fakeContext([], { secrets: { DOUBAO_APP_ID: 'a', DOUBAO_ACCESS_TOKEN: 't' } })
+    await expect(
+      synthesizeSpeech('doubao-seed-tts-3.0', { text: '你好' }, ctx),
+    ).rejects.toMatchObject({ code: 'auth' })
   })
 })
 

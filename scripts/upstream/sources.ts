@@ -319,6 +319,12 @@ export const SOURCES: PlatformSources[] = [
       'seed-tts-1.0',
       'seed-icl-1.0',
     ],
+    skipped: [
+      // 写法变体：目录页的产品名「TTS 3.0」就是已声明的 doubao-seed-tts-3.0（接口 model_id）
+      'tts-3.0',
+      // 实时音视频对话（双向流），不在支持的能力内；声明 doubao-seed-tts-3.0 后 doubao 前缀才把它带出来
+      'doubao-seed-realtime-1.0',
+    ],
   },
   {
     key: 'openai',

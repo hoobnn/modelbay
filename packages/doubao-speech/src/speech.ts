@@ -12,8 +12,18 @@ import {
   type SubmitResult,
   type VoicePreset,
 } from '@modelbay/core'
-import { all } from './models/index'
-import { asJson, events, failure, incomplete, postRaw, readSecret, type Json } from './http'
+import { all, seedTts30 } from './models/index'
+import {
+  API_KEY_NAMES,
+  asJson,
+  events,
+  failure,
+  firstSecret,
+  incomplete,
+  postRaw,
+  readSecret,
+  type Json,
+} from './http'
 
 /** 声明里出现过的全部采样率：宿主设置表单的可选值（具体模型的范围以它自己的声明为准）。 */
 const DECLARED_SAMPLE_RATES = [...new Set(all.flatMap((model) => model.limits?.sampleRates ?? []))]
@@ -219,6 +229,113 @@ export function buildSpeechRequest(
   }
 }
 
+/**
+ * 豆包语音合成 3.0：新域名、新路径，音色 ID 放在路径里，鉴权只认 `X-Api-Key`，请求体是扁平字段，
+ * 响应是 JSONL 事件流（ready / audio / alignment / final / error）。
+ * 来源：https://docs.volcengine.com/docs/doubao-voice/seed-tts-3-0-http-streaming（2026-11-27 核对）。
+ */
+const TTS3_HOST = 'https://voice.cn-beijing.volces.com'
+
+/** Build the TTS 3.0 request (path carries the voice ID). */
+export function buildSpeech3Request(
+  input: CapabilityInput<'audio.speech'>,
+  settings: SpeechSettings,
+): { path: string; body: Json } {
+  const { promptMaxLength, speed: speedLimits, speech } = seedTts30.limits
+  const content = text(input.text, '合成文本', promptMaxLength)
+  // 宿主默认音色是内置 2.0 音色时换成 3.0 默认音色。
+  const voice =
+    input.voice ??
+    (TTS_VOICES.some((preset) => preset.id === settings.voice)
+      ? speech.defaultVoice
+      : settings.voice)
+  const instruction =
+    input.instruction ?? (input as { instructions?: string | null }).instructions ?? undefined
+  const extras = input as SpeechExtras
+  const speechRate = integer(extras.speech_rate, 'speech_rate')
+  const loudnessRate = integer(extras.loudness_rate, 'loudness_rate')
+  // MCP 沿用百分比刻度，3.0 接口接收倍率。
+  const speed =
+    speechRate === undefined ? (input.speed ?? settings.speed) : (100 + speechRate) / 100
+  const volume = loudnessRate === undefined ? undefined : (100 + loudnessRate) / 100
+  if (!Number.isFinite(speed) || speed < speedLimits.min || speed > speedLimits.max)
+    throw new ProviderError(
+      'invalid_input',
+      `语速须在 ${speedLimits.min} 至 ${speedLimits.max} 之间`,
+    )
+  if (volume !== undefined && (volume < speech.volume.min || volume > speech.volume.max))
+    throw new ProviderError(
+      'invalid_input',
+      `音量须在 ${speech.volume.min} 至 ${speech.volume.max} 之间`,
+    )
+  const pitch = integer(extras.pitch, 'pitch')
+  if (pitch !== undefined && (pitch < speech.pitch.min || pitch > speech.pitch.max))
+    throw new ProviderError(
+      'invalid_input',
+      `pitch 须在 ${speech.pitch.min} 至 ${speech.pitch.max} 之间`,
+    )
+  const body: Json = {
+    text: content,
+    model_id: seedTts30.id,
+    ...(typeof extras.language === 'string' && extras.language
+      ? { language_code: extras.language }
+      : {}),
+    output_format: {
+      format: settings.format === 'wav' ? 'pcm' : settings.format,
+      sample_rate: Number(settings.sampleRate),
+    },
+    voice_settings: {
+      speed,
+      ...(volume === undefined ? {} : { volume }),
+      ...(pitch === undefined ? {} : { pitch }),
+      ...(instruction ? { instructions: [instruction] } : {}),
+    },
+  }
+  return {
+    path: `/api/v3/text-to-speech/${encodeURIComponent(text(voice, '音色 ID'))}/streaming`,
+    body,
+  }
+}
+
+/** Decode the TTS 3.0 JSONL event stream into audio bytes. */
+export function decodeSpeech3Stream(
+  raw: string,
+  ctx: AdapterContext,
+  settings: SpeechSettings,
+): Uint8Array {
+  const chunks: Uint8Array[] = []
+  let ended = false
+  for (const packet of events(raw)) {
+    if (packet.event === 'error') {
+      const error = asJson(packet.error)
+      throw failure(200, error.code, error.message, ctx)
+    }
+    if (
+      packet.event === 'final' &&
+      packet.is_final === true &&
+      packet.reason === 'TTS_STREAM_FINAL_REASON_CLOSED'
+    )
+      ended = true
+    if (packet.event !== 'audio') continue
+    const data = packet.audio
+    if (
+      typeof data !== 'string' ||
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)
+    )
+      throw incomplete('豆包语音返回无效 Base64 音频')
+    if (data) chunks.push(fromBase64(data))
+  }
+  if (!ended) throw incomplete('豆包语音未返回合成完成标记')
+  const merged = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0))
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.length
+  }
+  if (!merged.length) throw incomplete('豆包语音未返回内嵌音频')
+  return settings.format === 'wav' ? pcmWav(merged, Number(settings.sampleRate)) : merged
+}
+
 /** Decode concatenated base64 audio chunks from a chunked HTTP response. */
 export function decodeAudioStream(
   raw: string,
@@ -298,9 +415,24 @@ export async function synthesizeSpeech(
     ...(input.speed === undefined ? {} : { speed: input.speed }),
   })
   checkSampleRate(model, Number(settings.sampleRate))
-  const { path, resource, body } = buildSpeechRequest(model, input, settings, plan)
-  const response = await postRaw(ctx, path, body, { resource })
-  const data = response.decode((raw) => decodeAudioStream(raw, 'data', ctx, settings, true))
+  let data: Uint8Array
+  if (!plan && (model === seedTts30.id || model === seedTts30.canonicalId)) {
+    if (!firstSecret(ctx, API_KEY_NAMES))
+      throw new ProviderError(
+        'auth',
+        '豆包语音合成 3.0 只支持 API Key：请配置 VOLC_SPEECH_API_KEY（或 DOUBAO_API_KEY）',
+      )
+    const { path, body } = buildSpeech3Request(input, settings)
+    const response = await postRaw(ctx, path, body, {
+      host: TTS3_HOST,
+      requestIdHeader: 'X-Request-Id',
+    })
+    data = response.decode((raw) => decodeSpeech3Stream(raw, ctx, settings))
+  } else {
+    const { path, resource, body } = buildSpeechRequest(model, input, settings, plan)
+    const response = await postRaw(ctx, path, body, { resource })
+    data = response.decode((raw) => decodeAudioStream(raw, 'data', ctx, settings, true))
+  }
   const output: ProviderOutput = {
     type: 'file',
     kind: 'audio',

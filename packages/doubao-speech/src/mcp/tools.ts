@@ -319,8 +319,8 @@ export const doubaoSpeechTools: ToolSpec[] = [
     name: 'text_to_speech',
     description:
       '豆包语音合成（中文音色、方言、长文本首选；千问音色用 ali-bailian），text为文本，voice为官方音色ID或S_复刻ID。\n' +
-      'instructions控制语气（仅2.0音色，不计费）；language指定语种（如 zh-cn、en、ja，可选值随音色不同）。\n' +
-      'speech_rate / loudness_rate 为官方整数刻度 -50..100（0 为原速 / 原音量，100 为 2 倍）；pitch 为 -12..12 的音调。\n' +
+      'instructions 为支持语气指令的 2.0 / 3.0 音色设置表达方式；language 指定语种（如 en、ja，可选值随模型和音色不同）。\n' +
+      'speech_rate / loudness_rate 使用整数刻度 -50..100（0 为原速 / 原音量，100 为 2 倍）；pitch 为 -12..12 的音调。\n' +
       'format=mp3或wav；sample_rate为采样率。按字数计费。完整音色与调节范围见get_tool_help。\n',
     capability: 'audio.speech',
     modelParams: { text: 'promptLength', sample_rate: 'sampleRate' },
