@@ -34,7 +34,7 @@ This is the only allowed cross-adapter dependency. The root entry exports:
 - `synthesizeSpeech(model, input, ctx, plan?)` — synchronous `Promise<SubmitResult>`;
   `plan=true` selects `/api/v3/plan/tts/unidirectional` for Ark Agent Plan TTS.
 - `TTS_VOICES` — `VoicePreset[]` for speech synthesis 2.0.
-- `doubao-seed-tts-3.0` — speech synthesis 3.0 on its own endpoint (`voice.cn-beijing.volces.com`, API Key only). It uses 3.0 voices (`multi_*_v3_uranus_bigtts`); when the host default is a 2.0 preset it falls back to `multi_female_tuanzi_v3_uranus_bigtts`.
+- `doubao-seed-tts-3.0` — speech synthesis 3.0 on its own endpoint (`voice.cn-beijing.volces.com`, API Key only). It uses 3.0 voices such as `multi_female_tuanzi_v3_uranus_bigtts`, which Modelbay selects when the host default is one of its bundled 2.0 presets.
 
 ## Capabilities
 

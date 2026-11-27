@@ -135,6 +135,31 @@ describe('text_to_speech', () => {
     await handlers.callTool('text_to_speech', { text: '你好', speed: 1.5 })
     expect(captured[0]!.body.req_params.audio_params.speech_rate).toBe(50)
   })
+
+  it('3.0 将语速和音量的整数刻度转成官方倍率', async () => {
+    const { handlers, captured } = await setup(
+      () =>
+        new Response(
+          '{"event":"audio","audio":"AAA="}\n' +
+            '{"event":"final","is_final":true,"reason":"TTS_STREAM_FINAL_REASON_CLOSED"}',
+        ),
+    )
+    const result = await handlers.callTool('text_to_speech', {
+      text: '你好',
+      model: 'doubao-seed-tts-3.0',
+      voice: 'multi_female_tuanzi_v3_uranus_bigtts',
+      speech_rate: 30,
+      loudness_rate: -10,
+      pitch: 3,
+      language: 'zh',
+      instructions: '温柔自然',
+    })
+    expect(result.isError).toBeFalsy()
+    expect(captured[0]!.body).toMatchObject({
+      language_code: 'zh',
+      voice_settings: { speed: 1.3, volume: 0.9, pitch: 3, instructions: ['温柔自然'] },
+    })
+  })
 })
 
 describe('generate_audio', () => {

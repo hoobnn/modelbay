@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { ProviderError } from '@modelbay/core'
+import { createDoubaoAdapter } from '../src/adapter'
+import { all } from '../src/models/index'
 import {
   buildSpeech3Request,
   buildSpeechRequest,
@@ -180,26 +182,32 @@ describe('synthesizeSpeech (the ark-facing export)', () => {
 
 describe('TTS 3.0', () => {
   const jsonl = (...lines: object[]) => lines.map((line) => JSON.stringify(line)).join('\n')
-  it('走新域名，音色放在路径里，请求体是扁平字段', async () => {
+  const closed = { event: 'final', is_final: true, reason: 'TTS_STREAM_FINAL_REASON_CLOSED' }
+  it('用 canonical ID 提交时走 3.0 域名，音色放在路径里', async () => {
     const reply = new Response(
       jsonl(
         { event: 'ready', session_id: 's' },
         { event: 'audio', audio: 'AQI=' },
         { event: 'audio', audio: 'Aw==' },
-        { event: 'final', is_final: true, reason: 'TTS_STREAM_FINAL_REASON_CLOSED' },
+        closed,
       ),
       { status: 200 },
     )
     const { ctx, calls } = fakeContext([reply])
-    const result = await synthesizeSpeech(
-      'doubao-seed-tts-3.0',
-      { text: '你好', instruction: '温柔自然', speed: 1.2 },
+    const result = await createDoubaoAdapter(all).submit(
+      {
+        capability: 'audio.speech',
+        model: 'doubao/seed-tts-3.0',
+        input: { text: '你好', instruction: '温柔自然', speed: 1.2 },
+      },
       ctx,
     )
     const call = calls()[0]!
     expect(call.url).toBe(
       'https://voice.cn-beijing.volces.com/api/v3/text-to-speech/multi_female_tuanzi_v3_uranus_bigtts/streaming',
     )
+    expect(call.headers?.['X-Request-Id']).toBeTruthy()
+    expect(call.headers?.['X-Api-Request-Id']).toBeUndefined()
     expect(call.headers?.['X-Api-Resource-Id']).toBeUndefined()
     expect(call.body).toEqual({
       text: '你好',
@@ -219,11 +227,19 @@ describe('TTS 3.0', () => {
     expect(built.path).toBe('/api/v3/text-to-speech/multi_male_jamie_v3_uranus_bigtts/streaming')
     expect(built.body.output_format).toEqual({ format: 'pcm', sample_rate: 16000 })
     const wav = decodeSpeech3Stream(
-      jsonl({ event: 'audio', audio: 'AAA=' }, { event: 'final', is_final: true }),
+      jsonl({ event: 'audio', audio: 'AAA=' }, closed),
       fakeContext().ctx,
       { ...settings, format: 'wav', sampleRate: '16000' },
     )
     expect(new TextDecoder().decode(wav.slice(0, 4))).toBe('RIFF')
+  })
+  it('收到音频后，仍须等到会话明确结束', () => {
+    const { ctx } = fakeContext()
+    const partial = jsonl(
+      { event: 'audio', audio: 'AQI=' },
+      { ...closed, reason: 'TTS_STREAM_FINAL_REASON_FLUSHED' },
+    )
+    expect(() => decodeSpeech3Stream(partial, ctx, settings)).toThrow('合成完成标记')
   })
   it('error 事件和 HTTP 错误正文都转成 ProviderError', async () => {
     const { ctx } = fakeContext()

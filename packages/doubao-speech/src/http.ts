@@ -6,6 +6,7 @@ import { ProviderError, redact, type ProviderErrorCode } from '@modelbay/core'
 import type { AdapterContext } from '@modelbay/core'
 
 export const HOST = 'https://openspeech.bytedance.com'
+const REQUEST_ID_HEADER = 'X-Api-Request-Id'
 
 /**
  * Canonical secret names (used by the `modelbay` entry / CLI): `DOUBAO_APP_ID` +
@@ -164,10 +165,14 @@ export async function readText(
 }
 
 /** Build the request headers; supports the modern API key and the legacy APP ID pair. */
-export function headers(ctx: AdapterContext, resource?: string): Record<string, string> {
+export function headers(
+  ctx: AdapterContext,
+  resource?: string,
+  requestIdHeader = REQUEST_ID_HEADER,
+): Record<string, string> {
   const result: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Api-Request-Id': ctx.submission?.requestId ?? crypto.randomUUID(),
+    [requestIdHeader]: ctx.submission?.requestId ?? crypto.randomUUID(),
   }
   const key = firstSecret(ctx, API_KEY_NAMES)
   if (key) result['X-Api-Key'] = key
@@ -239,6 +244,7 @@ export interface PostOptions {
   resource?: string
   /** 默认 `HOST`；TTS 3.0 走 `voice.cn-beijing.volces.com` */
   host?: string
+  requestIdHeader?: 'X-Request-Id'
   asr?: boolean
   extraHeaders?: Record<string, string>
   idempotencyKey?: string
@@ -259,10 +265,11 @@ export async function postRaw(
   body: Json,
   opts: PostOptions = {},
 ): Promise<PostResult> {
-  const requestHeaders = { ...headers(ctx, opts.resource), ...opts.extraHeaders }
+  const requestIdHeader = opts.requestIdHeader ?? REQUEST_ID_HEADER
+  const requestHeaders = { ...headers(ctx, opts.resource, requestIdHeader), ...opts.extraHeaders }
   if (opts.asr) requestHeaders['X-Api-Sequence'] = '-1'
-  if (opts.idempotencyKey) requestHeaders['X-Api-Request-Id'] = opts.idempotencyKey
-  const requestId = requestHeaders['X-Api-Request-Id']!
+  if (opts.idempotencyKey) requestHeaders[requestIdHeader] = opts.idempotencyKey
+  const requestId = requestHeaders[requestIdHeader]!
   let logId: string | undefined
   const traced = (error: unknown) => {
     if (!(error instanceof ProviderError)) return error

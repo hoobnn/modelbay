@@ -302,6 +302,10 @@ export interface SpeechLimits {
   otherLanguage?: boolean
   /** 不指定音色时使用的系统音色 */
   defaultVoice?: string
+  /** 音量倍率的范围 */
+  volume?: { min: number; max: number }
+  /** 音高偏移的范围 */
+  pitch?: { min: number; max: number }
 }
 
 /**
