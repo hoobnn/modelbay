@@ -8,6 +8,7 @@ export const minimaxPlatform = definePlatform({
   key: 'minimax',
   title: 'MiniMax',
   primaryChannel: 'minimax',
+  models: all,
   secrets: {
     required: [['MINIMAX_API_KEY']],
     optional: ['MINIMAX_REGION', 'MINIMAX_BASE_URL'],

@@ -27,14 +27,9 @@ interface Entry {
   declaration: ModelDeclaration
 }
 
-/** 每个平台取全部适配器里的声明，按规范 ID 去重（同一平台多个渠道共用一份声明）。 */
-const entries: Entry[] = PLATFORMS.flatMap((platform) => {
-  const seen = new Map<string, ModelDeclaration>()
-  for (const adapter of platform.createAdapters()) {
-    for (const declaration of adapter.models) seen.set(declaration.canonicalId, declaration)
-  }
-  return [...seen.values()].map((declaration) => ({ platform: platform.key, declaration }))
-})
+const entries: Entry[] = PLATFORMS.flatMap((platform) =>
+  (platform.models ?? []).map((declaration) => ({ platform: platform.key, declaration })),
+)
 const all = entries.map((entry) => entry.declaration)
 
 function sourceProblems(where: string, source: { url?: string; checkedAt?: string } | undefined) {
@@ -54,6 +49,18 @@ function hasZodInternals(value: unknown): boolean {
 }
 
 describe('模型声明自检', () => {
+  it('平台注册目录与适配器提供的声明一致', () => {
+    for (const platform of PLATFORMS) {
+      const catalog = new Map(platform.models?.map((model) => [model.canonicalId, model]))
+      const installed = new Map(
+        platform
+          .createAdapters()
+          .flatMap((adapter) => adapter.models.map((model) => [model.canonicalId, model] as const)),
+      )
+      expect(catalog, platform.key).toEqual(installed)
+    }
+  })
+
   it('每个 src/models/*.ts 都登记进了平台的 models/index.ts', () => {
     for (const platform of PLATFORMS) {
       const files = readdirSync(`${packagesDir}${platform.key}/src/models/`).filter(
