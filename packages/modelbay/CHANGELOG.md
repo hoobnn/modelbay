@@ -1,5 +1,12 @@
 # modelbay
 
+## 0.6.1
+
+### Patch Changes
+
+- e5d5173: 方舟 `doubao-seedream-5-0-260128` 已过官方第十批下线说明的 EOS（2026-11-24 14:00），生命周期改为 `retired`。
+- 8b0ed4f: 豆包语音新增 `doubao-seed-tts-3.0`（语音合成 3.0）：走独立的 `voice.cn-beijing.volces.com` 接口，只支持 API Key，文本最长 10000 字，附 10 个 3.0 通用音色。
+
 ## 0.6.0
 
 ### Minor Changes
