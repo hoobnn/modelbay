@@ -1,6 +1,6 @@
 {
   "name": "@modelbay/mcp",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "MCP tools and on-demand Skills for Volcengine Ark, Alibaba Bailian, MiniMax, Doubao Speech, OpenAI and DeepSeek",
   "keywords": [
     "mcp",

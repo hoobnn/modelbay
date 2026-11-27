@@ -1,5 +1,12 @@
 # @modelbay/cli
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [5884c93]
+  - modelbay@0.7.0
+
 ## 0.6.1
 
 ### Patch Changes
